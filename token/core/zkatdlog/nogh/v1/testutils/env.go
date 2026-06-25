@@ -12,7 +12,6 @@ import (
 	"encoding/json"
 	"maps"
 	"os"
-	"strconv"
 
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
@@ -717,10 +716,7 @@ func prepareTransfer(
 		if err != nil {
 			return nil, nil, nil, nil, errors.Wrap(err, "failed to serialize metadata for loader")
 		}
-		key := ids[i].TxId
-		if ids[i].Index != 0 {
-			key = ids[i].TxId + ":" + strconv.FormatUint(ids[i].Index, 10)
-		}
+		key := ids[i].String()
 		tokenLoaderMap[key] = v1.LoadedToken{
 			Token:       tokenRaw,
 			Metadata:    metadataRaw,

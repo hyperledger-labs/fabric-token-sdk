@@ -2019,3 +2019,318 @@ func TestMarshalToMessageToSign_V1_ExcludesVersion(t *testing.T) {
 
 	assert.Equal(t, msg1, msg2, "V1 marshaling should not include Version field")
 }
+
+// TestTokenRequest_Validate_Success tests successful validation of a valid TokenRequest
+func TestTokenRequest_Validate_Success(t *testing.T) {
+	req := &TokenRequest{
+		Version: uint32(ProtocolV1),
+		Actions: []*TypedAction{
+			{Type: request.ActionType_ACTION_TYPE_ISSUE, Raw: []byte("issue1")},
+			{Type: request.ActionType_ACTION_TYPE_TRANSFER, Raw: []byte("transfer1")},
+		},
+		Signatures: []*RequestSignature{
+			{
+				Action: &ActionSignature{
+					ActionID:  0,
+					Signature: []byte("signature1"),
+				},
+			},
+		},
+	}
+
+	err := req.Validate()
+	require.NoError(t, err)
+}
+
+// TestTokenRequest_Validate_EmptyRequest tests that completely empty requests are allowed (for test scenarios)
+func TestTokenRequest_Validate_EmptyRequest(t *testing.T) {
+	req := &TokenRequest{
+		Version: 0,
+		Actions: []*TypedAction{},
+	}
+
+	err := req.Validate()
+	require.NoError(t, err, "Empty requests should be allowed for test scenarios")
+}
+
+// TestTokenRequest_Validate_NilActions tests that nil Actions slice is allowed (for test scenarios)
+func TestTokenRequest_Validate_NilActions(t *testing.T) {
+	req := &TokenRequest{
+		Version: 0,
+		Actions: nil,
+	}
+
+	err := req.Validate()
+	require.NoError(t, err, "Nil Actions should be allowed for test scenarios")
+}
+
+// TestTokenRequest_Validate_EmptyActionsWithVersion tests that empty actions with version set is allowed
+// This is necessary because ToProtos() sets Version=ProtocolV1 even for empty requests
+func TestTokenRequest_Validate_EmptyActionsWithVersion(t *testing.T) {
+	req := &TokenRequest{
+		Version: uint32(ProtocolV1),
+		Actions: []*TypedAction{}, // Empty actions
+	}
+
+	err := req.Validate()
+	require.NoError(t, err, "Empty actions should be allowed even with version set (ToProtos behavior)")
+}
+
+// TestTokenRequest_Validate_NilAction tests validation failure for nil action
+func TestTokenRequest_Validate_NilAction(t *testing.T) {
+	req := &TokenRequest{
+		Version: uint32(ProtocolV1),
+		Actions: []*TypedAction{
+			{Type: request.ActionType_ACTION_TYPE_ISSUE, Raw: []byte("issue1")},
+			nil, // Nil action
+			{Type: request.ActionType_ACTION_TYPE_TRANSFER, Raw: []byte("transfer1")},
+		},
+	}
+
+	err := req.Validate()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "action at index 1 is nil")
+}
+
+// TestTokenRequest_Validate_EmptyActionRaw tests validation failure for empty action Raw bytes
+func TestTokenRequest_Validate_EmptyActionRaw(t *testing.T) {
+	req := &TokenRequest{
+		Version: uint32(ProtocolV1),
+		Actions: []*TypedAction{
+			{Type: request.ActionType_ACTION_TYPE_ISSUE, Raw: []byte("issue1")},
+			{Type: request.ActionType_ACTION_TYPE_TRANSFER, Raw: []byte{}}, // Empty Raw
+		},
+	}
+
+	err := req.Validate()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "action at index 1 has empty Raw bytes")
+}
+
+// TestTokenRequest_Validate_NilSignature tests validation failure for nil signature
+func TestTokenRequest_Validate_NilSignature(t *testing.T) {
+	req := &TokenRequest{
+		Version: uint32(ProtocolV1),
+		Actions: []*TypedAction{
+			{Type: request.ActionType_ACTION_TYPE_ISSUE, Raw: []byte("issue1")},
+		},
+		Signatures: []*RequestSignature{
+			{
+				Action: &ActionSignature{
+					ActionID:  0,
+					Signature: []byte("signature1"),
+				},
+			},
+			nil, // Nil signature
+		},
+	}
+
+	err := req.Validate()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "signature at index 1 is nil")
+}
+
+// TestTokenRequest_Validate_EmptyActionSignature tests validation failure for empty action signature bytes
+func TestTokenRequest_Validate_EmptyActionSignature(t *testing.T) {
+	req := &TokenRequest{
+		Version: uint32(ProtocolV1),
+		Actions: []*TypedAction{
+			{Type: request.ActionType_ACTION_TYPE_ISSUE, Raw: []byte("issue1")},
+		},
+		Signatures: []*RequestSignature{
+			{
+				Action: &ActionSignature{
+					ActionID:  0,
+					Signature: []byte{}, // Empty signature
+				},
+			},
+		},
+	}
+
+	err := req.Validate()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "action signature at index 0 has empty signature bytes")
+}
+
+// TestTokenRequest_Validate_EmptyAuditorSignature tests validation failure for empty auditor signature bytes
+func TestTokenRequest_Validate_EmptyAuditorSignature(t *testing.T) {
+	req := &TokenRequest{
+		Version: uint32(ProtocolV1),
+		Actions: []*TypedAction{
+			{Type: request.ActionType_ACTION_TYPE_ISSUE, Raw: []byte("issue1")},
+		},
+		Signatures: []*RequestSignature{
+			{
+				Auditor: &AuditorSignature{
+					Identity:  Identity("auditor1"),
+					Signature: []byte{}, // Empty signature
+				},
+			},
+		},
+	}
+
+	err := req.Validate()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "auditor signature at index 0 has empty signature bytes")
+}
+
+// TestTokenRequest_Validate_SignatureWithoutActionOrAuditor tests validation failure for signature with neither action nor auditor
+func TestTokenRequest_Validate_SignatureWithoutActionOrAuditor(t *testing.T) {
+	req := &TokenRequest{
+		Version: uint32(ProtocolV1),
+		Actions: []*TypedAction{
+			{Type: request.ActionType_ACTION_TYPE_ISSUE, Raw: []byte("issue1")},
+		},
+		Signatures: []*RequestSignature{
+			{
+				// Neither Action nor Auditor set
+			},
+		},
+	}
+
+	err := req.Validate()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "signature at index 0 has neither action nor auditor signature")
+}
+
+// TestTokenRequest_Validate_NoSignatures tests successful validation with no signatures
+func TestTokenRequest_Validate_NoSignatures(t *testing.T) {
+	req := &TokenRequest{
+		Version: uint32(ProtocolV1),
+		Actions: []*TypedAction{
+			{Type: request.ActionType_ACTION_TYPE_ISSUE, Raw: []byte("issue1")},
+		},
+		Signatures: []*RequestSignature{}, // Empty signatures is valid
+	}
+
+	err := req.Validate()
+	require.NoError(t, err)
+}
+
+// TestTokenRequest_Validate_MultipleValidSignatures tests successful validation with multiple signatures
+func TestTokenRequest_Validate_MultipleValidSignatures(t *testing.T) {
+	req := &TokenRequest{
+		Version: uint32(ProtocolV1),
+		Actions: []*TypedAction{
+			{Type: request.ActionType_ACTION_TYPE_ISSUE, Raw: []byte("issue1")},
+			{Type: request.ActionType_ACTION_TYPE_TRANSFER, Raw: []byte("transfer1")},
+		},
+		Signatures: []*RequestSignature{
+			{
+				Action: &ActionSignature{
+					ActionID:  0,
+					Signature: []byte("signature1"),
+				},
+			},
+			{
+				Action: &ActionSignature{
+					ActionID:  1,
+					Signature: []byte("signature2"),
+				},
+			},
+			{
+				Auditor: &AuditorSignature{
+					Identity:  Identity("auditor1"),
+					Signature: []byte("audsig1"),
+				},
+			},
+		},
+	}
+
+	err := req.Validate()
+	require.NoError(t, err)
+}
+
+// TestTokenRequest_FromBytes_CallsValidate tests that FromBytes calls Validate
+func TestTokenRequest_FromBytes_CallsValidate(t *testing.T) {
+	// Create a valid protobuf request
+	protoReq := &request.TokenRequest{
+		Version: uint32(ProtocolV1),
+		Actions: []*request.Action{
+			{
+				Action: &request.Action_TypedAction{
+					TypedAction: &request.TypedAction{
+						Type: request.ActionType_ACTION_TYPE_ISSUE,
+						Raw:  []byte("issue1"),
+					},
+				},
+			},
+		},
+	}
+
+	raw, err := proto.Marshal(protoReq)
+	require.NoError(t, err)
+
+	// Deserialize - should succeed
+	req := &TokenRequest{}
+	err = req.FromBytes(raw)
+	require.NoError(t, err)
+
+	// Now create an invalid protobuf request (action with empty Raw bytes)
+	invalidProtoReq := &request.TokenRequest{
+		Version: uint32(ProtocolV1),
+		Actions: []*request.Action{
+			{
+				Action: &request.Action_TypedAction{
+					TypedAction: &request.TypedAction{
+						Type: request.ActionType_ACTION_TYPE_ISSUE,
+						Raw:  []byte{}, // Empty Raw bytes should fail validation
+					},
+				},
+			},
+		},
+	}
+
+	invalidRaw, err := proto.Marshal(invalidProtoReq)
+	require.NoError(t, err)
+
+	// Deserialize - should fail validation
+	invalidReq := &TokenRequest{}
+	err = invalidReq.FromBytes(invalidRaw)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "validation failed")
+}
+
+// TestTokenRequest_FromProtos_CallsValidate tests that FromProtos calls Validate
+func TestTokenRequest_FromProtos_CallsValidate(t *testing.T) {
+	// Create a valid protobuf request
+	protoReq := &request.TokenRequest{
+		Version: uint32(ProtocolV1),
+		Actions: []*request.Action{
+			{
+				Action: &request.Action_TypedAction{
+					TypedAction: &request.TypedAction{
+						Type: request.ActionType_ACTION_TYPE_ISSUE,
+						Raw:  []byte("issue1"),
+					},
+				},
+			},
+		},
+	}
+
+	// Deserialize - should succeed
+	req := &TokenRequest{}
+	err := req.FromProtos(protoReq)
+	require.NoError(t, err)
+
+	// Now create an invalid protobuf request (action with empty Raw bytes)
+	invalidProtoReq := &request.TokenRequest{
+		Version: uint32(ProtocolV1),
+		Actions: []*request.Action{
+			{
+				Action: &request.Action_TypedAction{
+					TypedAction: &request.TypedAction{
+						Type: request.ActionType_ACTION_TYPE_ISSUE,
+						Raw:  []byte{}, // Empty Raw bytes should fail validation
+					},
+				},
+			},
+		},
+	}
+
+	// Deserialize - should fail validation
+	invalidReq := &TokenRequest{}
+	err = invalidReq.FromProtos(invalidProtoReq)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "validation failed")
+}

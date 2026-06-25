@@ -340,6 +340,60 @@ func (r *TokenRequest) FromProtos(tr *request.TokenRequest) error {
 		r.Signatures = append(r.Signatures, requestSignature)
 	}
 
+	// Validate the structural integrity of the token request
+	if err := r.Validate(); err != nil {
+		return errors.Wrap(err, "token request validation failed")
+	}
+
+	return nil
+}
+
+// Validate checks the structural validity of the TokenRequest.
+// It ensures that all required fields are present and non-empty.
+// This method should be called after unmarshalling to verify the request is well-formed.
+//
+// Special case: Empty requests (nil Actions or empty Actions slice) are allowed
+// to support test scenarios where requests are created but not yet populated.
+// This is necessary because ToProtos() sets Version=ProtocolV1 even for empty requests.
+//
+// Returns an error if:
+//   - Any action in Actions is nil
+//   - Any action has empty Raw bytes
+//   - Any signature in Signatures is nil
+//   - Any signature has empty signature bytes
+func (r *TokenRequest) Validate() error {
+	// If we have actions, validate them
+
+	for i, action := range r.Actions {
+		if action == nil {
+			return errors.Errorf("action at index %d is nil", i)
+		}
+		if len(action.Raw) == 0 {
+			return errors.Errorf("action at index %d has empty Raw bytes", i)
+		}
+	}
+
+	// Validate signatures (if present)
+	for i, sig := range r.Signatures {
+		if sig == nil {
+			return errors.Errorf("signature at index %d is nil", i)
+		}
+
+		// Check that signature has either Action or Auditor signature with non-empty bytes
+		switch {
+		case sig.Action != nil:
+			if len(sig.Action.Signature) == 0 {
+				return errors.Errorf("action signature at index %d has empty signature bytes", i)
+			}
+		case sig.Auditor != nil:
+			if len(sig.Auditor.Signature) == 0 {
+				return errors.Errorf("auditor signature at index %d has empty signature bytes", i)
+			}
+		default:
+			return errors.Errorf("signature at index %d has neither action nor auditor signature", i)
+		}
+	}
+
 	return nil
 }
 

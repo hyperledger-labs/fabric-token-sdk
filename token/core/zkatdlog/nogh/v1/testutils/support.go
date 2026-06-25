@@ -9,7 +9,6 @@ package testutils
 import (
 	"context"
 	"math/big"
-	"strconv"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1"
@@ -163,10 +162,7 @@ type testTokenLoader struct {
 func (t *testTokenLoader) LoadTokens(ctx context.Context, ids []*token2.ID) ([]v1.LoadedToken, error) {
 	result := make([]v1.LoadedToken, len(ids))
 	for i, id := range ids {
-		key := id.TxId
-		if id.Index != 0 {
-			key = id.TxId + ":" + strconv.FormatUint(id.Index, 10)
-		}
+		key := id.String()
 		tok, ok := t.tokens[key]
 		if !ok {
 			return nil, errors.Errorf("token not found: %s", key)

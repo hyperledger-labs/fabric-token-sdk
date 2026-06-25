@@ -84,6 +84,7 @@ type QueryEngine interface {
 	// ListUnspentTokens returns a comprehensive list of all unspent tokens.
 	ListUnspentTokens(ctx context.Context) (*token.UnspentTokens, error)
 	// ListAuditTokens returns the audited token data for the specified token IDs.
+	// The result is in order of ids meaning that the first token correspond to the first id and so on.
 	ListAuditTokens(ctx context.Context, ids ...*token.ID) ([]*token.Token, error)
 	// ListHistoryIssuedTokens returns a list of all tokens issued by the service.
 	ListHistoryIssuedTokens(ctx context.Context) (*token.IssuedTokens, error)

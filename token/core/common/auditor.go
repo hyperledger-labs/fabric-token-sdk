@@ -293,12 +293,11 @@ func RetrieveAuditTokens(
 		return nil, errors.WithMessagef(err, "failed to retrieve audit tokens for tx [%s]", anchor)
 	}
 
-	// Build the token map using token ID string as key
+	// Build the token map using token ID string as key.
+	// Tokens is in order of the ids.
 	auditTokens := make(map[string]*token.Token, len(tokens))
-	for i, tok := range tokens {
-		if tok != nil && i < len(tokenIDs) {
-			auditTokens[tokenIDs[i].String()] = tok
-		}
+	for i, id := range tokenIDs {
+		auditTokens[id.String()] = tokens[i]
 	}
 	logger.DebugfContext(ctx, "[%s] retrieved [%d] audit tokens", anchor, len(auditTokens))
 
