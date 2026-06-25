@@ -214,6 +214,5 @@ If you're migrating code that previously used ttxdb for validation records:
 
 ## See Also
 
-- [Storage Services Overview](../../docs/services/storage.md)
-- [TTXDB Documentation](ttxdb.md)
-- [AuditDB Documentation](../auditdb/README.md)
+- [Storage Services Overview](../storage.md)
+- [TTXDB/AuditDB Documentation](ttxdb.md)
