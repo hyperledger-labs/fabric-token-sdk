@@ -18,7 +18,7 @@
         <link rel="prev" href="../selector/">
       
       
-        <link rel="next" href="../tokens/">
+        <link rel="next" href="keystore_cleanup/">
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
@@ -26,7 +26,7 @@
     
     
       
-        <title>Storage - Fabric Token SDK</title>
+        <title>Overview - Fabric Token SDK</title>
       
     
     
@@ -112,7 +112,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Storage
+              Overview
             
           </span>
         </div>
@@ -1340,27 +1340,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../recovery/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Recovery
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../selector/" class="md-nav__link">
         
   
@@ -1383,6 +1362,51 @@
   
   
   
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_13" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4_13" id="__nav_4_13_label" tabindex="">
+            
+  
+  <span class="md-ellipsis">
+    Storage
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_13_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4_13">
+            <span class="md-nav__icon md-icon"></span>
+            Storage
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
     <li class="md-nav__item md-nav__item--active">
       
       <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
@@ -1395,7 +1419,7 @@
           
   
   <span class="md-ellipsis">
-    Storage
+    Overview
   </span>
   
 
@@ -1406,7 +1430,7 @@
         
   
   <span class="md-ellipsis">
-    Storage
+    Overview
   </span>
   
 
@@ -1625,9 +1649,119 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#keystore-cleanup-service" class="md-nav__link">
+    <span class="md-ellipsis">
+      Keystore Cleanup Service
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Keystore Cleanup Service">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#architecture_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      Architecture
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cleanup-manager" class="md-nav__link">
+    <span class="md-ellipsis">
+      Cleanup Manager
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cleanup-process" class="md-nav__link">
+    <span class="md-ellipsis">
+      Cleanup Process
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#database-backend-considerations_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Database Backend Considerations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configuration_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuration
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="keystore_cleanup/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Cleanup Service
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="recovery/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Recovery Service
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
       
     </li>
   
@@ -2270,6 +2404,66 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#keystore-cleanup-service" class="md-nav__link">
+    <span class="md-ellipsis">
+      Keystore Cleanup Service
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Keystore Cleanup Service">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#architecture_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      Architecture
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cleanup-manager" class="md-nav__link">
+    <span class="md-ellipsis">
+      Cleanup Manager
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cleanup-process" class="md-nav__link">
+    <span class="md-ellipsis">
+      Cleanup Process
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#database-backend-considerations_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Database Backend Considerations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configuration_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuration
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2321,6 +2515,7 @@
 <li><strong>PublicParameters</strong>: A cache for the network's cryptographic public parameters and their hashes.</li>
 <li><strong>TokenCertifications</strong>: Stores third-party certifications for tokens, often required by privacy-preserving drivers.</li>
 <li><strong>TokenLocks</strong>: Manages short-lived pessimistic locks on tokens to prevent double-spending during transaction assembly.</li>
+<li><strong>TokenSKICleanups</strong>: Tracks keystore cleanup operations for deleted tokens. Records when cryptographic keys were removed from the keystore and which instance performed the cleanup, preventing reprocessing and enabling audit trails in multi-instance deployments.</li>
 </ul>
 <h3 id="wallet-identity-store-walletdb-identitydb">Wallet &amp; Identity Store (WalletDB / IdentityDB)<a class="headerlink" href="#wallet-identity-store-walletdb-identitydb" title="Permanent link">&para;</a></h3>
 <p>Manages the cryptographic identities and logical wallet groupings used by the node.</p>
@@ -2332,7 +2527,7 @@
 </ul>
 <h3 id="generic-store">Generic Store<a class="headerlink" href="#generic-store" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>KeyStore</strong>: A secure, generic key-value store used for persisting various cryptographic materials and small sensitive states.</li>
+<li><strong>KeyStore</strong>: A secure, generic key-value store used for persisting various cryptographic materials and small sensitive states. The keystore uses identifiers that are expected to be the hexadecimal representation of the key's Subject Key Identifier (SKI). This convention is relied upon by other packages, particularly for operations like keystore cleanup where SKIs are derived from owner identities to locate and manage keys.</li>
 </ul>
 <h2 id="internal-databases">Internal Databases<a class="headerlink" href="#internal-databases" title="Permanent link">&para;</a></h2>
 <p>The SDK partitions its data into several specialized databases to maintain a clean separation of concerns.</p>
@@ -2361,7 +2556,7 @@ The <code>TokenDB</code> and <code>Movements</code> tables are typically updated
 This ensures that the local view of the "Token Landscape" always reflects the ground truth of the distributed ledger.</p>
 <h2 id="transaction-recovery-service">Transaction Recovery Service<a class="headerlink" href="#transaction-recovery-service" title="Permanent link">&para;</a></h2>
 <p>The Storage Service includes a <strong>Transaction Recovery Service</strong> that provides the core recovery mechanism for handling pending transactions that may have lost their finality listeners due to node restarts, network interruptions, or other failures.</p>
-<p>For detailed documentation on the recovery service architecture, configuration, and usage, see <a href="../recovery/"><strong>Transaction Recovery Service</strong></a>.</p>
+<p>For detailed documentation on the recovery service architecture, configuration, and usage, see <a href="recovery/"><strong>Transaction Recovery Service</strong></a>.</p>
 <h3 id="architecture_1">Architecture<a class="headerlink" href="#architecture_1" title="Permanent link">&para;</a></h3>
 <p>The recovery service is instantiated by the <strong>Network Service</strong> (both Fabric and FabricX implementations) and operates on either the <code>TTXDB</code> (for regular transactions) or <code>AuditDB</code> (for auditor nodes). 
 It provides a generic recovery mechanism that is independent of the specific network backend.</p>
@@ -2409,8 +2604,43 @@ It uses a distributed locking mechanism (PostgreSQL advisory locks) to ensure on
 - <strong>Limitations</strong>: Not suitable for multi-replica deployments as SQLite does not support the advisory lock mechanism used for leader election</p>
 <p><strong>Important</strong>: When using SQLite, ensure that only one node instance accesses the database file. Running multiple replicas with SQLite will result in undefined behavior and potential data corruption.</p>
 <h3 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h3>
-<p>Recovery behavior is controlled by the <code>token.tms.&lt;name&gt;.services.network.fabric.recovery</code> configuration section. 
-See the <a href="../../configuration/">Configuration Guide</a>, Section <code>Optional: token.tms.&lt;name&gt;.services.network.fabric.recovery</code>, for detailed parameter descriptions and tuning recommendations.</p>
+<p>Recovery behavior is controlled by the <code>token.tms.&lt;name&gt;.services.network.fabric.recovery</code> configuration section. </p>
+<h2 id="keystore-cleanup-service">Keystore Cleanup Service<a class="headerlink" href="#keystore-cleanup-service" title="Permanent link">&para;</a></h2>
+<p>The Storage Service includes a <strong>Keystore Cleanup Service</strong> that provides automatic deletion of cryptographic keys from the keystore for tokens that have been deleted (spent, expired, or invalidated). This ensures that the keystore doesn't accumulate stale keys indefinitely, improving security and reducing storage overhead.</p>
+<p>For detailed documentation on the cleanup service architecture, configuration, and usage, see <a href="keystore_cleanup/"><strong>Keystore Cleanup Service</strong></a>.</p>
+<h3 id="architecture_2">Architecture<a class="headerlink" href="#architecture_2" title="Permanent link">&para;</a></h3>
+<p>The cleanup service operates on the token database and keystore, scanning for deleted tokens that are eligible for key cleanup. It uses a distributed locking mechanism (PostgreSQL advisory locks) to ensure only one replica in a multi-instance deployment performs cleanup at a time.</p>
+<h3 id="cleanup-manager">Cleanup Manager<a class="headerlink" href="#cleanup-manager" title="Permanent link">&para;</a></h3>
+<p>The cleanup manager runs in the background and periodically scans for deleted tokens whose cryptographic keys can be safely removed from the keystore.</p>
+<p><strong>Key Features:</strong>
+- <strong>Automatic Key Deletion</strong>: Removes keys for deleted tokens after a configurable TTL period
+- <strong>SKI Derivation</strong>: Derives Subject Key Identifiers (SKIs) from owner identities to locate keys
+- <strong>Multi-Database Support</strong>:
+  - <strong>PostgreSQL</strong>: Recommended for production multi-instance deployments. Uses advisory locks for distributed coordination and leader election
+  - <strong>SQLite</strong>: Supported for single-node deployments and development. Handles node restarts gracefully but is not designed for multi-replica scenarios
+- <strong>Configurable Behavior</strong>: Cleanup parameters can be tuned via configuration (see <a href="../../configuration/">Configuration</a>)</p>
+<h3 id="cleanup-process">Cleanup Process<a class="headerlink" href="#cleanup-process" title="Permanent link">&para;</a></h3>
+<p>The cleanup service follows this workflow:</p>
+<ol>
+<li><strong>Leadership Acquisition</strong>: The cleanup manager acquires an advisory lock to become the leader</li>
+<li><strong>Scan Phase</strong>: Scans the token database for deleted tokens older than the configured TTL (default: 24 hours) that haven't had their keys cleaned</li>
+<li><strong>SKI Derivation</strong>: For each eligible token, derives SKIs from the owner identity</li>
+<li><strong>Key Deletion</strong>: Deletes the derived keys from the keystore using parallel workers</li>
+<li><strong>Tracking</strong>: Marks tokens as cleaned in the database to prevent reprocessing</li>
+</ol>
+<h3 id="database-backend-considerations_1">Database Backend Considerations<a class="headerlink" href="#database-backend-considerations_1" title="Permanent link">&para;</a></h3>
+<p>The cleanup service supports both PostgreSQL and SQLite backends, with different characteristics:</p>
+<p><strong>PostgreSQL:</strong>
+- <strong>Multi-Instance Support</strong>: Uses advisory locks for distributed coordination
+- <strong>Leader Election</strong>: Only one replica performs cleanup sweeps at a time
+- <strong>High Availability</strong>: Multiple replicas can share the same database</p>
+<p><strong>SQLite:</strong>
+- <strong>Single-Node Only</strong>: Suitable for development and single-node deployments
+- <strong>Node Restart Support</strong>: Cleanup resumes automatically after restart
+- <strong>No Multi-Replica Support</strong>: Lacks advisory lock mechanism for leader election</p>
+<h3 id="configuration_1">Configuration<a class="headerlink" href="#configuration_1" title="Permanent link">&para;</a></h3>
+<p>Cleanup behavior is controlled by the configuration section. See the <a href="../../configuration/">Configuration Guide</a> for detailed parameter descriptions and tuning recommendations.</p>
+<p>See the <a href="../../configuration/">Configuration Guide</a>, Section <code>Optional: token.tms.&lt;name&gt;.services.network.fabric.recovery</code>, for detailed parameter descriptions and tuning recommendations.</p>
 
 
 

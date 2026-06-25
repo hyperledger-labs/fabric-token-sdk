@@ -12,28 +12,28 @@
         <meta name="author" content="Hyperledger Labs">
       
       
-        <link rel="canonical" href="https://hyperledger-labs.github.io/fabric-token-sdk/services/recovery/">
+        <link rel="canonical" href="https://hyperledger-labs.github.io/fabric-token-sdk/services/storage/recovery/">
       
       
-        <link rel="prev" href="../nfttx/">
+        <link rel="prev" href="../keystore_cleanup/">
       
       
-        <link rel="next" href="../selector/">
+        <link rel="next" href="../../tokens/">
       
       
-      <link rel="icon" href="../../assets/images/favicon.png">
+      <link rel="icon" href="../../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.0, mkdocs-material-9.5.39">
     
     
       
-        <title>Recovery - Fabric Token SDK</title>
+        <title>Recovery Service - Fabric Token SDK</title>
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.8c3ca2c6.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.8c3ca2c6.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.06af60db.min.css">
       
       
 
@@ -52,7 +52,7 @@
       
     
     
-    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -92,7 +92,7 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../.." title="Fabric Token SDK" class="md-header__button md-logo" aria-label="Fabric Token SDK" data-md-component="logo">
+    <a href="../../.." title="Fabric Token SDK" class="md-header__button md-logo" aria-label="Fabric Token SDK" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -112,7 +112,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Recovery
+              Recovery Service
             
           </span>
         </div>
@@ -221,7 +221,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../.." class="md-tabs__link">
+      <a href="../../.." class="md-tabs__link">
         
   
     
@@ -240,7 +240,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../tokensdk/" class="md-tabs__link">
+        <a href="../../../tokensdk/" class="md-tabs__link">
           
   
   Core Concepts
@@ -258,7 +258,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../drivers/fabtoken/" class="md-tabs__link">
+        <a href="../../../drivers/fabtoken/" class="md-tabs__link">
           
   
   Drivers
@@ -278,7 +278,7 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="../auditor/" class="md-tabs__link">
+        <a href="../../auditor/" class="md-tabs__link">
           
   
   Services
@@ -296,7 +296,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../development/development/" class="md-tabs__link">
+        <a href="../../../development/development/" class="md-tabs__link">
           
   
   Development
@@ -312,7 +312,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../evolution_summary/" class="md-tabs__link">
+      <a href="../../../evolution_summary/" class="md-tabs__link">
         
   
     
@@ -346,7 +346,7 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../.." title="Fabric Token SDK" class="md-nav__button md-logo" aria-label="Fabric Token SDK" data-md-component="logo">
+    <a href="../../.." title="Fabric Token SDK" class="md-nav__button md-logo" aria-label="Fabric Token SDK" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -376,7 +376,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../.." class="md-nav__link">
+      <a href="../../.." class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -438,7 +438,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tokensdk/" class="md-nav__link">
+      <a href="../../../tokensdk/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -459,7 +459,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tokenapi/" class="md-nav__link">
+      <a href="../../../tokenapi/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -480,7 +480,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../token_sdk_usage/" class="md-nav__link">
+      <a href="../../../token_sdk_usage/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -501,7 +501,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../driverapi/" class="md-nav__link">
+      <a href="../../../driverapi/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -522,7 +522,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../configuration/" class="md-nav__link">
+      <a href="../../../configuration/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -543,7 +543,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../" class="md-nav__link">
+      <a href="../../" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -564,7 +564,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../upgradability/" class="md-nav__link">
+      <a href="../../../upgradability/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -585,7 +585,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../public_parameters/" class="md-nav__link">
+      <a href="../../../public_parameters/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -655,7 +655,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../drivers/fabtoken/" class="md-nav__link">
+      <a href="../../../drivers/fabtoken/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -676,7 +676,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../drivers/dlogwogh/" class="md-nav__link">
+      <a href="../../../drivers/dlogwogh/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -697,7 +697,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../drivers/extending_validator/" class="md-nav__link">
+      <a href="../../../drivers/extending_validator/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -718,7 +718,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../drivers/metrics/" class="md-nav__link">
+      <a href="../../../drivers/metrics/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -781,7 +781,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../drivers/benchmark/benchmark/" class="md-nav__link">
+      <a href="../../../drivers/benchmark/benchmark/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -802,7 +802,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../drivers/benchmark/tools/" class="md-nav__link">
+      <a href="../../../drivers/benchmark/tools/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -865,7 +865,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../drivers/benchmark/core/dlognogh/dlognogh/" class="md-nav__link">
+      <a href="../../../drivers/benchmark/core/dlognogh/dlognogh/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -886,7 +886,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../drivers/benchmark/core/dlognogh/dlognogh_architecture/" class="md-nav__link">
+      <a href="../../../drivers/benchmark/core/dlognogh/dlognogh_architecture/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -907,7 +907,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../drivers/benchmark/core/dlognogh/dlognogh_regression/" class="md-nav__link">
+      <a href="../../../drivers/benchmark/core/dlognogh/dlognogh_regression/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -928,7 +928,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../drivers/benchmark/core/dlognogh/transfer_BenchmarkSender_results/" class="md-nav__link">
+      <a href="../../../drivers/benchmark/core/dlognogh/transfer_BenchmarkSender_results/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -949,7 +949,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../drivers/benchmark/core/dlognogh/validator_transfer_profile/" class="md-nav__link">
+      <a href="../../../drivers/benchmark/core/dlognogh/validator_transfer_profile/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1020,7 +1020,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../drivers/benchmark/services/identity/idemix/" class="md-nav__link">
+      <a href="../../../drivers/benchmark/services/identity/idemix/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1109,7 +1109,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../auditor/" class="md-nav__link">
+      <a href="../../auditor/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1130,7 +1130,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../benchmark/" class="md-nav__link">
+      <a href="../../benchmark/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1151,7 +1151,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../certifier/" class="md-nav__link">
+      <a href="../../certifier/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1172,7 +1172,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../config/" class="md-nav__link">
+      <a href="../../config/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1193,7 +1193,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../identity/" class="md-nav__link">
+      <a href="../../identity/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1214,7 +1214,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../interop/" class="md-nav__link">
+      <a href="../../interop/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1235,7 +1235,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../network-ethereum/" class="md-nav__link">
+      <a href="../../network-ethereum/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1256,7 +1256,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../network-fabric/" class="md-nav__link">
+      <a href="../../network-fabric/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1277,7 +1277,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../network-fabricx/" class="md-nav__link">
+      <a href="../../network-fabricx/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1298,7 +1298,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../network/" class="md-nav__link">
+      <a href="../../network/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1319,11 +1319,119 @@
   
   
     <li class="md-nav__item">
-      <a href="../nfttx/" class="md-nav__link">
+      <a href="../../nfttx/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
     NFT Tx
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../selector/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Selector
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_13" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4_13" id="__nav_4_13_label" tabindex="">
+            
+  
+  <span class="md-ellipsis">
+    Storage
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_13_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4_13">
+            <span class="md-nav__icon md-icon"></span>
+            Storage
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../keystore_cleanup/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Cleanup Service
   </span>
   
 
@@ -1353,7 +1461,7 @@
           
   
   <span class="md-ellipsis">
-    Recovery
+    Recovery Service
   </span>
   
 
@@ -1364,7 +1472,7 @@
         
   
   <span class="md-ellipsis">
-    Recovery
+    Recovery Service
   </span>
   
 
@@ -1583,22 +1691,9 @@
 
               
             
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../selector/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Selector
-  </span>
-  
-
-      </a>
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -1611,28 +1706,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../storage/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Storage
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../tokens/" class="md-nav__link">
+      <a href="../../tokens/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1653,7 +1727,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../ttx/" class="md-nav__link">
+      <a href="../../ttx/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1723,7 +1797,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../development/development/" class="md-nav__link">
+      <a href="../../../development/development/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1744,7 +1818,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../development/general/" class="md-nav__link">
+      <a href="../../../development/general/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1765,7 +1839,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../development/idiomatic/" class="md-nav__link">
+      <a href="../../../development/idiomatic/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1786,7 +1860,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../development/mock/" class="md-nav__link">
+      <a href="../../../development/mock/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1807,7 +1881,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../development/linting/" class="md-nav__link">
+      <a href="../../../development/linting/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1828,7 +1902,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../development/makefile/" class="md-nav__link">
+      <a href="../../../development/makefile/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1849,7 +1923,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../development/monitoring/" class="md-nav__link">
+      <a href="../../../development/monitoring/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1870,7 +1944,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../development/storage/" class="md-nav__link">
+      <a href="../../../development/storage/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1891,7 +1965,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../development/testing/" class="md-nav__link">
+      <a href="../../../development/testing/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1912,7 +1986,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../development/tokengen/" class="md-nav__link">
+      <a href="../../../development/tokengen/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1933,7 +2007,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../development/tools/" class="md-nav__link">
+      <a href="../../../development/tools/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1954,7 +2028,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../development/versioning/" class="md-nav__link">
+      <a href="../../../development/versioning/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1975,7 +2049,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../development/ai_agents/" class="md-nav__link">
+      <a href="../../../development/ai_agents/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1996,7 +2070,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../development/documentation/" class="md-nav__link">
+      <a href="../../../development/documentation/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -2024,7 +2098,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../evolution_summary/" class="md-nav__link">
+      <a href="../../../evolution_summary/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -2313,7 +2387,7 @@
 - Not designed for multi-replica scenarios
 - No distributed locking mechanism</p>
 <h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
-<p>Recovery behavior is controlled via configuration (see <a href="../../configuration/">Configuration</a>):</p>
+<p>Recovery behavior is controlled via configuration (see <a href="../../../configuration/">Configuration</a>):</p>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">recovery</span><span class="p">:</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">              </span><span class="c1"># Enable/disable recovery</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">ttl</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">30s</span><span class="w">                   </span><span class="c1"># Minimum age before recovery</span>
@@ -2466,10 +2540,10 @@
     </div>
     
     
-    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.expand", "navigation.tracking", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../../..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.expand", "navigation.tracking", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../../assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.525ec568.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.525ec568.min.js"></script>
       
     
   </body>

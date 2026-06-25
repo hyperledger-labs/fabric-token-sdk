@@ -635,6 +635,30 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#optional-tokentmsservicesstoragecleanup" class="md-nav__link">
+    <span class="md-ellipsis">
+      Optional: token.tms..services.storage.cleanup
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#-" class="md-nav__link">
+    <span class="md-ellipsis">
+      ---
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="---">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
   <a href="#optional-tokentmsauditorlock" class="md-nav__link">
     <span class="md-ellipsis">
       Optional: token.tms..auditor.lock
@@ -1467,27 +1491,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../services/recovery/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Recovery
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../services/selector/" class="md-nav__link">
         
   
@@ -1508,16 +1511,108 @@
   
   
   
-    <li class="md-nav__item">
-      <a href="../services/storage/" class="md-nav__link">
+    
+    
+    
+      
+      
         
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_13" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_13" id="__nav_4_13_label" tabindex="0">
+            
   
   <span class="md-ellipsis">
     Storage
   </span>
   
 
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_13_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_13">
+            <span class="md-nav__icon md-icon"></span>
+            Storage
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../services/storage/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+  </span>
+  
+
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../services/storage/keystore_cleanup/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Cleanup Service
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../services/storage/recovery/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Recovery Service
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -2026,6 +2121,30 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#optional-tokentmsservicesstoragecleanup" class="md-nav__link">
+    <span class="md-ellipsis">
+      Optional: token.tms..services.storage.cleanup
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#-" class="md-nav__link">
+    <span class="md-ellipsis">
+      ---
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="---">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
   <a href="#optional-tokentmsauditorlock" class="md-nav__link">
     <span class="md-ellipsis">
       Optional: token.tms..auditor.lock
@@ -2107,7 +2226,7 @@
 </span><span id="__span-0-37"><a id="__codelineno-0-37" name="__codelineno-0-37" href="#__codelineno-0-37"></a>
 </span><span id="__span-0-38"><a id="__codelineno-0-38" name="__codelineno-0-38" href="#__codelineno-0-38"></a><span class="w">  </span><span class="c1"># When we are interested in knowing when a transaction reaches finality, we subscribe to the Finality Listener Manager for the finality event of that transaction.</span>
 </span><span id="__span-0-39"><a id="__codelineno-0-39" name="__codelineno-0-39" href="#__codelineno-0-39"></a><span class="w">  </span><span class="c1"># This configuration specifies the way the manager is instantiated (i.e., how it gets notified about the finality events, how often it checks).</span>
-</span><span id="__span-0-40"><a id="__codelineno-0-40" name="__codelineno-0-40" href="#__codelineno-0-40"></a><span class="w w-Error"> </span><span class="nt">finality</span><span class="p">:</span>
+</span><span id="__span-0-40"><a id="__codelineno-0-40" name="__codelineno-0-40" href="#__codelineno-0-40"></a><span class="w">  </span><span class="nt">finality</span><span class="p">:</span>
 </span><span id="__span-0-41"><a id="__codelineno-0-41" name="__codelineno-0-41" href="#__codelineno-0-41"></a><span class="w">    </span><span class="c1"># Only applicable for fabric networks.</span>
 </span><span id="__span-0-42"><a id="__codelineno-0-42" name="__codelineno-0-42" href="#__codelineno-0-42"></a><span class="w">    </span><span class="c1"># The manager subscribes to the delivery service and receives all final transactions.</span>
 </span><span id="__span-0-43"><a id="__codelineno-0-43" name="__codelineno-0-43" href="#__codelineno-0-43"></a><span class="w">    </span><span class="c1">#   This manager keeps two structures: an LRU cache of recently finalized transactions, and a list of listeners that are waiting for future transactions.</span>
@@ -2147,7 +2266,7 @@
 </span><span id="__span-0-77"><a id="__codelineno-0-77" name="__codelineno-0-77" href="#__codelineno-0-77"></a><span class="w">      </span><span class="nt">queueSize</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1000</span>
 </span><span id="__span-0-78"><a id="__codelineno-0-78" name="__codelineno-0-78" href="#__codelineno-0-78"></a>
 </span><span id="__span-0-79"><a id="__codelineno-0-79" name="__codelineno-0-79" href="#__codelineno-0-79"></a><span class="w">  </span><span class="c1"># fabricx configuration for FabricX-specific settings</span>
-</span><span id="__span-0-80"><a id="__codelineno-0-80" name="__codelineno-0-80" href="#__codelineno-0-80"></a><span class="w"> </span><span class="w w-Error"> </span><span class="nt">fabricx</span><span class="p">:</span>
+</span><span id="__span-0-80"><a id="__codelineno-0-80" name="__codelineno-0-80" href="#__codelineno-0-80"></a><span class="w">  </span><span class="nt">fabricx</span><span class="p">:</span>
 </span><span id="__span-0-81"><a id="__codelineno-0-81" name="__codelineno-0-81" href="#__codelineno-0-81"></a><span class="w">    </span><span class="c1"># lookup configuration for the lookup service</span>
 </span><span id="__span-0-82"><a id="__codelineno-0-82" name="__codelineno-0-82" href="#__codelineno-0-82"></a><span class="w">    </span><span class="nt">lookup</span><span class="p">:</span>
 </span><span id="__span-0-83"><a id="__codelineno-0-83" name="__codelineno-0-83" href="#__codelineno-0-83"></a><span class="w">      </span><span class="c1"># permanent lookup configuration</span>
@@ -2274,115 +2393,165 @@
 </span><span id="__span-0-204"><a id="__codelineno-0-204" name="__codelineno-0-204" href="#__codelineno-0-204"></a><span class="w">              </span><span class="c1"># on every sweep until it either resolves or an operator intervenes.</span>
 </span><span id="__span-0-205"><a id="__codelineno-0-205" name="__codelineno-0-205" href="#__codelineno-0-205"></a><span class="w">              </span><span class="nt">notFoundGracePeriod</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">30m</span>
 </span><span id="__span-0-206"><a id="__codelineno-0-206" name="__codelineno-0-206" href="#__codelineno-0-206"></a>
-</span><span id="__span-0-207"><a id="__codelineno-0-207" name="__codelineno-0-207" href="#__codelineno-0-207"></a><span class="w">      </span><span class="c1"># auditor-specific settings</span>
-</span><span id="__span-0-208"><a id="__codelineno-0-208" name="__codelineno-0-208" href="#__codelineno-0-208"></a><span class="w">      </span><span class="nt">auditor</span><span class="p">:</span>
-</span><span id="__span-0-209"><a id="__codelineno-0-209" name="__codelineno-0-209" href="#__codelineno-0-209"></a><span class="w">        </span><span class="c1"># locker configures the distributed locking strategy for the auditor&#39;s</span>
-</span><span id="__span-0-210"><a id="__codelineno-0-210" name="__codelineno-0-210" href="#__codelineno-0-210"></a><span class="w">        </span><span class="c1"># enrollment-ID (EID) locks. These locks serialise concurrent access</span>
-</span><span id="__span-0-211"><a id="__codelineno-0-211" name="__codelineno-0-211" href="#__codelineno-0-211"></a><span class="w">        </span><span class="c1"># to the same EIDs across replicas when processing audit records.</span>
-</span><span id="__span-0-212"><a id="__codelineno-0-212" name="__codelineno-0-212" href="#__codelineno-0-212"></a><span class="w">        </span><span class="nt">locker</span><span class="p">:</span>
-</span><span id="__span-0-213"><a id="__codelineno-0-213" name="__codelineno-0-213" href="#__codelineno-0-213"></a><span class="w">          </span><span class="c1"># backend selects the Locker implementation.</span>
-</span><span id="__span-0-214"><a id="__codelineno-0-214" name="__codelineno-0-214" href="#__codelineno-0-214"></a><span class="w">          </span><span class="c1">#   &quot;memory&quot;   – in-process mutex (default, single-replica only)</span>
-</span><span id="__span-0-215"><a id="__codelineno-0-215" name="__codelineno-0-215" href="#__codelineno-0-215"></a><span class="w">          </span><span class="c1">#   &quot;postgres&quot; – PostgreSQL lease-table (multi-replica)</span>
-</span><span id="__span-0-216"><a id="__codelineno-0-216" name="__codelineno-0-216" href="#__codelineno-0-216"></a><span class="w">          </span><span class="nt">backend</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">memory</span>
-</span><span id="__span-0-217"><a id="__codelineno-0-217" name="__codelineno-0-217" href="#__codelineno-0-217"></a><span class="w">          </span><span class="c1"># postgres section is read only when backend == &quot;postgres&quot;.</span>
-</span><span id="__span-0-218"><a id="__codelineno-0-218" name="__codelineno-0-218" href="#__codelineno-0-218"></a><span class="w">          </span><span class="nt">postgres</span><span class="p">:</span>
-</span><span id="__span-0-219"><a id="__codelineno-0-219" name="__codelineno-0-219" href="#__codelineno-0-219"></a><span class="w">            </span><span class="c1"># ttl is the lease duration for each EID lock row.</span>
-</span><span id="__span-0-220"><a id="__codelineno-0-220" name="__codelineno-0-220" href="#__codelineno-0-220"></a><span class="w">            </span><span class="nt">ttl</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">30s</span>
-</span><span id="__span-0-221"><a id="__codelineno-0-221" name="__codelineno-0-221" href="#__codelineno-0-221"></a><span class="w">            </span><span class="c1"># acquireBackoff is the wait between retry attempts when a lock is contended.</span>
-</span><span id="__span-0-222"><a id="__codelineno-0-222" name="__codelineno-0-222" href="#__codelineno-0-222"></a><span class="w">            </span><span class="nt">acquireBackoff</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">100ms</span>
-</span><span id="__span-0-223"><a id="__codelineno-0-223" name="__codelineno-0-223" href="#__codelineno-0-223"></a><span class="w">            </span><span class="c1"># acquireDeadline is the total time allowed to acquire all EID locks.</span>
-</span><span id="__span-0-224"><a id="__codelineno-0-224" name="__codelineno-0-224" href="#__codelineno-0-224"></a><span class="w">            </span><span class="nt">acquireDeadline</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1m</span>
-</span><span id="__span-0-225"><a id="__codelineno-0-225" name="__codelineno-0-225" href="#__codelineno-0-225"></a><span class="w">            </span><span class="c1"># heartbeat is the interval at which held leases are renewed (~TTL/3).</span>
-</span><span id="__span-0-226"><a id="__codelineno-0-226" name="__codelineno-0-226" href="#__codelineno-0-226"></a><span class="w">            </span><span class="nt">heartbeat</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10s</span>
-</span><span id="__span-0-227"><a id="__codelineno-0-227" name="__codelineno-0-227" href="#__codelineno-0-227"></a><span class="w">            </span><span class="c1"># owner identifies this replica. Auto-generated at startup if empty.</span>
-</span><span id="__span-0-228"><a id="__codelineno-0-228" name="__codelineno-0-228" href="#__codelineno-0-228"></a><span class="w">            </span><span class="nt">owner</span><span class="p">:</span>
-</span><span id="__span-0-229"><a id="__codelineno-0-229" name="__codelineno-0-229" href="#__codelineno-0-229"></a>
-</span><span id="__span-0-230"><a id="__codelineno-0-230" name="__codelineno-0-230" href="#__codelineno-0-230"></a><span class="w">      </span><span class="c1"># sections dedicated to the definition of the wallets</span>
-</span><span id="__span-0-231"><a id="__codelineno-0-231" name="__codelineno-0-231" href="#__codelineno-0-231"></a><span class="w">      </span><span class="nt">wallets</span><span class="p">:</span>
-</span><span id="__span-0-232"><a id="__codelineno-0-232" name="__codelineno-0-232" href="#__codelineno-0-232"></a><span class="w">        </span><span class="c1"># Default cache size reference that can be used by any wallet that supports caching.</span>
-</span><span id="__span-0-233"><a id="__codelineno-0-233" name="__codelineno-0-233" href="#__codelineno-0-233"></a><span class="w">        </span><span class="nt">defaultCacheSize</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3</span>
-</span><span id="__span-0-234"><a id="__codelineno-0-234" name="__codelineno-0-234" href="#__codelineno-0-234"></a><span class="w">        </span><span class="c1"># owner wallets</span>
-</span><span id="__span-0-235"><a id="__codelineno-0-235" name="__codelineno-0-235" href="#__codelineno-0-235"></a><span class="w">        </span><span class="nt">owners</span><span class="p">:</span>
-</span><span id="__span-0-236"><a id="__codelineno-0-236" name="__codelineno-0-236" href="#__codelineno-0-236"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">alice</span><span class="w"> </span><span class="c1"># the unique identifier of this wallet. Here is an example of use: `ttx.GetWallet(context, &quot;alice&quot;)` </span>
-</span><span id="__span-0-237"><a id="__codelineno-0-237" name="__codelineno-0-237" href="#__codelineno-0-237"></a><span class="w">          </span><span class="nt">default</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w"> </span><span class="c1"># is this the default owner wallet</span>
-</span><span id="__span-0-238"><a id="__codelineno-0-238" name="__codelineno-0-238" href="#__codelineno-0-238"></a><span class="w">          </span><span class="c1"># path to the folder containing the cryptographic material associated with the wallet.</span>
-</span><span id="__span-0-239"><a id="__codelineno-0-239" name="__codelineno-0-239" href="#__codelineno-0-239"></a><span class="w">          </span><span class="c1"># The content of the folder is driver dependent.</span>
-</span><span id="__span-0-240"><a id="__codelineno-0-240" name="__codelineno-0-240" href="#__codelineno-0-240"></a><span class="w">          </span><span class="nt">path</span><span class="p">:</span><span class="w">  </span><span class="l l-Scalar l-Scalar-Plain">/path/to/alice-wallet</span>
-</span><span id="__span-0-241"><a id="__codelineno-0-241" name="__codelineno-0-241" href="#__codelineno-0-241"></a><span class="w">          </span><span class="c1"># Cache size, in case the wallet supports caching (e.g., idemix-based wallet).</span>
-</span><span id="__span-0-242"><a id="__codelineno-0-242" name="__codelineno-0-242" href="#__codelineno-0-242"></a><span class="w">          </span><span class="nt">cacheSize</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3</span>
-</span><span id="__span-0-243"><a id="__codelineno-0-243" name="__codelineno-0-243" href="#__codelineno-0-243"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">alice.id1</span>
-</span><span id="__span-0-244"><a id="__codelineno-0-244" name="__codelineno-0-244" href="#__codelineno-0-244"></a><span class="w">          </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/path/to/alice.id1-wallet</span>
-</span><span id="__span-0-245"><a id="__codelineno-0-245" name="__codelineno-0-245" href="#__codelineno-0-245"></a><span class="w">        </span><span class="c1"># issuer wallets</span>
-</span><span id="__span-0-246"><a id="__codelineno-0-246" name="__codelineno-0-246" href="#__codelineno-0-246"></a><span class="w">        </span><span class="nt">issuers</span><span class="p">:</span>
-</span><span id="__span-0-247"><a id="__codelineno-0-247" name="__codelineno-0-247" href="#__codelineno-0-247"></a><span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">issuer</span><span class="w"> </span><span class="c1"># the unique identifier of this wallet. Here is an example of use: `ttx.GetIssuerWallet(context, &quot;issuer&quot;)`</span>
-</span><span id="__span-0-248"><a id="__codelineno-0-248" name="__codelineno-0-248" href="#__codelineno-0-248"></a><span class="w">            </span><span class="nt">default</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w"> </span><span class="c1"># is this the default issuer wallet</span>
-</span><span id="__span-0-249"><a id="__codelineno-0-249" name="__codelineno-0-249" href="#__codelineno-0-249"></a><span class="w">            </span><span class="c1"># path to the folder containing the cryptographic material associated with the wallet.</span>
-</span><span id="__span-0-250"><a id="__codelineno-0-250" name="__codelineno-0-250" href="#__codelineno-0-250"></a><span class="w">            </span><span class="c1"># The content of the folder is driver dependent.</span>
-</span><span id="__span-0-251"><a id="__codelineno-0-251" name="__codelineno-0-251" href="#__codelineno-0-251"></a><span class="w">            </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/path/to/issuer-wallet</span>
-</span><span id="__span-0-252"><a id="__codelineno-0-252" name="__codelineno-0-252" href="#__codelineno-0-252"></a><span class="w">            </span><span class="c1"># additional options that can be used to instantiate the wallet.</span>
-</span><span id="__span-0-253"><a id="__codelineno-0-253" name="__codelineno-0-253" href="#__codelineno-0-253"></a><span class="w">            </span><span class="c1"># options are driver dependent. With `fabtoken` and `dlog` drivers,</span>
-</span><span id="__span-0-254"><a id="__codelineno-0-254" name="__codelineno-0-254" href="#__codelineno-0-254"></a><span class="w">            </span><span class="c1"># the following options apply.</span>
-</span><span id="__span-0-255"><a id="__codelineno-0-255" name="__codelineno-0-255" href="#__codelineno-0-255"></a><span class="w">            </span><span class="nt">opts</span><span class="p">:</span>
-</span><span id="__span-0-256"><a id="__codelineno-0-256" name="__codelineno-0-256" href="#__codelineno-0-256"></a><span class="w">              </span><span class="nt">BCCSP</span><span class="p">:</span>
-</span><span id="__span-0-257"><a id="__codelineno-0-257" name="__codelineno-0-257" href="#__codelineno-0-257"></a><span class="w">                </span><span class="nt">Default</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">SW</span>
-</span><span id="__span-0-258"><a id="__codelineno-0-258" name="__codelineno-0-258" href="#__codelineno-0-258"></a><span class="w">                </span><span class="nt">SW</span><span class="p">:</span>
-</span><span id="__span-0-259"><a id="__codelineno-0-259" name="__codelineno-0-259" href="#__codelineno-0-259"></a><span class="w">                  </span><span class="nt">Hash</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">SHA2</span>
-</span><span id="__span-0-260"><a id="__codelineno-0-260" name="__codelineno-0-260" href="#__codelineno-0-260"></a><span class="w">                  </span><span class="nt">Security</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">256</span>
-</span><span id="__span-0-261"><a id="__codelineno-0-261" name="__codelineno-0-261" href="#__codelineno-0-261"></a><span class="w">                </span><span class="c1"># The following only needs to be defined if the BCCSP Default is set to PKCS11.</span>
-</span><span id="__span-0-262"><a id="__codelineno-0-262" name="__codelineno-0-262" href="#__codelineno-0-262"></a><span class="w">                </span><span class="c1"># NOTE: in order to use pkcs11, you have to build the application with &quot;go build -tags pkcs11&quot;</span>
-</span><span id="__span-0-263"><a id="__codelineno-0-263" name="__codelineno-0-263" href="#__codelineno-0-263"></a><span class="w">                </span><span class="nt">PKCS11</span><span class="p">:</span>
-</span><span id="__span-0-264"><a id="__codelineno-0-264" name="__codelineno-0-264" href="#__codelineno-0-264"></a><span class="w">                  </span><span class="nt">Hash</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">SHA2</span>
-</span><span id="__span-0-265"><a id="__codelineno-0-265" name="__codelineno-0-265" href="#__codelineno-0-265"></a><span class="w">                  </span><span class="nt">Label</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span>
-</span><span id="__span-0-266"><a id="__codelineno-0-266" name="__codelineno-0-266" href="#__codelineno-0-266"></a><span class="w">                  </span><span class="nt">Library</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span>
-</span><span id="__span-0-267"><a id="__codelineno-0-267" name="__codelineno-0-267" href="#__codelineno-0-267"></a><span class="w">                  </span><span class="nt">Pin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span>
-</span><span id="__span-0-268"><a id="__codelineno-0-268" name="__codelineno-0-268" href="#__codelineno-0-268"></a><span class="w">                  </span><span class="nt">Security</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">256</span>
-</span><span id="__span-0-269"><a id="__codelineno-0-269" name="__codelineno-0-269" href="#__codelineno-0-269"></a><span class="w">        </span><span class="c1"># auditor wallets</span>
-</span><span id="__span-0-270"><a id="__codelineno-0-270" name="__codelineno-0-270" href="#__codelineno-0-270"></a><span class="w">        </span><span class="nt">auditors</span><span class="p">:</span>
-</span><span id="__span-0-271"><a id="__codelineno-0-271" name="__codelineno-0-271" href="#__codelineno-0-271"></a><span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">auditor</span><span class="w"> </span><span class="c1"># the unique identifier of this wallet. Here is an example of use: `ttx.GetAuditorWallet(context, &quot;auditor&quot;)`</span>
-</span><span id="__span-0-272"><a id="__codelineno-0-272" name="__codelineno-0-272" href="#__codelineno-0-272"></a><span class="w">            </span><span class="nt">default</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w"> </span><span class="c1"># is this the default auditor wallet  </span>
-</span><span id="__span-0-273"><a id="__codelineno-0-273" name="__codelineno-0-273" href="#__codelineno-0-273"></a><span class="w">            </span><span class="c1"># path to the folder containing the cryptographic material associated with the wallet.</span>
-</span><span id="__span-0-274"><a id="__codelineno-0-274" name="__codelineno-0-274" href="#__codelineno-0-274"></a><span class="w">            </span><span class="c1"># The content of the folder is driver dependent.</span>
-</span><span id="__span-0-275"><a id="__codelineno-0-275" name="__codelineno-0-275" href="#__codelineno-0-275"></a><span class="w">            </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/path/to/auditor-wallet</span>
-</span><span id="__span-0-276"><a id="__codelineno-0-276" name="__codelineno-0-276" href="#__codelineno-0-276"></a><span class="w">            </span><span class="c1"># additional options that can be used to instantiate the wallet.</span>
-</span><span id="__span-0-277"><a id="__codelineno-0-277" name="__codelineno-0-277" href="#__codelineno-0-277"></a><span class="w">            </span><span class="c1"># options are driver dependent. With `fabtoken` and `dlog` drivers,</span>
-</span><span id="__span-0-278"><a id="__codelineno-0-278" name="__codelineno-0-278" href="#__codelineno-0-278"></a><span class="w">            </span><span class="c1"># the following options apply</span>
-</span><span id="__span-0-279"><a id="__codelineno-0-279" name="__codelineno-0-279" href="#__codelineno-0-279"></a><span class="w">            </span><span class="nt">opts</span><span class="p">:</span>
-</span><span id="__span-0-280"><a id="__codelineno-0-280" name="__codelineno-0-280" href="#__codelineno-0-280"></a><span class="w">              </span><span class="nt">BCCSP</span><span class="p">:</span>
-</span><span id="__span-0-281"><a id="__codelineno-0-281" name="__codelineno-0-281" href="#__codelineno-0-281"></a><span class="w">                </span><span class="nt">Default</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">SW</span>
-</span><span id="__span-0-282"><a id="__codelineno-0-282" name="__codelineno-0-282" href="#__codelineno-0-282"></a><span class="w">                </span><span class="nt">PKCS11</span><span class="p">:</span>
-</span><span id="__span-0-283"><a id="__codelineno-0-283" name="__codelineno-0-283" href="#__codelineno-0-283"></a><span class="w">                  </span><span class="nt">Hash</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">SHA2</span>
-</span><span id="__span-0-284"><a id="__codelineno-0-284" name="__codelineno-0-284" href="#__codelineno-0-284"></a><span class="w">                  </span><span class="nt">Label</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span>
-</span><span id="__span-0-285"><a id="__codelineno-0-285" name="__codelineno-0-285" href="#__codelineno-0-285"></a><span class="w">                  </span><span class="nt">Library</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span>
-</span><span id="__span-0-286"><a id="__codelineno-0-286" name="__codelineno-0-286" href="#__codelineno-0-286"></a><span class="w">                  </span><span class="nt">Pin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span>
-</span><span id="__span-0-287"><a id="__codelineno-0-287" name="__codelineno-0-287" href="#__codelineno-0-287"></a><span class="w">                  </span><span class="nt">Security</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">256</span>
-</span><span id="__span-0-288"><a id="__codelineno-0-288" name="__codelineno-0-288" href="#__codelineno-0-288"></a><span class="w">                </span><span class="nt">SW</span><span class="p">:</span>
-</span><span id="__span-0-289"><a id="__codelineno-0-289" name="__codelineno-0-289" href="#__codelineno-0-289"></a><span class="w">                  </span><span class="nt">Hash</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">SHA2</span>
-</span><span id="__span-0-290"><a id="__codelineno-0-290" name="__codelineno-0-290" href="#__codelineno-0-290"></a><span class="w">      </span><span class="c1"># Auditor lock configuration for enrollment ID locking during audit operations</span>
-</span><span id="__span-0-291"><a id="__codelineno-0-291" name="__codelineno-0-291" href="#__codelineno-0-291"></a><span class="w">      </span><span class="c1"># These settings control the retry behavior when multiple auditors compete for locks</span>
-</span><span id="__span-0-292"><a id="__codelineno-0-292" name="__codelineno-0-292" href="#__codelineno-0-292"></a><span class="w">      </span><span class="nt">auditor</span><span class="p">:</span>
-</span><span id="__span-0-293"><a id="__codelineno-0-293" name="__codelineno-0-293" href="#__codelineno-0-293"></a><span class="w">        </span><span class="nt">lock</span><span class="p">:</span>
-</span><span id="__span-0-294"><a id="__codelineno-0-294" name="__codelineno-0-294" href="#__codelineno-0-294"></a><span class="w">          </span><span class="c1"># maxRetries is the maximum number of retry attempts for lock acquisition</span>
-</span><span id="__span-0-295"><a id="__codelineno-0-295" name="__codelineno-0-295" href="#__codelineno-0-295"></a><span class="w">          </span><span class="c1"># Default: 10</span>
-</span><span id="__span-0-296"><a id="__codelineno-0-296" name="__codelineno-0-296" href="#__codelineno-0-296"></a><span class="w">          </span><span class="nt">maxRetries</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10</span>
-</span><span id="__span-0-297"><a id="__codelineno-0-297" name="__codelineno-0-297" href="#__codelineno-0-297"></a>
-</span><span id="__span-0-298"><a id="__codelineno-0-298" name="__codelineno-0-298" href="#__codelineno-0-298"></a><span class="w">          </span><span class="c1"># initialBackoff is the initial backoff delay before the first retry</span>
-</span><span id="__span-0-299"><a id="__codelineno-0-299" name="__codelineno-0-299" href="#__codelineno-0-299"></a><span class="w">          </span><span class="c1"># Default: 10ms</span>
-</span><span id="__span-0-300"><a id="__codelineno-0-300" name="__codelineno-0-300" href="#__codelineno-0-300"></a><span class="w">          </span><span class="nt">initialBackoff</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10ms</span>
-</span><span id="__span-0-301"><a id="__codelineno-0-301" name="__codelineno-0-301" href="#__codelineno-0-301"></a>
-</span><span id="__span-0-302"><a id="__codelineno-0-302" name="__codelineno-0-302" href="#__codelineno-0-302"></a><span class="w">          </span><span class="c1"># maxBackoff is the maximum backoff delay between retries</span>
-</span><span id="__span-0-303"><a id="__codelineno-0-303" name="__codelineno-0-303" href="#__codelineno-0-303"></a><span class="w">          </span><span class="c1"># Default: 5s</span>
-</span><span id="__span-0-304"><a id="__codelineno-0-304" name="__codelineno-0-304" href="#__codelineno-0-304"></a><span class="w">          </span><span class="nt">maxBackoff</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5s</span>
-</span><span id="__span-0-305"><a id="__codelineno-0-305" name="__codelineno-0-305" href="#__codelineno-0-305"></a>
-</span><span id="__span-0-306"><a id="__codelineno-0-306" name="__codelineno-0-306" href="#__codelineno-0-306"></a><span class="w">          </span><span class="c1"># backoffMultiplier is the exponential backoff multiplier</span>
-</span><span id="__span-0-307"><a id="__codelineno-0-307" name="__codelineno-0-307" href="#__codelineno-0-307"></a><span class="w">          </span><span class="c1"># Each retry delay is multiplied by this factor</span>
-</span><span id="__span-0-308"><a id="__codelineno-0-308" name="__codelineno-0-308" href="#__codelineno-0-308"></a><span class="w">          </span><span class="c1"># Default: 2.0</span>
-</span><span id="__span-0-309"><a id="__codelineno-0-309" name="__codelineno-0-309" href="#__codelineno-0-309"></a><span class="w">          </span><span class="nt">backoffMultiplier</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2.0</span>
-</span><span id="__span-0-310"><a id="__codelineno-0-310" name="__codelineno-0-310" href="#__codelineno-0-310"></a>
-</span><span id="__span-0-311"><a id="__codelineno-0-311" name="__codelineno-0-311" href="#__codelineno-0-311"></a><span class="w">          </span><span class="c1"># jitterFactor is the randomization factor to prevent thundering herd (0.0 to 1.0)</span>
-</span><span id="__span-0-312"><a id="__codelineno-0-312" name="__codelineno-0-312" href="#__codelineno-0-312"></a><span class="w">          </span><span class="c1"># Adds random jitter to break symmetry when multiple auditors retry simultaneously</span>
-</span><span id="__span-0-313"><a id="__codelineno-0-313" name="__codelineno-0-313" href="#__codelineno-0-313"></a><span class="w">          </span><span class="c1"># Default: 0.3 (30%)</span>
-</span><span id="__span-0-314"><a id="__codelineno-0-314" name="__codelineno-0-314" href="#__codelineno-0-314"></a><span class="w">          </span><span class="nt">jitterFactor</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.3</span>
-</span><span id="__span-0-315"><a id="__codelineno-0-315" name="__codelineno-0-315" href="#__codelineno-0-315"></a><span class="w">                  </span><span class="l l-Scalar l-Scalar-Plain">Security</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">256</span>
+</span><span id="__span-0-207"><a id="__codelineno-0-207" name="__codelineno-0-207" href="#__codelineno-0-207"></a><span class="w">        </span><span class="c1"># storage service configuration</span>
+</span><span id="__span-0-208"><a id="__codelineno-0-208" name="__codelineno-0-208" href="#__codelineno-0-208"></a><span class="w">        </span><span class="nt">storage</span><span class="p">:</span>
+</span><span id="__span-0-209"><a id="__codelineno-0-209" name="__codelineno-0-209" href="#__codelineno-0-209"></a><span class="w">          </span><span class="c1"># cleanup config controls automatic deletion of cryptographic keys from the keystore</span>
+</span><span id="__span-0-210"><a id="__codelineno-0-210" name="__codelineno-0-210" href="#__codelineno-0-210"></a><span class="w">          </span><span class="c1"># for tokens that have been deleted (spent, expired, or invalidated).</span>
+</span><span id="__span-0-211"><a id="__codelineno-0-211" name="__codelineno-0-211" href="#__codelineno-0-211"></a><span class="w">          </span><span class="c1"># If omitted, the cleanup manager uses its built-in defaults (disabled by default).</span>
+</span><span id="__span-0-212"><a id="__codelineno-0-212" name="__codelineno-0-212" href="#__codelineno-0-212"></a><span class="w">          </span><span class="nt">cleanup</span><span class="p">:</span>
+</span><span id="__span-0-213"><a id="__codelineno-0-213" name="__codelineno-0-213" href="#__codelineno-0-213"></a><span class="w">            </span><span class="c1"># enabled determines whether keystore cleanup runs. Default: false.</span>
+</span><span id="__span-0-214"><a id="__codelineno-0-214" name="__codelineno-0-214" href="#__codelineno-0-214"></a><span class="w">            </span><span class="c1"># Must be explicitly enabled. This is a conservative default to prevent</span>
+</span><span id="__span-0-215"><a id="__codelineno-0-215" name="__codelineno-0-215" href="#__codelineno-0-215"></a><span class="w">            </span><span class="c1"># unexpected key deletion in existing deployments.</span>
+</span><span id="__span-0-216"><a id="__codelineno-0-216" name="__codelineno-0-216" href="#__codelineno-0-216"></a><span class="w">            </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+</span><span id="__span-0-217"><a id="__codelineno-0-217" name="__codelineno-0-217" href="#__codelineno-0-217"></a>
+</span><span id="__span-0-218"><a id="__codelineno-0-218" name="__codelineno-0-218" href="#__codelineno-0-218"></a><span class="w">            </span><span class="c1"># ttl is the minimum age of deleted tokens before their keys are eligible for cleanup. Default: 24h.</span>
+</span><span id="__span-0-219"><a id="__codelineno-0-219" name="__codelineno-0-219" href="#__codelineno-0-219"></a><span class="w">            </span><span class="c1"># This ensures tokens are truly finalized before key deletion.</span>
+</span><span id="__span-0-220"><a id="__codelineno-0-220" name="__codelineno-0-220" href="#__codelineno-0-220"></a><span class="w">            </span><span class="c1"># Increase this value for additional safety margin in high-latency networks.</span>
+</span><span id="__span-0-221"><a id="__codelineno-0-221" name="__codelineno-0-221" href="#__codelineno-0-221"></a><span class="w">            </span><span class="c1"># Relationship: Should be significantly greater than transaction finality time.</span>
+</span><span id="__span-0-222"><a id="__codelineno-0-222" name="__codelineno-0-222" href="#__codelineno-0-222"></a><span class="w">            </span><span class="nt">ttl</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">24h</span>
+</span><span id="__span-0-223"><a id="__codelineno-0-223" name="__codelineno-0-223" href="#__codelineno-0-223"></a>
+</span><span id="__span-0-224"><a id="__codelineno-0-224" name="__codelineno-0-224" href="#__codelineno-0-224"></a><span class="w">            </span><span class="c1"># scanInterval is how often the cleanup manager scans for deleted tokens. Default: 1h.</span>
+</span><span id="__span-0-225"><a id="__codelineno-0-225" name="__codelineno-0-225" href="#__codelineno-0-225"></a><span class="w">            </span><span class="c1"># Lower values provide faster cleanup but increase database load.</span>
+</span><span id="__span-0-226"><a id="__codelineno-0-226" name="__codelineno-0-226" href="#__codelineno-0-226"></a><span class="w">            </span><span class="c1"># Higher values reduce overhead but delay key removal.</span>
+</span><span id="__span-0-227"><a id="__codelineno-0-227" name="__codelineno-0-227" href="#__codelineno-0-227"></a><span class="w">            </span><span class="c1"># Relationship: Should be less than ttl to ensure timely cleanup.</span>
+</span><span id="__span-0-228"><a id="__codelineno-0-228" name="__codelineno-0-228" href="#__codelineno-0-228"></a><span class="w">            </span><span class="c1"># Performance impact: Each scan queries the token database for deleted tokens.</span>
+</span><span id="__span-0-229"><a id="__codelineno-0-229" name="__codelineno-0-229" href="#__codelineno-0-229"></a><span class="w">            </span><span class="nt">scanInterval</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1h</span>
+</span><span id="__span-0-230"><a id="__codelineno-0-230" name="__codelineno-0-230" href="#__codelineno-0-230"></a>
+</span><span id="__span-0-231"><a id="__codelineno-0-231" name="__codelineno-0-231" href="#__codelineno-0-231"></a><span class="w">            </span><span class="c1"># batchSize is the maximum number of deleted tokens processed per scan. Default: 100.</span>
+</span><span id="__span-0-232"><a id="__codelineno-0-232" name="__codelineno-0-232" href="#__codelineno-0-232"></a><span class="w">            </span><span class="c1"># Limits the number of tokens processed in a single cleanup sweep.</span>
+</span><span id="__span-0-233"><a id="__codelineno-0-233" name="__codelineno-0-233" href="#__codelineno-0-233"></a><span class="w">            </span><span class="c1"># Increase for high-volume environments with many deleted tokens.</span>
+</span><span id="__span-0-234"><a id="__codelineno-0-234" name="__codelineno-0-234" href="#__codelineno-0-234"></a><span class="w">            </span><span class="c1"># Performance impact: Larger batches reduce scan overhead but increase memory usage and processing time per sweep.</span>
+</span><span id="__span-0-235"><a id="__codelineno-0-235" name="__codelineno-0-235" href="#__codelineno-0-235"></a><span class="w">            </span><span class="nt">batchSize</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">100</span>
+</span><span id="__span-0-236"><a id="__codelineno-0-236" name="__codelineno-0-236" href="#__codelineno-0-236"></a>
+</span><span id="__span-0-237"><a id="__codelineno-0-237" name="__codelineno-0-237" href="#__codelineno-0-237"></a><span class="w">            </span><span class="c1"># workerCount is the number of local workers that process tokens in parallel. Default: 1.</span>
+</span><span id="__span-0-238"><a id="__codelineno-0-238" name="__codelineno-0-238" href="#__codelineno-0-238"></a><span class="w">            </span><span class="c1"># Increase to improve cleanup throughput in high-volume scenarios.</span>
+</span><span id="__span-0-239"><a id="__codelineno-0-239" name="__codelineno-0-239" href="#__codelineno-0-239"></a><span class="w">            </span><span class="c1"># Decrease to reduce resource consumption on constrained systems.</span>
+</span><span id="__span-0-240"><a id="__codelineno-0-240" name="__codelineno-0-240" href="#__codelineno-0-240"></a><span class="w">            </span><span class="c1"># Performance impact: More workers increase CPU utilization during cleanup sweeps.</span>
+</span><span id="__span-0-241"><a id="__codelineno-0-241" name="__codelineno-0-241" href="#__codelineno-0-241"></a><span class="w">            </span><span class="nt">workerCount</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
+</span><span id="__span-0-242"><a id="__codelineno-0-242" name="__codelineno-0-242" href="#__codelineno-0-242"></a>
+</span><span id="__span-0-243"><a id="__codelineno-0-243" name="__codelineno-0-243" href="#__codelineno-0-243"></a><span class="w">            </span><span class="c1"># advisoryLockID is the PostgreSQL advisory lock identifier used for cleanup leader election.</span>
+</span><span id="__span-0-244"><a id="__codelineno-0-244" name="__codelineno-0-244" href="#__codelineno-0-244"></a><span class="w">            </span><span class="c1"># This ensures only one replica performs cleanup sweeps at a time in multi-instance deployments.</span>
+</span><span id="__span-0-245"><a id="__codelineno-0-245" name="__codelineno-0-245" href="#__codelineno-0-245"></a><span class="w">            </span><span class="c1"># Default: 8389190333894887277 (hex: 0x74746b636c65616e, ASCII: &quot;ttkclean&quot;)</span>
+</span><span id="__span-0-246"><a id="__codelineno-0-246" name="__codelineno-0-246" href="#__codelineno-0-246"></a><span class="w">            </span><span class="c1"># The default value is derived from the ASCII encoding of &quot;ttkclean&quot; (Token Transaction Keystore Cleanup).</span>
+</span><span id="__span-0-247"><a id="__codelineno-0-247" name="__codelineno-0-247" href="#__codelineno-0-247"></a><span class="w">            </span><span class="c1"># Only change this if you need to run multiple independent cleanup managers on the same database.</span>
+</span><span id="__span-0-248"><a id="__codelineno-0-248" name="__codelineno-0-248" href="#__codelineno-0-248"></a><span class="w">            </span><span class="c1"># Note: PostgreSQL advisory locks use 64-bit integers. This value must be unique across your application.</span>
+</span><span id="__span-0-249"><a id="__codelineno-0-249" name="__codelineno-0-249" href="#__codelineno-0-249"></a><span class="w">            </span><span class="nt">advisoryLockID</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8389190333894887277</span>
+</span><span id="__span-0-250"><a id="__codelineno-0-250" name="__codelineno-0-250" href="#__codelineno-0-250"></a>
+</span><span id="__span-0-251"><a id="__codelineno-0-251" name="__codelineno-0-251" href="#__codelineno-0-251"></a><span class="w">            </span><span class="c1"># instanceID identifies this replica in logs and monitoring.</span>
+</span><span id="__span-0-252"><a id="__codelineno-0-252" name="__codelineno-0-252" href="#__codelineno-0-252"></a><span class="w">            </span><span class="c1"># If empty, a unique identifier is generated automatically at startup.</span>
+</span><span id="__span-0-253"><a id="__codelineno-0-253" name="__codelineno-0-253" href="#__codelineno-0-253"></a><span class="w">            </span><span class="c1"># Set this explicitly in containerized environments for consistent identity across restarts.</span>
+</span><span id="__span-0-254"><a id="__codelineno-0-254" name="__codelineno-0-254" href="#__codelineno-0-254"></a><span class="w">            </span><span class="c1"># This helps with debugging and tracking which instance performed cleanup operations.</span>
+</span><span id="__span-0-255"><a id="__codelineno-0-255" name="__codelineno-0-255" href="#__codelineno-0-255"></a><span class="w">            </span><span class="nt">instanceID</span><span class="p">:</span>
+</span><span id="__span-0-256"><a id="__codelineno-0-256" name="__codelineno-0-256" href="#__codelineno-0-256"></a>
+</span><span id="__span-0-257"><a id="__codelineno-0-257" name="__codelineno-0-257" href="#__codelineno-0-257"></a><span class="w">      </span><span class="c1"># auditor-specific settings</span>
+</span><span id="__span-0-258"><a id="__codelineno-0-258" name="__codelineno-0-258" href="#__codelineno-0-258"></a><span class="w">      </span><span class="nt">auditor</span><span class="p">:</span>
+</span><span id="__span-0-259"><a id="__codelineno-0-259" name="__codelineno-0-259" href="#__codelineno-0-259"></a><span class="w">        </span><span class="c1"># locker configures the distributed locking strategy for the auditor&#39;s</span>
+</span><span id="__span-0-260"><a id="__codelineno-0-260" name="__codelineno-0-260" href="#__codelineno-0-260"></a><span class="w">        </span><span class="c1"># enrollment-ID (EID) locks. These locks serialise concurrent access</span>
+</span><span id="__span-0-261"><a id="__codelineno-0-261" name="__codelineno-0-261" href="#__codelineno-0-261"></a><span class="w">        </span><span class="c1"># to the same EIDs across replicas when processing audit records.</span>
+</span><span id="__span-0-262"><a id="__codelineno-0-262" name="__codelineno-0-262" href="#__codelineno-0-262"></a><span class="w">        </span><span class="nt">locker</span><span class="p">:</span>
+</span><span id="__span-0-263"><a id="__codelineno-0-263" name="__codelineno-0-263" href="#__codelineno-0-263"></a><span class="w">          </span><span class="c1"># backend selects the Locker implementation.</span>
+</span><span id="__span-0-264"><a id="__codelineno-0-264" name="__codelineno-0-264" href="#__codelineno-0-264"></a><span class="w">          </span><span class="c1">#   &quot;memory&quot;   – in-process mutex (default, single-replica only)</span>
+</span><span id="__span-0-265"><a id="__codelineno-0-265" name="__codelineno-0-265" href="#__codelineno-0-265"></a><span class="w">          </span><span class="c1">#   &quot;postgres&quot; – PostgreSQL lease-table (multi-replica)</span>
+</span><span id="__span-0-266"><a id="__codelineno-0-266" name="__codelineno-0-266" href="#__codelineno-0-266"></a><span class="w">          </span><span class="nt">backend</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">memory</span>
+</span><span id="__span-0-267"><a id="__codelineno-0-267" name="__codelineno-0-267" href="#__codelineno-0-267"></a><span class="w">          </span><span class="c1"># postgres section is read only when backend == &quot;postgres&quot;.</span>
+</span><span id="__span-0-268"><a id="__codelineno-0-268" name="__codelineno-0-268" href="#__codelineno-0-268"></a><span class="w">          </span><span class="nt">postgres</span><span class="p">:</span>
+</span><span id="__span-0-269"><a id="__codelineno-0-269" name="__codelineno-0-269" href="#__codelineno-0-269"></a><span class="w">            </span><span class="c1"># ttl is the lease duration for each EID lock row.</span>
+</span><span id="__span-0-270"><a id="__codelineno-0-270" name="__codelineno-0-270" href="#__codelineno-0-270"></a><span class="w">            </span><span class="nt">ttl</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">30s</span>
+</span><span id="__span-0-271"><a id="__codelineno-0-271" name="__codelineno-0-271" href="#__codelineno-0-271"></a><span class="w">            </span><span class="c1"># acquireBackoff is the wait between retry attempts when a lock is contended.</span>
+</span><span id="__span-0-272"><a id="__codelineno-0-272" name="__codelineno-0-272" href="#__codelineno-0-272"></a><span class="w">            </span><span class="nt">acquireBackoff</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">100ms</span>
+</span><span id="__span-0-273"><a id="__codelineno-0-273" name="__codelineno-0-273" href="#__codelineno-0-273"></a><span class="w">            </span><span class="c1"># acquireDeadline is the total time allowed to acquire all EID locks.</span>
+</span><span id="__span-0-274"><a id="__codelineno-0-274" name="__codelineno-0-274" href="#__codelineno-0-274"></a><span class="w">            </span><span class="nt">acquireDeadline</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1m</span>
+</span><span id="__span-0-275"><a id="__codelineno-0-275" name="__codelineno-0-275" href="#__codelineno-0-275"></a><span class="w">            </span><span class="c1"># heartbeat is the interval at which held leases are renewed (~TTL/3).</span>
+</span><span id="__span-0-276"><a id="__codelineno-0-276" name="__codelineno-0-276" href="#__codelineno-0-276"></a><span class="w">            </span><span class="nt">heartbeat</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10s</span>
+</span><span id="__span-0-277"><a id="__codelineno-0-277" name="__codelineno-0-277" href="#__codelineno-0-277"></a><span class="w">            </span><span class="c1"># owner identifies this replica. Auto-generated at startup if empty.</span>
+</span><span id="__span-0-278"><a id="__codelineno-0-278" name="__codelineno-0-278" href="#__codelineno-0-278"></a><span class="w">            </span><span class="nt">owner</span><span class="p">:</span>
+</span><span id="__span-0-279"><a id="__codelineno-0-279" name="__codelineno-0-279" href="#__codelineno-0-279"></a>
+</span><span id="__span-0-280"><a id="__codelineno-0-280" name="__codelineno-0-280" href="#__codelineno-0-280"></a><span class="w">      </span><span class="c1"># sections dedicated to the definition of the wallets</span>
+</span><span id="__span-0-281"><a id="__codelineno-0-281" name="__codelineno-0-281" href="#__codelineno-0-281"></a><span class="w">      </span><span class="nt">wallets</span><span class="p">:</span>
+</span><span id="__span-0-282"><a id="__codelineno-0-282" name="__codelineno-0-282" href="#__codelineno-0-282"></a><span class="w">        </span><span class="c1"># Default cache size reference that can be used by any wallet that supports caching.</span>
+</span><span id="__span-0-283"><a id="__codelineno-0-283" name="__codelineno-0-283" href="#__codelineno-0-283"></a><span class="w">        </span><span class="nt">defaultCacheSize</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3</span>
+</span><span id="__span-0-284"><a id="__codelineno-0-284" name="__codelineno-0-284" href="#__codelineno-0-284"></a><span class="w">        </span><span class="c1"># owner wallets</span>
+</span><span id="__span-0-285"><a id="__codelineno-0-285" name="__codelineno-0-285" href="#__codelineno-0-285"></a><span class="w">        </span><span class="nt">owners</span><span class="p">:</span>
+</span><span id="__span-0-286"><a id="__codelineno-0-286" name="__codelineno-0-286" href="#__codelineno-0-286"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">alice</span><span class="w"> </span><span class="c1"># the unique identifier of this wallet. Here is an example of use: `ttx.GetWallet(context, &quot;alice&quot;)` </span>
+</span><span id="__span-0-287"><a id="__codelineno-0-287" name="__codelineno-0-287" href="#__codelineno-0-287"></a><span class="w">          </span><span class="nt">default</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w"> </span><span class="c1"># is this the default owner wallet</span>
+</span><span id="__span-0-288"><a id="__codelineno-0-288" name="__codelineno-0-288" href="#__codelineno-0-288"></a><span class="w">          </span><span class="c1"># path to the folder containing the cryptographic material associated with the wallet.</span>
+</span><span id="__span-0-289"><a id="__codelineno-0-289" name="__codelineno-0-289" href="#__codelineno-0-289"></a><span class="w">          </span><span class="c1"># The content of the folder is driver dependent.</span>
+</span><span id="__span-0-290"><a id="__codelineno-0-290" name="__codelineno-0-290" href="#__codelineno-0-290"></a><span class="w">          </span><span class="nt">path</span><span class="p">:</span><span class="w">  </span><span class="l l-Scalar l-Scalar-Plain">/path/to/alice-wallet</span>
+</span><span id="__span-0-291"><a id="__codelineno-0-291" name="__codelineno-0-291" href="#__codelineno-0-291"></a><span class="w">          </span><span class="c1"># Cache size, in case the wallet supports caching (e.g., idemix-based wallet).</span>
+</span><span id="__span-0-292"><a id="__codelineno-0-292" name="__codelineno-0-292" href="#__codelineno-0-292"></a><span class="w">          </span><span class="nt">cacheSize</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3</span>
+</span><span id="__span-0-293"><a id="__codelineno-0-293" name="__codelineno-0-293" href="#__codelineno-0-293"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">alice.id1</span>
+</span><span id="__span-0-294"><a id="__codelineno-0-294" name="__codelineno-0-294" href="#__codelineno-0-294"></a><span class="w">          </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/path/to/alice.id1-wallet</span>
+</span><span id="__span-0-295"><a id="__codelineno-0-295" name="__codelineno-0-295" href="#__codelineno-0-295"></a><span class="w">        </span><span class="c1"># issuer wallets</span>
+</span><span id="__span-0-296"><a id="__codelineno-0-296" name="__codelineno-0-296" href="#__codelineno-0-296"></a><span class="w">        </span><span class="nt">issuers</span><span class="p">:</span>
+</span><span id="__span-0-297"><a id="__codelineno-0-297" name="__codelineno-0-297" href="#__codelineno-0-297"></a><span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">issuer</span><span class="w"> </span><span class="c1"># the unique identifier of this wallet. Here is an example of use: `ttx.GetIssuerWallet(context, &quot;issuer&quot;)`</span>
+</span><span id="__span-0-298"><a id="__codelineno-0-298" name="__codelineno-0-298" href="#__codelineno-0-298"></a><span class="w">            </span><span class="nt">default</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w"> </span><span class="c1"># is this the default issuer wallet</span>
+</span><span id="__span-0-299"><a id="__codelineno-0-299" name="__codelineno-0-299" href="#__codelineno-0-299"></a><span class="w">            </span><span class="c1"># path to the folder containing the cryptographic material associated with the wallet.</span>
+</span><span id="__span-0-300"><a id="__codelineno-0-300" name="__codelineno-0-300" href="#__codelineno-0-300"></a><span class="w">            </span><span class="c1"># The content of the folder is driver dependent.</span>
+</span><span id="__span-0-301"><a id="__codelineno-0-301" name="__codelineno-0-301" href="#__codelineno-0-301"></a><span class="w">            </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/path/to/issuer-wallet</span>
+</span><span id="__span-0-302"><a id="__codelineno-0-302" name="__codelineno-0-302" href="#__codelineno-0-302"></a><span class="w">            </span><span class="c1"># additional options that can be used to instantiate the wallet.</span>
+</span><span id="__span-0-303"><a id="__codelineno-0-303" name="__codelineno-0-303" href="#__codelineno-0-303"></a><span class="w">            </span><span class="c1"># options are driver dependent. With `fabtoken` and `dlog` drivers,</span>
+</span><span id="__span-0-304"><a id="__codelineno-0-304" name="__codelineno-0-304" href="#__codelineno-0-304"></a><span class="w">            </span><span class="c1"># the following options apply.</span>
+</span><span id="__span-0-305"><a id="__codelineno-0-305" name="__codelineno-0-305" href="#__codelineno-0-305"></a><span class="w">            </span><span class="nt">opts</span><span class="p">:</span>
+</span><span id="__span-0-306"><a id="__codelineno-0-306" name="__codelineno-0-306" href="#__codelineno-0-306"></a><span class="w">              </span><span class="nt">BCCSP</span><span class="p">:</span>
+</span><span id="__span-0-307"><a id="__codelineno-0-307" name="__codelineno-0-307" href="#__codelineno-0-307"></a><span class="w">                </span><span class="nt">Default</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">SW</span>
+</span><span id="__span-0-308"><a id="__codelineno-0-308" name="__codelineno-0-308" href="#__codelineno-0-308"></a><span class="w">                </span><span class="nt">SW</span><span class="p">:</span>
+</span><span id="__span-0-309"><a id="__codelineno-0-309" name="__codelineno-0-309" href="#__codelineno-0-309"></a><span class="w">                  </span><span class="nt">Hash</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">SHA2</span>
+</span><span id="__span-0-310"><a id="__codelineno-0-310" name="__codelineno-0-310" href="#__codelineno-0-310"></a><span class="w">                  </span><span class="nt">Security</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">256</span>
+</span><span id="__span-0-311"><a id="__codelineno-0-311" name="__codelineno-0-311" href="#__codelineno-0-311"></a><span class="w">                </span><span class="c1"># The following only needs to be defined if the BCCSP Default is set to PKCS11.</span>
+</span><span id="__span-0-312"><a id="__codelineno-0-312" name="__codelineno-0-312" href="#__codelineno-0-312"></a><span class="w">                </span><span class="c1"># NOTE: in order to use pkcs11, you have to build the application with &quot;go build -tags pkcs11&quot;</span>
+</span><span id="__span-0-313"><a id="__codelineno-0-313" name="__codelineno-0-313" href="#__codelineno-0-313"></a><span class="w">                </span><span class="nt">PKCS11</span><span class="p">:</span>
+</span><span id="__span-0-314"><a id="__codelineno-0-314" name="__codelineno-0-314" href="#__codelineno-0-314"></a><span class="w">                  </span><span class="nt">Hash</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">SHA2</span>
+</span><span id="__span-0-315"><a id="__codelineno-0-315" name="__codelineno-0-315" href="#__codelineno-0-315"></a><span class="w">                  </span><span class="nt">Label</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span>
+</span><span id="__span-0-316"><a id="__codelineno-0-316" name="__codelineno-0-316" href="#__codelineno-0-316"></a><span class="w">                  </span><span class="nt">Library</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span>
+</span><span id="__span-0-317"><a id="__codelineno-0-317" name="__codelineno-0-317" href="#__codelineno-0-317"></a><span class="w">                  </span><span class="nt">Pin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span>
+</span><span id="__span-0-318"><a id="__codelineno-0-318" name="__codelineno-0-318" href="#__codelineno-0-318"></a><span class="w">                  </span><span class="nt">Security</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">256</span>
+</span><span id="__span-0-319"><a id="__codelineno-0-319" name="__codelineno-0-319" href="#__codelineno-0-319"></a><span class="w">        </span><span class="c1"># auditor wallets</span>
+</span><span id="__span-0-320"><a id="__codelineno-0-320" name="__codelineno-0-320" href="#__codelineno-0-320"></a><span class="w">        </span><span class="nt">auditors</span><span class="p">:</span>
+</span><span id="__span-0-321"><a id="__codelineno-0-321" name="__codelineno-0-321" href="#__codelineno-0-321"></a><span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">auditor</span><span class="w"> </span><span class="c1"># the unique identifier of this wallet. Here is an example of use: `ttx.GetAuditorWallet(context, &quot;auditor&quot;)`</span>
+</span><span id="__span-0-322"><a id="__codelineno-0-322" name="__codelineno-0-322" href="#__codelineno-0-322"></a><span class="w">            </span><span class="nt">default</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w"> </span><span class="c1"># is this the default auditor wallet  </span>
+</span><span id="__span-0-323"><a id="__codelineno-0-323" name="__codelineno-0-323" href="#__codelineno-0-323"></a><span class="w">            </span><span class="c1"># path to the folder containing the cryptographic material associated with the wallet.</span>
+</span><span id="__span-0-324"><a id="__codelineno-0-324" name="__codelineno-0-324" href="#__codelineno-0-324"></a><span class="w">            </span><span class="c1"># The content of the folder is driver dependent.</span>
+</span><span id="__span-0-325"><a id="__codelineno-0-325" name="__codelineno-0-325" href="#__codelineno-0-325"></a><span class="w">            </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/path/to/auditor-wallet</span>
+</span><span id="__span-0-326"><a id="__codelineno-0-326" name="__codelineno-0-326" href="#__codelineno-0-326"></a><span class="w">            </span><span class="c1"># additional options that can be used to instantiate the wallet.</span>
+</span><span id="__span-0-327"><a id="__codelineno-0-327" name="__codelineno-0-327" href="#__codelineno-0-327"></a><span class="w">            </span><span class="c1"># options are driver dependent. With `fabtoken` and `dlog` drivers,</span>
+</span><span id="__span-0-328"><a id="__codelineno-0-328" name="__codelineno-0-328" href="#__codelineno-0-328"></a><span class="w">            </span><span class="c1"># the following options apply</span>
+</span><span id="__span-0-329"><a id="__codelineno-0-329" name="__codelineno-0-329" href="#__codelineno-0-329"></a><span class="w">            </span><span class="nt">opts</span><span class="p">:</span>
+</span><span id="__span-0-330"><a id="__codelineno-0-330" name="__codelineno-0-330" href="#__codelineno-0-330"></a><span class="w">              </span><span class="nt">BCCSP</span><span class="p">:</span>
+</span><span id="__span-0-331"><a id="__codelineno-0-331" name="__codelineno-0-331" href="#__codelineno-0-331"></a><span class="w">                </span><span class="nt">Default</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">SW</span>
+</span><span id="__span-0-332"><a id="__codelineno-0-332" name="__codelineno-0-332" href="#__codelineno-0-332"></a><span class="w">                </span><span class="nt">PKCS11</span><span class="p">:</span>
+</span><span id="__span-0-333"><a id="__codelineno-0-333" name="__codelineno-0-333" href="#__codelineno-0-333"></a><span class="w">                  </span><span class="nt">Hash</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">SHA2</span>
+</span><span id="__span-0-334"><a id="__codelineno-0-334" name="__codelineno-0-334" href="#__codelineno-0-334"></a><span class="w">                  </span><span class="nt">Label</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span>
+</span><span id="__span-0-335"><a id="__codelineno-0-335" name="__codelineno-0-335" href="#__codelineno-0-335"></a><span class="w">                  </span><span class="nt">Library</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span>
+</span><span id="__span-0-336"><a id="__codelineno-0-336" name="__codelineno-0-336" href="#__codelineno-0-336"></a><span class="w">                  </span><span class="nt">Pin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span>
+</span><span id="__span-0-337"><a id="__codelineno-0-337" name="__codelineno-0-337" href="#__codelineno-0-337"></a><span class="w">                  </span><span class="nt">Security</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">256</span>
+</span><span id="__span-0-338"><a id="__codelineno-0-338" name="__codelineno-0-338" href="#__codelineno-0-338"></a><span class="w">                </span><span class="nt">SW</span><span class="p">:</span>
+</span><span id="__span-0-339"><a id="__codelineno-0-339" name="__codelineno-0-339" href="#__codelineno-0-339"></a><span class="w">                  </span><span class="nt">Hash</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">SHA2</span>
+</span><span id="__span-0-340"><a id="__codelineno-0-340" name="__codelineno-0-340" href="#__codelineno-0-340"></a><span class="w">      </span><span class="c1"># Auditor lock configuration for enrollment ID locking during audit operations</span>
+</span><span id="__span-0-341"><a id="__codelineno-0-341" name="__codelineno-0-341" href="#__codelineno-0-341"></a><span class="w">      </span><span class="c1"># These settings control the retry behavior when multiple auditors compete for locks</span>
+</span><span id="__span-0-342"><a id="__codelineno-0-342" name="__codelineno-0-342" href="#__codelineno-0-342"></a><span class="w">      </span><span class="nt">auditor</span><span class="p">:</span>
+</span><span id="__span-0-343"><a id="__codelineno-0-343" name="__codelineno-0-343" href="#__codelineno-0-343"></a><span class="w">        </span><span class="nt">lock</span><span class="p">:</span>
+</span><span id="__span-0-344"><a id="__codelineno-0-344" name="__codelineno-0-344" href="#__codelineno-0-344"></a><span class="w">          </span><span class="c1"># maxRetries is the maximum number of retry attempts for lock acquisition</span>
+</span><span id="__span-0-345"><a id="__codelineno-0-345" name="__codelineno-0-345" href="#__codelineno-0-345"></a><span class="w">          </span><span class="c1"># Default: 10</span>
+</span><span id="__span-0-346"><a id="__codelineno-0-346" name="__codelineno-0-346" href="#__codelineno-0-346"></a><span class="w">          </span><span class="nt">maxRetries</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10</span>
+</span><span id="__span-0-347"><a id="__codelineno-0-347" name="__codelineno-0-347" href="#__codelineno-0-347"></a>
+</span><span id="__span-0-348"><a id="__codelineno-0-348" name="__codelineno-0-348" href="#__codelineno-0-348"></a><span class="w">          </span><span class="c1"># initialBackoff is the initial backoff delay before the first retry</span>
+</span><span id="__span-0-349"><a id="__codelineno-0-349" name="__codelineno-0-349" href="#__codelineno-0-349"></a><span class="w">          </span><span class="c1"># Default: 10ms</span>
+</span><span id="__span-0-350"><a id="__codelineno-0-350" name="__codelineno-0-350" href="#__codelineno-0-350"></a><span class="w">          </span><span class="nt">initialBackoff</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10ms</span>
+</span><span id="__span-0-351"><a id="__codelineno-0-351" name="__codelineno-0-351" href="#__codelineno-0-351"></a>
+</span><span id="__span-0-352"><a id="__codelineno-0-352" name="__codelineno-0-352" href="#__codelineno-0-352"></a><span class="w">          </span><span class="c1"># maxBackoff is the maximum backoff delay between retries</span>
+</span><span id="__span-0-353"><a id="__codelineno-0-353" name="__codelineno-0-353" href="#__codelineno-0-353"></a><span class="w">          </span><span class="c1"># Default: 5s</span>
+</span><span id="__span-0-354"><a id="__codelineno-0-354" name="__codelineno-0-354" href="#__codelineno-0-354"></a><span class="w">          </span><span class="nt">maxBackoff</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5s</span>
+</span><span id="__span-0-355"><a id="__codelineno-0-355" name="__codelineno-0-355" href="#__codelineno-0-355"></a>
+</span><span id="__span-0-356"><a id="__codelineno-0-356" name="__codelineno-0-356" href="#__codelineno-0-356"></a><span class="w">          </span><span class="c1"># backoffMultiplier is the exponential backoff multiplier</span>
+</span><span id="__span-0-357"><a id="__codelineno-0-357" name="__codelineno-0-357" href="#__codelineno-0-357"></a><span class="w">          </span><span class="c1"># Each retry delay is multiplied by this factor</span>
+</span><span id="__span-0-358"><a id="__codelineno-0-358" name="__codelineno-0-358" href="#__codelineno-0-358"></a><span class="w">          </span><span class="c1"># Default: 2.0</span>
+</span><span id="__span-0-359"><a id="__codelineno-0-359" name="__codelineno-0-359" href="#__codelineno-0-359"></a><span class="w">          </span><span class="nt">backoffMultiplier</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2.0</span>
+</span><span id="__span-0-360"><a id="__codelineno-0-360" name="__codelineno-0-360" href="#__codelineno-0-360"></a>
+</span><span id="__span-0-361"><a id="__codelineno-0-361" name="__codelineno-0-361" href="#__codelineno-0-361"></a><span class="w">          </span><span class="c1"># jitterFactor is the randomization factor to prevent thundering herd (0.0 to 1.0)</span>
+</span><span id="__span-0-362"><a id="__codelineno-0-362" name="__codelineno-0-362" href="#__codelineno-0-362"></a><span class="w">          </span><span class="c1"># Adds random jitter to break symmetry when multiple auditors retry simultaneously</span>
+</span><span id="__span-0-363"><a id="__codelineno-0-363" name="__codelineno-0-363" href="#__codelineno-0-363"></a><span class="w">          </span><span class="c1"># Default: 0.3 (30%)</span>
+</span><span id="__span-0-364"><a id="__codelineno-0-364" name="__codelineno-0-364" href="#__codelineno-0-364"></a><span class="w">          </span><span class="nt">jitterFactor</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.3</span>
+</span><span id="__span-0-365"><a id="__codelineno-0-365" name="__codelineno-0-365" href="#__codelineno-0-365"></a><span class="w">                  </span><span class="l l-Scalar l-Scalar-Plain">Security</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">256</span>
 </span></code></pre></div>
 <h2 id="minimal-token-sdk-configuration">Minimal Token-SDK Configuration<a class="headerlink" href="#minimal-token-sdk-configuration" title="Permanent link">&para;</a></h2>
 <p>The Token SDK can start with the following minimal configuration:</p>
@@ -2487,19 +2656,97 @@
 <li>Increase <code>workerCount</code> to 8-16 to improve parallel processing</li>
 <li>Decrease <code>scanInterval</code> to 2-3s for faster recovery detection</li>
 </ol>
-<hr />
-<h3 id="optional-tokentmsauditorlock">Optional: token.tms.<name>.auditor.lock<a class="headerlink" href="#optional-tokentmsauditorlock" title="Permanent link">&para;</a></h3>
+<h3 id="optional-tokentmsservicesstoragecleanup">Optional: token.tms.<name>.services.storage.cleanup<a class="headerlink" href="#optional-tokentmsservicesstoragecleanup" title="Permanent link">&para;</a></h3>
 <p>If not specified, the default configuration is:</p>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">token</span><span class="p">:</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">tms</span><span class="p">:</span>
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nt">&lt;name&gt;</span><span class="p">:</span>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">      </span><span class="nt">auditor</span><span class="p">:</span>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">        </span><span class="nt">lock</span><span class="p">:</span>
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">          </span><span class="nt">maxRetries</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10</span>
-</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">          </span><span class="nt">initialBackoff</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10ms</span>
-</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">          </span><span class="nt">maxBackoff</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5s</span>
-</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">          </span><span class="nt">backoffMultiplier</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2.0</span>
-</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">          </span><span class="nt">jitterFactor</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.3</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">      </span><span class="nt">services</span><span class="p">:</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">        </span><span class="nt">storage</span><span class="p">:</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">          </span><span class="nt">cleanup</span><span class="p">:</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">            </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">            </span><span class="nt">ttl</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">24h</span>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">            </span><span class="nt">scanInterval</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1h</span>
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">            </span><span class="nt">batchSize</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">100</span>
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="w">            </span><span class="nt">workerCount</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="w">            </span><span class="nt">advisoryLockID</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8389190333894887277</span>
+</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="w">            </span><span class="nt">instanceID</span><span class="p">:</span>
+</span></code></pre></div>
+<p>Default values:</p>
+<ul>
+<li>enabled: false</li>
+<li>ttl: 24h</li>
+<li>scanInterval: 1h</li>
+<li>batchSize: 100</li>
+<li>workerCount: 1</li>
+<li>advisoryLockID: 8389190333894887277 (<code>0x74746b636c65616e</code>)</li>
+<li>instanceID: empty, auto-generated when the cleanup manager starts</li>
+</ul>
+<p><strong>Parameter Relationships and Tuning:</strong></p>
+<ul>
+<li><strong>Cleanup is disabled by default</strong> and must be explicitly enabled. This is a conservative default to prevent unexpected key deletion in existing deployments.</li>
+<li><strong>Only deleted tokens older than <code>ttl</code> are considered for cleanup</strong> to ensure tokens are truly finalized before key deletion.</li>
+<li><strong>The manager validates</strong> that <code>ttl</code>, <code>scanInterval</code>, <code>batchSize</code>, and <code>workerCount</code> are all greater than zero.</li>
+<li><strong><code>advisoryLockID</code></strong> is used to acquire PostgreSQL advisory-lock leadership so that only one replica performs a cleanup sweep at a time. The default value (8389190333894887277 or 0x74746b636c65616e) represents the ASCII string "ttkclean" (Token Transaction Keystore Cleanup) encoded as a 64-bit integer.</li>
+<li><strong><code>instanceID</code></strong> is used to identify this replica in logs and monitoring; if omitted, the manager generates a unique identifier automatically at startup.</li>
+</ul>
+<p><strong>Tuning Recommendations:</strong></p>
+<ol>
+<li><strong>For High-Volume Environments:</strong></li>
+<li>Increase <code>batchSize</code> to 200-500 to process more tokens per sweep</li>
+<li>Increase <code>workerCount</code> to 8-16 to improve parallel key deletion</li>
+<li>
+<p>Decrease <code>scanInterval</code> to 30m for more frequent cleanup</p>
+</li>
+<li>
+<p><strong>For Resource-Constrained Systems:</strong></p>
+</li>
+<li>Decrease <code>workerCount</code> to 2 to reduce CPU usage</li>
+<li>Increase <code>scanInterval</code> to 2-4h to reduce database load</li>
+<li>
+<p>Keep default <code>batchSize</code> to limit memory usage</p>
+</li>
+<li>
+<p><strong>For Security-Sensitive Deployments:</strong></p>
+</li>
+<li>Decrease <code>ttl</code> to 12h for faster key removal</li>
+<li>Decrease <code>scanInterval</code> to 30m for more frequent cleanup</li>
+<li>
+<p>Monitor cleanup metrics to ensure timely processing</p>
+</li>
+<li>
+<p><strong>For Multi-Instance Deployments:</strong></p>
+</li>
+<li><strong>PostgreSQL Required</strong>: Multi-instance deployments require PostgreSQL for distributed coordination via advisory locks</li>
+<li>Keep default <code>advisoryLockID</code> unless running multiple independent cleanup systems</li>
+<li>
+<p>Consider setting explicit <code>instanceID</code> values for easier debugging and monitoring</p>
+</li>
+<li>
+<p><strong>For Single-Node Deployments:</strong></p>
+</li>
+<li><strong>SQLite Supported</strong>: SQLite can be used for single-node deployments and handles node restarts gracefully</li>
+<li>Cleanup works automatically after node restarts by scanning for eligible tokens</li>
+<li><strong>Important</strong>: Do not use SQLite with multiple replicas as it lacks the advisory lock mechanism for leader election</li>
+</ol>
+<p><strong>Performance Considerations:</strong>
+- Each scan queries the token database, so <code>scanInterval</code> directly affects database load
+- <code>workerCount</code> affects CPU utilization during cleanup sweeps
+- <code>batchSize</code> affects memory usage and the duration of each cleanup sweep
+- The relationship <code>scanInterval &lt; ttl</code> ensures timely cleanup without premature processing</p>
+<h2 id="-">---<a class="headerlink" href="#-" title="Permanent link">&para;</a></h2>
+<h3 id="optional-tokentmsauditorlock">Optional: token.tms.<name>.auditor.lock<a class="headerlink" href="#optional-tokentmsauditorlock" title="Permanent link">&para;</a></h3>
+<p>If not specified, the default configuration is:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">token</span><span class="p">:</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">tms</span><span class="p">:</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nt">&lt;name&gt;</span><span class="p">:</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">      </span><span class="nt">auditor</span><span class="p">:</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">        </span><span class="nt">lock</span><span class="p">:</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">          </span><span class="nt">maxRetries</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">          </span><span class="nt">initialBackoff</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10ms</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">          </span><span class="nt">maxBackoff</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5s</span>
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">          </span><span class="nt">backoffMultiplier</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2.0</span>
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">          </span><span class="nt">jitterFactor</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.3</span>
 </span></code></pre></div>
 <p>Default values:</p>
 <ul>
@@ -2581,18 +2828,18 @@
 <p>Controls the distributed locking strategy used by the auditor to serialise
 concurrent access to enrollment IDs (EIDs) when processing audit records.</p>
 <p>If not specified, the default configuration is:</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">token</span><span class="p">:</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">tms</span><span class="p">:</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nt">&lt;name&gt;</span><span class="p">:</span>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">      </span><span class="nt">auditor</span><span class="p">:</span>
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">        </span><span class="nt">locker</span><span class="p">:</span>
-</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">          </span><span class="nt">backend</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">memory</span>
-</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">          </span><span class="nt">postgres</span><span class="p">:</span>
-</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">            </span><span class="nt">ttl</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">30s</span>
-</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">            </span><span class="nt">acquireBackoff</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">100ms</span>
-</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">            </span><span class="nt">acquireDeadline</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1m</span>
-</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="w">            </span><span class="nt">heartbeat</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10s</span>
-</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">            </span><span class="nt">owner</span><span class="p">:</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">token</span><span class="p">:</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">tms</span><span class="p">:</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="nt">&lt;name&gt;</span><span class="p">:</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">      </span><span class="nt">auditor</span><span class="p">:</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">        </span><span class="nt">locker</span><span class="p">:</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">          </span><span class="nt">backend</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">memory</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">          </span><span class="nt">postgres</span><span class="p">:</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">            </span><span class="nt">ttl</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">30s</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">            </span><span class="nt">acquireBackoff</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">100ms</span>
+</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">            </span><span class="nt">acquireDeadline</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1m</span>
+</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="w">            </span><span class="nt">heartbeat</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10s</span>
+</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="w">            </span><span class="nt">owner</span><span class="p">:</span>
 </span></code></pre></div>
 <p>Default values:</p>
 <ul>

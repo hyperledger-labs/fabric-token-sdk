@@ -1335,27 +1335,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../services/recovery/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Recovery
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../services/selector/" class="md-nav__link">
         
   
@@ -1376,16 +1355,108 @@
   
   
   
-    <li class="md-nav__item">
-      <a href="../services/storage/" class="md-nav__link">
+    
+    
+    
+      
+      
         
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_13" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_13" id="__nav_4_13_label" tabindex="0">
+            
   
   <span class="md-ellipsis">
     Storage
   </span>
   
 
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_13_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_13">
+            <span class="md-nav__icon md-icon"></span>
+            Storage
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../services/storage/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+  </span>
+  
+
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../services/storage/keystore_cleanup/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Cleanup Service
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../services/storage/recovery/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Recovery Service
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -2165,7 +2236,7 @@
 </ul>
 </li>
 <li>
-<p><em>See also:</em> <a href="../services/ttx/"><strong>TTX Service Documentation</strong></a>, <a href="../services/recovery/"><strong>Transaction Recovery Service</strong></a></p>
+<p><em>See also:</em> <a href="../services/ttx/"><strong>TTX Service Documentation</strong></a>, <a href="../services/storage/recovery/"><strong>Transaction Recovery Service</strong></a></p>
 </li>
 </ul>
 <h2 id="core-service-enhancements">Core Service Enhancements<a class="headerlink" href="#core-service-enhancements" title="Permanent link">&para;</a></h2>
@@ -2179,7 +2250,8 @@
 <li><strong>Database Indexing:</strong> Added missing indexes for token queries, significantly improving query performance</li>
 <li><strong>Query Enhancements:</strong> New <code>SearchDirection</code> support in <code>QueryTransactionsParams</code> for flexible result ordering</li>
 <li><strong>Recovery Service Integration:</strong> Built-in transaction recovery capabilities for handling finality listener failures</li>
-<li><em>See also:</em> <a href="../services/storage/"><strong>Storage Service</strong></a></li>
+<li><strong>Keystore Cleanup Service:</strong> Automatic deletion of cryptographic keys for deleted tokens, improving security and reducing storage overhead</li>
+<li><em>See also:</em> <a href="../services/storage/"><strong>Storage Service</strong></a>, <a href="../services/storage/keystore_cleanup/"><strong>Keystore Cleanup Service</strong></a></li>
 </ul>
 </li>
 <li><strong>Network Service:</strong> Expanded to handle more complex Fabric network interactions and better integration with the Fabric Smart Client. A major change was the <strong>removal of the Orion-based implementation</strong>, which has been replaced by the introduction of <strong>FabricX support</strong>, providing a more modern and integrated approach for advanced ledger interactions.<ul>
