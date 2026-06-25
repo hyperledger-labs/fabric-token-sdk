@@ -36,3 +36,7 @@ func TestKeyStore(t *testing.T) {
 func TestWallet(t *testing.T) {
 	dbtest2.WalletTest(t, func(string) driver.Driver { return NewDriver() })
 }
+
+func TestEndorser(t *testing.T) {
+	dbtest2.EndorserTest(t, func(string) driver.Driver { return NewDriver() })
+}

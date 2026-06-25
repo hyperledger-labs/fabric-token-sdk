@@ -38,6 +38,7 @@ type Driver struct {
 	Token     lazy.Provider[fscPostgres.Config, *TokenStore]
 	AuditTx   lazy.Provider[fscPostgres.Config, *AuditTransactionStore]
 	OwnerTx   lazy.Provider[fscPostgres.Config, *TransactionStore]
+	Endorser  lazy.Provider[fscPostgres.Config, *EndorserStore]
 	KeyStore  lazy.Provider[fscPostgres.Config, *KeystoreStore]
 }
 
@@ -66,6 +67,7 @@ func NewDriverWithDbProvider(config driver3.Config, dbProvider fscPostgres.DbPro
 	d.Token = newTokenStoreProvider(dbProvider)
 	d.AuditTx = newProviderWithKeyMapper(dbProvider, NewAuditTransactionStore, "audittx")
 	d.OwnerTx = newTransactionStoreProvider(dbProvider)
+	d.Endorser = newEndorserStoreProvider(dbProvider)
 	d.KeyStore = newProviderWithKeyMapper(dbProvider, NewKeystoreStore, "keystore")
 
 	return d
@@ -275,6 +277,54 @@ func (d *Driver) NewOwnerTransaction(name driver2.PersistenceName, params ...str
 	}
 
 	return d.OwnerTx.Get(*opts)
+}
+
+// NewEndorser returns a new EndorserStore.
+func (d *Driver) NewEndorser(name driver2.PersistenceName, params ...string) (driver3.EndorserStore, error) {
+	opts, err := d.cp.GetOpts(name, params...)
+	if err != nil {
+		return nil, err
+	}
+
+	return d.Endorser.Get(*opts)
+}
+
+// newEndorserStoreProvider returns a lazy provider for EndorserStore.
+func newEndorserStoreProvider(dbProvider fscPostgres.DbProvider) lazy.Provider[fscPostgres.Config, *EndorserStore] {
+	return lazy.NewProviderWithKeyMapper(key, func(o fscPostgres.Config) (*EndorserStore, error) {
+		opts := fscPostgres.Opts{
+			DataSource:      o.DataSource,
+			MaxOpenConns:    o.MaxOpenConns,
+			MaxIdleConns:    *o.MaxIdleConns,
+			MaxIdleTime:     *o.MaxIdleTime,
+			TablePrefix:     o.TablePrefix,
+			TableNameParams: o.TableNameParams,
+			Tracing:         o.Tracing,
+		}
+		dbs, err := dbProvider.Get(opts)
+		if err != nil {
+			return nil, err
+		}
+		tableNames, err := common3.GetTableNames(o.TablePrefix, o.TableNameParams...)
+		if err != nil {
+			return nil, err
+		}
+
+		// Create endorser store (reuses validation table from transaction store)
+		p, err := NewEndorserStore(dbs, tableNames)
+		if err != nil {
+			return nil, err
+		}
+
+		// Create schema if needed
+		if !o.SkipCreateTable {
+			if err := p.CreateSchema(); err != nil {
+				return nil, err
+			}
+		}
+
+		return p, nil
+	})
 }
 
 // newProviderWithKeyMapper returns a lazy provider for a DB object using a common constructor.

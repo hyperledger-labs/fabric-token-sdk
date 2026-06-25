@@ -515,6 +515,8 @@ func (db *TransactionStore) GetSchema() string {
 			request BYTEA NOT NULL,
 			metadata BYTEA NOT NULL,
 			pp_hash BYTEA NOT NULL,
+			status INT NOT NULL,
+			status_message TEXT NOT NULL,
 			stored_at TIMESTAMP NOT NULL
 		);
 
@@ -667,40 +669,6 @@ func (w *TransactionStoreTransaction) AddMovement(ctx context.Context, rs ...dbd
 		Format()
 	logging.Debug(logger, query, args)
 	_, err := w.txn.ExecContext(ctx, query, args...)
-
-	return ttxDBError(err)
-}
-
-func (w *TransactionStoreTransaction) AddValidationRecord(ctx context.Context, txID string, tokenRequest []byte, meta map[string][]byte, ppHash driver2.PPHash) error {
-	logger.DebugfContext(ctx, "adding validation record [%s]", txID)
-	if w.txn == nil {
-		return errors.New("no db transaction in progress")
-	}
-	md, err := marshal(meta)
-	if err != nil {
-		return errors.New("can't marshal metadata")
-	}
-	now := time.Now().UTC()
-
-	// First, ensure the token request exists in the Requests table (for foreign key integrity with Transactions/Movements)
-	query, args := q.InsertInto(w.table.Requests).
-		Fields("tx_id", "request", "status", "status_message", "application_metadata", "public_metadata", "pp_hash", "stored_at").
-		Row(txID, tokenRequest, dbdriver.Pending, "", []byte("{}"), []byte("{}"), ppHash, now).
-		Format()
-	logging.Debug(logger, query, txID, fmt.Sprintf("(%d bytes)", len(tokenRequest)), len(ppHash), now)
-
-	if _, err = w.txn.ExecContext(ctx, query, args...); err != nil {
-		return ttxDBError(err)
-	}
-
-	// Then insert the validation record as a self-contained entity (no foreign key to Requests)
-	query, args = q.InsertInto(w.table.Validations).
-		Fields("tx_id", "request", "metadata", "pp_hash", "stored_at").
-		Row(txID, tokenRequest, md, ppHash, now).
-		Format()
-	logging.Debug(logger, query, txID, fmt.Sprintf("(%d bytes)", len(tokenRequest)), len(md), len(ppHash), now)
-
-	_, err = w.txn.ExecContext(ctx, query, args...)
 
 	return ttxDBError(err)
 }

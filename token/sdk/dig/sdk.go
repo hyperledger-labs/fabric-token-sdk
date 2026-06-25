@@ -49,6 +49,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/memory"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/postgres"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/sqlite"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/endorserdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/identitydb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/keystoredb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/services/cleanup"
@@ -187,6 +188,7 @@ func (p *SDK) Install() error {
 		p.Container().Provide(walletdb.NewStoreServiceManager, dig.As(new(identity.WalletStoreServiceManager))),
 		p.Container().Provide(tokenlockdb.NewStoreServiceManager),
 		p.Container().Provide(identity.NewDBStorageProvider),
+		p.Container().Provide(endorserdb.NewStoreServiceManager),
 		p.Container().Provide(digutils.Identity[*identity.DBStorageProvider](), dig.As(new(identity2.StorageProvider))),
 		p.Container().Provide(auditor.NewServiceManager),
 		p.Container().Provide(tokens.NewServiceManager),

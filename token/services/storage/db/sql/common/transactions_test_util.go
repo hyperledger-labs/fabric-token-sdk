@@ -152,50 +152,6 @@ func TestGetStatus(t *testing.T, store transactionsStoreConstructor) {
 	gomega.Expect(statusMessage).To(gomega.Equal(output[1]))
 }
 
-func TestQueryValidations(t *testing.T, store transactionsStoreConstructor, traits QueryConstructorTraits) {
-	gomega.RegisterTestingT(t)
-	db, mockDB, err := sqlmock.New()
-	gomega.Expect(err).ToNot(gomega.HaveOccurred())
-
-	timeFrom := time.Date(2025, time.June, 8, 10, 0, 0, 0, time.UTC)
-	timeTo := time.Date(2025, time.June, 9, 10, 0, 0, 0, time.UTC)
-	record := driver.ValidationRecord{
-		TxID:         "1234",
-		TokenRequest: []byte("some request"),
-		Timestamp:    timeFrom,
-	}
-	output := []driver2.Value{
-		record.TxID, record.TokenRequest, nil, record.Timestamp,
-	}
-	var query string
-	if traits.MultipleParenthesis {
-		query = "SELECT VALIDATIONS.tx_id, VALIDATIONS.request, VALIDATIONS.metadata, VALIDATIONS.stored_at " +
-			"FROM VALIDATIONS " +
-			"WHERE \\(\\(VALIDATIONS.stored_at >= \\$1\\) AND \\(VALIDATIONS.stored_at <= \\$2\\)\\)"
-	} else {
-		query = "SELECT VALIDATIONS.tx_id, VALIDATIONS.request, VALIDATIONS.metadata, VALIDATIONS.stored_at " +
-			"FROM VALIDATIONS " +
-			"WHERE \\(\\(VALIDATIONS.stored_at >= \\$1\\) AND \\(VALIDATIONS.stored_at <= \\$2\\)\\)"
-	}
-	mockDB.
-		ExpectQuery(query).
-		WithArgs(timeFrom, timeTo).
-		WillReturnRows(mockDB.NewRows([]string{"tx_id", "request", "metadata", "stored_at"}).AddRow(output...))
-
-	it, err := store(db).QueryValidations(t.Context(),
-		driver.QueryValidationRecordsParams{
-			From: &timeFrom,
-			To:   &timeTo,
-		},
-	)
-
-	gomega.Expect(mockDB.ExpectationsWereMet()).To(gomega.Succeed())
-	gomega.Expect(err).ToNot(gomega.HaveOccurred())
-	records, err := iterators.ReadAllValues(it)
-	gomega.Expect(err).ToNot(gomega.HaveOccurred())
-	gomega.Expect(records).To(gomega.ConsistOf(record))
-}
-
 func TestQueryTokenRequests(t *testing.T, store transactionsStoreConstructor, traits QueryConstructorTraits) {
 	gomega.RegisterTestingT(t)
 	db, mockDB, err := sqlmock.New()
@@ -391,39 +347,6 @@ func TestAWAddMovement(t *testing.T, store transactionsStoreConstructor) {
 	aw, err := store(db).NewTransactionStoreTransaction()
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
 	gomega.Expect(aw.AddMovement(t.Context(), input)).To(gomega.Succeed())
-	gomega.Expect(aw.Commit()).To(gomega.Succeed())
-
-	gomega.Expect(mockDB.ExpectationsWereMet()).To(gomega.Succeed())
-}
-
-func TestAWAddValidationRecord(t *testing.T, store transactionsStoreConstructor) {
-	gomega.RegisterTestingT(t)
-	db, mockDB, err := sqlmock.New()
-	gomega.Expect(err).ToNot(gomega.HaveOccurred())
-
-	txID := "txid"
-	tokenRequest := []byte("token_request_data")
-	ppHash := []byte("pp_hash_data")
-	now := sqlmock.AnyArg()
-
-	mockDB.ExpectBegin()
-	// First expect the INSERT into REQUESTS table
-	mockDB.
-		ExpectExec("INSERT INTO REQUESTS \\(tx_id, request, status, status_message, application_metadata, public_metadata, pp_hash, stored_at\\) "+
-			"VALUES \\(\\$1, \\$2, \\$3, \\$4, \\$5, \\$6, \\$7, \\$8\\)").
-		WithArgs(txID, tokenRequest, driver.Pending, "", []byte("{}"), []byte("{}"), ppHash, now).
-		WillReturnResult(sqlmock.NewResult(0, 1))
-	// Then expect the INSERT into VALIDATIONS table with embedded token request
-	mockDB.
-		ExpectExec("INSERT INTO VALIDATIONS \\(tx_id, request, metadata, pp_hash, stored_at\\) "+
-			"VALUES \\(\\$1, \\$2, \\$3, \\$4, \\$5\\)").
-		WithArgs(txID, tokenRequest, "null", ppHash, now).
-		WillReturnResult(sqlmock.NewResult(0, 1))
-	mockDB.ExpectCommit()
-
-	aw, err := store(db).NewTransactionStoreTransaction()
-	gomega.Expect(err).ToNot(gomega.HaveOccurred())
-	gomega.Expect(aw.AddValidationRecord(t.Context(), txID, tokenRequest, nil, ppHash)).To(gomega.Succeed())
 	gomega.Expect(aw.Commit()).To(gomega.Succeed())
 
 	gomega.Expect(mockDB.ExpectationsWereMet()).To(gomega.Succeed())

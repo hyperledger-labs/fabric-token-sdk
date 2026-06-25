@@ -43,6 +43,10 @@ func TestKeyStore(t *testing.T) {
 	dbtest2.KeyStoreTest(t, func(name string) driver.Driver { return NewDriver(sqliteCfg(t.TempDir(), name)) })
 }
 
+func TestEndorser(t *testing.T) {
+	dbtest2.EndorserTest(t, func(name string) driver.Driver { return NewDriver(sqliteCfg(t.TempDir(), name)) })
+}
+
 func sqliteCfg(tempDir string, name string) *mock.ConfigProvider {
 	return multiplexed.MockTypeConfig(fscSqlite.Persistence, fscSqlite.Config{
 		DataSource:   fmt.Sprintf("file:%s?_pragma=busy_timeout(20000)", path.Join(tempDir, "db.sqlite")),

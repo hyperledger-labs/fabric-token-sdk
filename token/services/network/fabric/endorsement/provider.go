@@ -22,16 +22,14 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/endorsement/fsc"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/ttxdb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/endorserdb"
 )
 
 const (
 	FSCEndorsementKey = "services.network.fabric.fsc_endorsement"
 )
 
-var (
-	logger = logging.MustGetLogger()
-)
+var logger = logging.MustGetLogger()
 
 type ServiceProvider struct {
 	lazy.Provider[token2.TMSID, Service]
@@ -45,7 +43,7 @@ func NewServiceProvider(
 	viewRegistry fsc.ViewRegistry,
 	identityProvider fsc.IdentityProvider,
 	keyTranslator translator.KeyTranslator,
-	storeServiceManager ttxdb.StoreServiceManager,
+	storeServiceManager endorserdb.StoreServiceManager,
 ) *ServiceProvider {
 	l := &loader{
 		fnsp:                fnsp,
@@ -74,7 +72,7 @@ type loader struct {
 	viewRegistry        fsc.ViewRegistry
 	identityProvider    fsc.IdentityProvider
 	keyTranslator       translator.KeyTranslator
-	storeServiceManager ttxdb.StoreServiceManager
+	storeServiceManager endorserdb.StoreServiceManager
 	fabricProvider      *fabric.NetworkServiceProvider
 }
 
@@ -264,13 +262,13 @@ func (e *EndorserService) EndorserID(tmsID token2.TMSID) (view.Identity, error) 
 	return endorserID, nil
 }
 
-// StorageProvider wraps ttxdb.StoreServiceManager
+// StorageProvider wraps endorserdb.StoreServiceManager
 type StorageProvider struct {
-	ttxdb.StoreServiceManager
+	endorserdb.StoreServiceManager
 }
 
 // NewStorageProvider returns a new instance of StorageProvider
-func NewStorageProvider(storeServiceManager ttxdb.StoreServiceManager) *StorageProvider {
+func NewStorageProvider(storeServiceManager endorserdb.StoreServiceManager) *StorageProvider {
 	return &StorageProvider{StoreServiceManager: storeServiceManager}
 }
 

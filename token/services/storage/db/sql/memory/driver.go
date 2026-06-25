@@ -53,3 +53,7 @@ func (d *Driver) NewAuditTransaction(_ driver2.PersistenceName, params ...string
 func (d *Driver) NewOwnerTransaction(_ driver2.PersistenceName, params ...string) (driver3.TokenTransactionStore, error) {
 	return ((*sqlite2.Driver)(d)).OwnerTx.Get(mem.Op.GetConfig(params...))
 }
+
+func (d *Driver) NewEndorser(_ driver2.PersistenceName, params ...string) (driver3.EndorserStore, error) {
+	return ((*sqlite2.Driver)(d)).Endorser.Get(mem.Op.GetConfig(params...))
+}

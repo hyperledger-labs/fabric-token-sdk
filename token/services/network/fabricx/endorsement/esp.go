@@ -19,7 +19,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/endorsement"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/endorsement/fsc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx/pp"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/ttxdb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/endorserdb"
 )
 
 // IdentityProvider models an identity provider.
@@ -52,7 +52,7 @@ func NewServiceProvider(
 	keyTranslator translator.KeyTranslator,
 	versionKeeperProvider pp.VersionKeeperProvider,
 	tokenManagementSystemProvider *token2.ManagementServiceProvider,
-	storeServiceManager ttxdb.StoreServiceManager,
+	storeServiceManager endorserdb.StoreServiceManager,
 	fabricProvider *fabric.NetworkServiceProvider,
 ) *ServiceProvider {
 	l := &loader{
@@ -77,7 +77,7 @@ type loader struct {
 	identityProvider              IdentityProvider
 	keyTranslator                 translator.KeyTranslator
 	versionKeeperProvider         pp.VersionKeeperProvider
-	storeServiceManager           ttxdb.StoreServiceManager
+	storeServiceManager           endorserdb.StoreServiceManager
 	tokenManagementSystemProvider *token2.ManagementServiceProvider
 	fabricProvider                *fabric.NetworkServiceProvider
 }
@@ -123,8 +123,7 @@ func key(tmsID token2.TMSID) string {
 }
 
 // NamespaceTxProcessor models a namespace transaction processor for fabric X
-type NamespaceTxProcessor struct {
-}
+type NamespaceTxProcessor struct{}
 
 // EnableTxProcessing is a no-op implementation because for FabricX
 // the endorser service is stateless and does not require pre-processing.

@@ -8,6 +8,7 @@ SPDX-License-Identifier: Apache-2.0
 package token
 
 import (
+	"context"
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
@@ -18,6 +19,16 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+type dummySelector struct{}
+
+func (d dummySelector) Select(ctx context.Context, ownerFilter OwnerFilter, q string, tokenType token.Type) ([]*token.ID, token.Quantity, error) {
+	panic("implement me")
+}
+
+func (d dummySelector) Close() error {
+	panic("implement me")
+}
 
 // TestRequestSerialization verifies that a Request can be serialized to bytes and
 // deserialized back without data loss. Tests both full serialization (Bytes/FromBytes)
@@ -230,9 +241,7 @@ func TestCompileTransferOptions(t *testing.T) {
 	})
 
 	t.Run("with token selector", func(t *testing.T) {
-		mockSelector := &SelectorMock{}
-		mockSelector.SelectReturns(nil, token.NewZeroQuantity(64), nil)
-		mockSelector.CloseReturns(nil)
+		mockSelector := &dummySelector{}
 		opts, err := CompileTransferOptions(
 			WithTokenSelector(mockSelector),
 		)
