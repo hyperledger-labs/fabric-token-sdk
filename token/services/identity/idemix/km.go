@@ -277,10 +277,13 @@ func (p *KeyManager) Identity(ctx context.Context, auditInfo []byte) (*idriver.I
 	// Set up default signer
 	logger.DebugfContext(ctx, "setup default signer")
 	id := crypto.NewIdentity(p.Deserializer, nymPublicKey, proof, p.verType, p.SchemaManager, p.Schema)
+	raw, err := nymPublicKey.Bytes()
+	ski := nymPublicKey.SKI()
+	fmt.Printf("raw public key: %s %s\n", raw, err)
 	sID := &crypto.SigningIdentity{
 		CSP:          p.Csp,
 		Identity:     id,
-		NymKeySKI:    nymPublicKey.SKI(),
+		NymKeySKI:    ski,
 		UserKeySKI:   p.userKeySKI,
 		EnrollmentId: enrollmentID,
 	}

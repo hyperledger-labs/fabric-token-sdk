@@ -50,7 +50,7 @@ Manages the cryptographic identities and logical wallet groupings used by the no
 *   **IdentitySigners**: Tracks which identities have locally available signing keys and their associated metadata.
 
 ### Generic Store
-*   **KeyStore**: A secure, generic key-value store used for persisting various cryptographic materials and small sensitive states.
+*   **KeyStore**: A secure, generic key-value store used for persisting various cryptographic materials and small sensitive states. The keystore uses identifiers that are expected to be the hexadecimal representation of the key's Subject Key Identifier (SKI). This convention is relied upon by other packages, particularly for operations like keystore cleanup where SKIs are derived from owner identities to locate and manage keys.
 
 ## Internal Databases
 

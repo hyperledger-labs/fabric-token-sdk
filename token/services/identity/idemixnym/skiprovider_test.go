@@ -34,7 +34,7 @@ func TestNewSKIProvider(t *testing.T) {
 
 // TestSKIProvider_GetSKIsFromIdentity tests SKI extraction from IdemixNym identities
 func TestSKIProvider_GetSKIsFromIdentity(t *testing.T) {
-	testSKIProviderGetSKIsFromIdentity(t, "../idemix/testdata/fp256bn_amcl/idemix", math.FP256BN_AMCL)
+	testSKIProviderGetSKIsFromIdentity(t, "../idemix/testdata/bls12_381_bbs_gurvy/idemix", math.BLS12_381_BBS_GURVY)
 	testSKIProviderGetSKIsFromIdentity(t, "../idemix/testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS_GURVY)
 }
 
@@ -146,7 +146,7 @@ func testSKIProviderGetSKIsFromIdentity(t *testing.T, configPath string, curveID
 // TestSKIProvider_ConsistencyWithDeserializeSigner verifies that the SKI provider
 // extracts the same IdemixSignature as DeserializeSigner
 func TestSKIProvider_ConsistencyWithDeserializeSigner(t *testing.T) {
-	testSKIProviderConsistency(t, "../idemix/testdata/fp256bn_amcl/idemix", math.FP256BN_AMCL)
+	testSKIProviderConsistency(t, "../idemix/testdata/bls12_381_bbs_gurvy/idemix", math.BLS12_381_BBS_GURVY)
 	testSKIProviderConsistency(t, "../idemix/testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS_GURVY)
 }
 
@@ -199,7 +199,7 @@ func testSKIProviderConsistency(t *testing.T, configPath string, curveID math.Cu
 
 // TestSKIProvider_MultipleIdentities tests that different identities produce different SKIs
 func TestSKIProvider_MultipleIdentities(t *testing.T) {
-	testSKIProviderMultipleIdentities(t, "../idemix/testdata/fp256bn_amcl/idemix", math.FP256BN_AMCL)
+	testSKIProviderMultipleIdentities(t, "../idemix/testdata/bls12_381_bbs_gurvy/idemix", math.BLS12_381_BBS_GURVY)
 	testSKIProviderMultipleIdentities(t, "../idemix/testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS_GURVY)
 }
 
@@ -261,7 +261,7 @@ func testSKIProviderMultipleIdentities(t *testing.T, configPath string, curveID 
 
 // TestSKIProvider_DeterministicOutput tests that the same identity always produces the same SKI
 func TestSKIProvider_DeterministicOutput(t *testing.T) {
-	testSKIProviderDeterministic(t, "../idemix/testdata/fp256bn_amcl/idemix", math.FP256BN_AMCL)
+	testSKIProviderDeterministic(t, "../idemix/testdata/bls12_381_bbs_gurvy/idemix", math.BLS12_381_BBS_GURVY)
 	testSKIProviderDeterministic(t, "../idemix/testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS_GURVY)
 }
 

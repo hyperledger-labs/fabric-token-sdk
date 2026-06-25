@@ -71,7 +71,7 @@ func testRound(t *testing.T, client *vault.Client) {
 	assert.Equal(t, &stuff{"claws", 2}, val)
 
 	results := kvstore.GetExisting(ctx, k1, k2)
-	assert.Len(t, len(results), 2)
+	assert.Len(t, results, 2)
 
 	it, err := kvstore.GetByPartialCompositeID(ctx, "k", []string{})
 	require.NoError(t, err)
@@ -97,7 +97,7 @@ func testRound(t *testing.T, client *vault.Client) {
 	assert.False(t, kvstore.Exists(ctx, k2))
 
 	results = kvstore.GetExisting(ctx, k1, k2)
-	assert.Len(t, len(results), 1)
+	assert.Len(t, results, 1)
 	assert.Equal(t, results[0], k1)
 
 	val = &stuff{}
@@ -153,7 +153,7 @@ func testRound(t *testing.T, client *vault.Client) {
 	assert.Equal(t, val, val2)
 
 	results = kvstore.GetExisting(ctx, k)
-	assert.Len(t, len(results), 1)
+	assert.Len(t, results, 1)
 
 	it, err = kvstore.GetByPartialCompositeID(ctx, k, []string{})
 	require.NoError(t, err)
