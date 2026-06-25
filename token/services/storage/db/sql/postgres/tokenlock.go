@@ -76,8 +76,8 @@ func (db *TokenLockStore) Cleanup(ctx context.Context, leaseExpiry time.Duration
 		WriteConditionSerializable(cond.OlderThan(tokenLocks.Field("created_at"), leaseExpiry), db.ci).
 		WriteString(" OR ").
 		WriteString(
-			fmt.Sprintf("EXISTS (SELECT 1 FROM %s WHERE %s.tx_id = %s.consumer_tx_id AND %s.status IN (%d))",
-				db.Table.Requests, db.Table.Requests, db.Table.TokenLocks, db.Table.Requests, driver.Deleted,
+			fmt.Sprintf("EXISTS (SELECT 1 FROM %s WHERE %s.tx_id = %s.consumer_tx_id AND %s.status IN (%d, %d))",
+				db.Table.Requests, db.Table.Requests, db.Table.TokenLocks, db.Table.Requests, driver.Deleted, driver.Orphan,
 			)). // TODO: Implement EXIST condition
 		Build()
 
