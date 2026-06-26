@@ -15,6 +15,7 @@ import (
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/libp2p"
 	auditor3 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/sdk/auditor"
 	issuer3 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/sdk/issuer"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/sdk/party"
@@ -134,7 +135,7 @@ func Topology(opts common.Opts) []api.Topology {
 	}
 
 	// additional nodes that are backend specific
-	fscTopology.ListNodes("lib-p2p-bootstrap-node")[0].AddSDK(opts.SDKs[0])
+	fscTopology.ListNodes("lib-p2p-bootstrap-node")[0].AddSDK(&libp2p.SDK{})
 
 	// add the rest of the SDKs
 	for i := 1; i < len(opts.SDKs); i++ {

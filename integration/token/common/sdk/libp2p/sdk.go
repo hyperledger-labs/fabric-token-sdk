@@ -11,6 +11,8 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	common "github.com/hyperledger-labs/fabric-smart-client/platform/common/sdk/dig"
+	viewsdk "github.com/hyperledger-labs/fabric-smart-client/platform/view/sdk/dig"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/comm"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/comm/host"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/comm/host/libp2p"
@@ -22,6 +24,10 @@ import (
 
 type SDK struct {
 	common.SDK
+}
+
+func NewSDK(registry services.Registry) *SDK {
+	return &SDK{SDK: NewFrom(viewsdk.NewSDK(registry))}
 }
 
 func NewFrom(sdk common.SDK) *SDK {
