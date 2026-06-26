@@ -84,6 +84,9 @@ func TestSaveTransferToFile(t *testing.T) {
 						Identity:  []byte{1, 2, 3, 4, 5},
 						AuditInfo: []byte{6, 7, 8, 9, 10, 11, 12, 13, 14, 15},
 					},
+					Inputs:       []*driver.IssueInputMetadata{},
+					Outputs:      []*driver.IssueOutputMetadata{},
+					ExtraSigners: []driver.AuditableIdentity{},
 				},
 			},
 		},
@@ -117,6 +120,12 @@ func TestSaveTransferToFile(t *testing.T) {
 	decoded, err := base64.StdEncoding.DecodeString(payload.ReqRaw)
 	require.NoError(t, err)
 	require.Equal(t, e.TRWithTransferRaw, decoded)
-	require.Equal(t, metadata, payload.Metadata)
-	require.Equal(t, inputs, payload.Inputs)
+	// Verify metadata: decode base64, then deserialize and compare
+	metadataBytes, err := base64.StdEncoding.DecodeString(payload.Metadata)
+	require.NoError(t, err)
+	decodedMetadata := &driver.TokenRequestMetadata{}
+	require.NoError(t, decodedMetadata.FromBytes(metadataBytes))
+	require.Equal(t, metadata, decodedMetadata)
+	// Verify inputs: compare the underlying map
+	require.Equal(t, inputs, payload.Inputs.Inputs)
 }
