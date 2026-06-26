@@ -146,7 +146,8 @@ func (s *IssueService) Issue(ctx context.Context, issuerIdentity driver.Identity
 			return nil, nil, err
 		}
 		outputsMetadata = append(outputsMetadata, &driver.IssueOutputMetadata{
-			OutputMetadata: raw,
+			OutputMetadata:  raw,
+			OutputAuditInfo: auditInfo,
 			Receivers: []*driver.AuditableIdentity{
 				{
 					Identity:  owner,

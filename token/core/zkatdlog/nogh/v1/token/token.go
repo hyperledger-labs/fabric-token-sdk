@@ -11,11 +11,11 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	fabtokenv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/actions"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/actions"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/pp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/utils"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/v1/actions"
 	math2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/math"
 	noghv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
+	protosv1 "github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/v1"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens/core/comm"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
@@ -220,7 +220,7 @@ func (m *Metadata) Serialize() ([]byte, error) {
 		Type:           string(m.Type),
 		Value:          value,
 		BlindingFactor: blindingFactor,
-		Issuer:         &pp.Identity{Raw: m.Issuer},
+		Issuer:         &protosv1.Identity{Raw: m.Issuer},
 	})
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed serializing token")

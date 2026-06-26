@@ -39,7 +39,7 @@ type GeneratorArgs struct {
 	// Aries is a flag to indicate that aries should be used as backend for idemix
 	Aries bool
 	// Version allows the caller of tokengen to override the version number put in the public params
-	Version uint
+	Version uint32
 }
 
 var (
@@ -59,7 +59,7 @@ var (
 	// Aries is a flag to indicate that aries should be used as backend for idemix
 	Aries bool
 	// Version allows the caller of tokengen to override the version number put in the public params
-	Version uint
+	Version uint32
 	// Extras allows the caller to add extra parameters to the public parameters
 	Extras []string
 )
@@ -75,7 +75,7 @@ func Cmd() *cobra.Command {
 	flags.StringVarP(&IdemixMSPDir, "idemix", "i", "", "idemix msp dir")
 	flags.Uint64VarP(&BitLength, "bits", "b", 64, "bits is used to define the maximum quantity a token can contain")
 	flags.BoolVarP(&Aries, "aries", "r", false, "flag to indicate that aries should be used as backend for idemix")
-	flags.UintVarP(&Version, "version", "v", 0, "allows the caller of tokengen to override the version number put in the public params")
+	flags.Uint32VarP(&Version, "version", "v", 0, "allows the caller of tokengen to override the version number put in the public params")
 	flags.StringArrayVarP(&Extras, "extra", "x", []string{}, "extra data in key=value format, where value is the path to a file containing the data to load and store in the key")
 
 	return cobraCommand
