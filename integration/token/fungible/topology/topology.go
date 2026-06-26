@@ -175,7 +175,6 @@ func Topology(opts common.Opts) []api.Topology {
 	fabric2.SetOrgs(tms, "Org1")
 	nodeList := fscTopology.ListNodes()
 	fscTopology.SetBootstrapNode(fscTopology.AddNodeByName("lib-p2p-bootstrap-node"))
-	fscTopology.ListNodes("lib-p2p-bootstrap-node")[0].AddSDK(&libp2p.SDK{})
 
 	if !opts.NoAuditor {
 		tms.AddAuditor(auditor)
@@ -210,6 +209,8 @@ func Topology(opts common.Opts) []api.Topology {
 				node.AddSDKWithBase(opts.SDKs[0], &endorser.SDK{})
 			}
 		}
+
+		fscTopology.ListNodes("lib-p2p-bootstrap-node")[0].AddSDK(&libp2p.SDK{})
 
 		// add the rest of the SDKs
 		for i := 1; i < len(opts.SDKs); i++ {
