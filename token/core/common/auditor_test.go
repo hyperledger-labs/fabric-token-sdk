@@ -207,7 +207,7 @@ func TestRetrieveAuditTokens(t *testing.T) {
 
 		tokens, err := RetrieveAuditTokens(ctx, logger, qe, tokenIDs, anchor)
 		require.NoError(t, err)
-		assert.Len(t, tokens, 1)
+		assert.Len(t, tokens, 2)
 		assert.Equal(t, tok1, tokens[id1.String()])
 		assert.Nil(t, tokens[id2.String()])
 	})
