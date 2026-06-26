@@ -2,13 +2,12 @@ module github.com/hyperledger-labs/fabric-token-sdk/cmd/artifactgen
 
 go 1.26.3
 
-replace github.com/hyperledger-labs/fabric-token-sdk => ./../../
-
-replace github.com/hyperledger-labs/fabric-token-sdk/integration => ./../../integration
-
-replace github.com/hyperledger-labs/fabric-smart-client/platform/view/services/comm/host/libp2p => github.com/hyperledger-labs/fabric-smart-client/platform/view/services/comm/host/libp2p v0.0.0-20260618115140-04366ada95c8
-
-replace github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/state/cc/query => github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/state/cc/query v0.0.0-20260618115140-04366ada95c8
+replace (
+	github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/state/cc/query => github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/state/cc/query v0.0.0-20260618115140-04366ada95c8
+	github.com/hyperledger-labs/fabric-smart-client/platform/view/services/comm/host/libp2p => github.com/hyperledger-labs/fabric-smart-client/platform/view/services/comm/host/libp2p v0.0.0-20260618115140-04366ada95c8
+	github.com/hyperledger-labs/fabric-token-sdk => ./../../
+	github.com/hyperledger-labs/fabric-token-sdk/integration => ./../../integration
+)
 
 require (
 	github.com/hyperledger-labs/fabric-smart-client v0.13.0

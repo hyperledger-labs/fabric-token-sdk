@@ -2,9 +2,10 @@ module github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen
 
 go 1.26.3
 
-replace github.com/hyperledger-labs/fabric-token-sdk/integration => ./../../integration
-
-replace github.com/hyperledger-labs/fabric-token-sdk => ./../../
+replace (
+	github.com/hyperledger-labs/fabric-token-sdk => ./../../
+	github.com/hyperledger-labs/fabric-token-sdk/integration => ./../../integration
+)
 
 require (
 	github.com/IBM/idemix v0.0.2
