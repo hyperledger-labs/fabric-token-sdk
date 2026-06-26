@@ -421,6 +421,36 @@ Default values:
 
 ---
 
+### Optional: token.validation
+
+Configuration related to strict input validation limits for tokens and identity service payloads. If not specified, the default configuration is:
+
+```yaml
+token:
+  validation:
+    maxTokenPayloadSize: 2097152
+    maxTokenOutputsPerTx: 1000
+    maxBulkDeleteSize: 10000
+    maxWalletIDSize: 1024
+    maxOwnerRawSize: 262144
+    maxIssuerRawSize: 262144
+    maxTokenRequestSize: 2097152
+    maxActionCount: 1000
+```
+
+Default values:
+
+- maxTokenPayloadSize: 2097152 (2MB) - Maximum size in bytes of a token's payload (TokenOnLedger/TokenOnLedgerMetadata).
+- maxTokenOutputsPerTx: 1000 - Maximum number of token outputs allowed per transaction append request.
+- maxBulkDeleteSize: 10000 - Maximum number of IDs that can be deleted in a bulk operation.
+- maxWalletIDSize: 1024 (1KB) - Maximum size in bytes for a wallet ID.
+- maxOwnerRawSize: 262144 (256KB) - Maximum raw size in bytes for an owner identity.
+- maxIssuerRawSize: 262144 (256KB) - Maximum raw size in bytes for an issuer identity.
+- maxTokenRequestSize: 2097152 (2MB) - Maximum allowed size in bytes for a full token request payload.
+- maxActionCount: 1000 - Maximum number of actions allowed in a single token request.
+
+---
+
 ### Optional: token.fabricx.lookup
 
 If not specified, the default configuration is:

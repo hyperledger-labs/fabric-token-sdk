@@ -14,6 +14,11 @@ type Validator struct {
 	setMinProtocolVersionArgsForCall []struct {
 		arg1 uint32
 	}
+	SetValidationConfigStub        func(driver.ValidationConfig)
+	setValidationConfigMutex       sync.RWMutex
+	setValidationConfigArgsForCall []struct {
+		arg1 driver.ValidationConfig
+	}
 	UnmarshalActionsStub        func([]byte) ([]interface{}, error)
 	unmarshalActionsMutex       sync.RWMutex
 	unmarshalActionsArgsForCall []struct {
@@ -78,6 +83,38 @@ func (fake *Validator) SetMinProtocolVersionArgsForCall(i int) uint32 {
 	fake.setMinProtocolVersionMutex.RLock()
 	defer fake.setMinProtocolVersionMutex.RUnlock()
 	argsForCall := fake.setMinProtocolVersionArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *Validator) SetValidationConfig(arg1 driver.ValidationConfig) {
+	fake.setValidationConfigMutex.Lock()
+	fake.setValidationConfigArgsForCall = append(fake.setValidationConfigArgsForCall, struct {
+		arg1 driver.ValidationConfig
+	}{arg1})
+	stub := fake.SetValidationConfigStub
+	fake.recordInvocation("SetValidationConfig", []interface{}{arg1})
+	fake.setValidationConfigMutex.Unlock()
+	if stub != nil {
+		fake.SetValidationConfigStub(arg1)
+	}
+}
+
+func (fake *Validator) SetValidationConfigCallCount() int {
+	fake.setValidationConfigMutex.RLock()
+	defer fake.setValidationConfigMutex.RUnlock()
+	return len(fake.setValidationConfigArgsForCall)
+}
+
+func (fake *Validator) SetValidationConfigCalls(stub func(driver.ValidationConfig)) {
+	fake.setValidationConfigMutex.Lock()
+	defer fake.setValidationConfigMutex.Unlock()
+	fake.SetValidationConfigStub = stub
+}
+
+func (fake *Validator) SetValidationConfigArgsForCall(i int) driver.ValidationConfig {
+	fake.setValidationConfigMutex.RLock()
+	defer fake.setValidationConfigMutex.RUnlock()
+	argsForCall := fake.setValidationConfigArgsForCall[i]
 	return argsForCall.arg1
 }
 

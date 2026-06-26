@@ -10,19 +10,41 @@ import (
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
+	tokenmock "github.com/hyperledger-labs/fabric-token-sdk/token/mock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens/mock"
+	tokensmock "github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens/mock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestServiceManager(t *testing.T) {
 	tmsID := token.TMSID{Network: "net", Channel: "ch", Namespace: "ns"}
-	mockTMSProv := &mock.FakeTMSProvider{}
-	mockStoreServProv := &mock.FakeStoreServiceManager{}
+	mockTMS := &mock.TokenManagerService{}
+	mockConfig := &mock.Configuration{}
+	mockTMS.ConfigurationReturns(mockConfig)
 
-	mockNetProv := &mock.FakeNetworkProvider{}
-	mockPub := &mock.FakePublisher{}
+	mockPPM := &mock.PublicParamsManager{}
+	mockPP := &mock.PublicParameters{}
+	mockPPM.PublicParametersReturns(mockPP)
+	mockTMS.PublicParamsManagerReturns(mockPPM)
+
+	mockTMS.DeserializerReturns(&mock.Deserializer{})
+	mockTMS.IdentityProviderReturns(&mock.IdentityProvider{})
+
+	mockVP := &tokenmock.VaultProvider{}
+	mockVault := &mock.Vault{}
+	mockVP.VaultReturns(mockVault, nil)
+
+	tms, err := token.NewManagementService(tmsID, mockTMS, nil, mockVP, nil, nil)
+	require.NoError(t, err)
+
+	mockTMSProv := &tokensmock.FakeTMSProvider{}
+	mockTMSProv.GetManagementServiceReturns(tms, nil)
+	mockStoreServProv := &tokensmock.FakeStoreServiceManager{}
+
+	mockNetProv := &tokensmock.FakeNetworkProvider{}
+	mockPub := &tokensmock.FakePublisher{}
 
 	manager := tokens.NewServiceManager(mockTMSProv, mockStoreServProv, mockNetProv, mockPub)
 	require.NotNil(t, manager)
@@ -35,7 +57,7 @@ func TestServiceManager(t *testing.T) {
 	assert.Equal(t, mockNetProv, service.NetworkProvider)
 
 	// Test GetService helper
-	sp := &mock.FakeServiceProvider{}
+	sp := &tokensmock.FakeServiceProvider{}
 	sp.GetServiceReturns(manager, nil)
 
 	service2, err := tokens.GetService(sp, tmsID)
@@ -43,7 +65,7 @@ func TestServiceManager(t *testing.T) {
 	assert.Equal(t, service, service2)
 
 	// Test GetService error
-	spErr := &mock.FakeServiceProvider{}
+	spErr := &tokensmock.FakeServiceProvider{}
 	spErr.GetServiceReturns(nil, assert.AnError)
 
 	_, err = tokens.GetService(spErr, tmsID)

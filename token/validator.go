@@ -57,6 +57,11 @@ func (c *Validator) UnmarshallAndVerifyWithMetadata(ctx context.Context, ledger 
 	return res, meta, nil
 }
 
+// SetValidationConfig configures the validation limits for the validator.
+func (c *Validator) SetValidationConfig(config driver.ValidationConfig) {
+	c.backend.SetValidationConfig(config)
+}
+
 type stateGetter struct {
 	f driver.GetStateFnc
 }

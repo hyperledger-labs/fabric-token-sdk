@@ -12,6 +12,25 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
+const (
+	// MaxTokenPayloadSize is the maximum size of a token payload in bytes.
+	MaxTokenPayloadSize = 2 * 1024 * 1024 // 2MB
+	// MaxTokenOutputsPerTx is the maximum number of outputs per transaction.
+	MaxTokenOutputsPerTx = 1000
+	// MaxBulkDeleteSize is the maximum number of token IDs that can be deleted in a single bulk operation.
+	MaxBulkDeleteSize = 10000
+	// MaxWalletIDSize is the maximum size of a wallet ID in bytes.
+	MaxWalletIDSize = 1024
+	// MaxOwnerRawSize is the maximum size of a raw owner identity in bytes.
+	MaxOwnerRawSize = 256 * 1024 // 256KB for Idemix
+	// MaxIssuerRawSize is the maximum size of a raw issuer identity in bytes.
+	MaxIssuerRawSize = 256 * 1024
+	// MaxTokenRequestSize is the maximum size of a token request in bytes.
+	MaxTokenRequestSize = 2 * 1024 * 1024 // 2MB
+	// MaxActionCount is the maximum number of actions/signatures in a token request.
+	MaxActionCount = 1000
+)
+
 // ValidationAttributeID is the type of validation attribute identifier
 type ValidationAttributeID = string
 
@@ -45,6 +64,18 @@ type ValidatorLedger interface {
 	GetState(id token.ID) ([]byte, error)
 }
 
+// ValidationConfig defines the limits for token validation operations to prevent resource exhaustion.
+type ValidationConfig struct {
+	MaxTokenPayloadSize  int
+	MaxTokenOutputsPerTx int
+	MaxBulkDeleteSize    int
+	MaxWalletIDSize      int
+	MaxOwnerRawSize      int
+	MaxIssuerRawSize     int
+	MaxTokenRequestSize  int
+	MaxActionCount       int
+}
+
 // Validator provides methods for validating token transaction requests.
 // It ensures that requests are well-formed and consistent with the rules
 // defined by the token driver.
@@ -68,4 +99,7 @@ type Validator interface {
 	// Setting this to 0 (default) accepts all protocol versions.
 	// This is useful for enforcing protocol upgrades across a network.
 	SetMinProtocolVersion(version uint32)
+
+	// SetValidationConfig configures the validation limits for the validator.
+	SetValidationConfig(config ValidationConfig)
 }
