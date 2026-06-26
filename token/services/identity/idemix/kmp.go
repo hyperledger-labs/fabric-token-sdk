@@ -128,12 +128,34 @@ func (l *KeyManagerProvider) Get(ctx context.Context, identityConfig *driver.Ide
 			return nil, errors.Errorf("cannot invoke this function, remote must register pseudonyms on wallet [%v]", id)
 		}
 	} else {
-		getIdentityFunc = cache.NewIdentityCache(
-			keyManager.Identity,
+		identityGetter := keyManager.Identity
+		if ephemeralKM, ok := keyManager.(interface {
+			EphemeralIdentity(context.Context, []byte) (*idriver.IdentityDescriptor, error)
+		}); ok {
+			identityGetter = ephemeralKM.EphemeralIdentity
+		}
+		c := cache.NewIdentityCache(
+			identityGetter,
 			cacheSize,
 			nil,
 			cache.NewMetrics(l.metricsProvider),
-		).Identity
+		)
+		getIdentityFunc = func(ctx context.Context, auditInfo []byte) (*idriver.IdentityDescriptor, error) {
+			desc, err := c.Identity(ctx, auditInfo)
+			if err != nil {
+				return nil, err
+			}
+			if desc != nil && desc.Signer != nil {
+				if signingID, ok := desc.Signer.(*crypto2.SigningIdentity); ok {
+					if signingID.NymKey != nil {
+						if err := l.keyStore.StoreKey(signingID.NymKey); err != nil {
+							return nil, errors.Wrap(err, "failed to persist nym key from cache")
+						}
+					}
+				}
+			}
+			return desc, nil
+		}
 	}
 
 	// finalize identity configuration

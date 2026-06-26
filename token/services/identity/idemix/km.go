@@ -211,8 +211,24 @@ func NewKeyManagerWithSchema(
 	}, nil
 }
 
-// Identity returns the identity descriptor for the given audit information
+// Identity returns the identity descriptor for the given audit information.
+// The derived nym key is persisted in the key store for later use.
 func (p *KeyManager) Identity(ctx context.Context, auditInfo []byte) (*idriver.IdentityDescriptor, error) {
+	return p.identityWithOpts(ctx, auditInfo, false)
+}
+
+// EphemeralIdentity returns the identity descriptor for the given audit information
+// without persisting the derived nym key in the key store.
+// This is intended for pre-generated cache identities that are used once and
+// do not need to survive a restart. Using ephemeral nym keys avoids accumulating
+// orphaned pseudonyms on disk when the cache size is later reduced.
+func (p *KeyManager) EphemeralIdentity(ctx context.Context, auditInfo []byte) (*idriver.IdentityDescriptor, error) {
+	return p.identityWithOpts(ctx, auditInfo, true)
+}
+
+// identityWithOpts is the core implementation for identity generation.
+// When temporaryNym is true, the derived nym key is not persisted in the key store.
+func (p *KeyManager) identityWithOpts(ctx context.Context, auditInfo []byte, temporaryNym bool) (*idriver.IdentityDescriptor, error) {
 	logger.DebugfContext(ctx, "get user secret key")
 	// Load the user key
 	userKey, err := p.Csp.GetKey(p.userKeySKI)
@@ -225,7 +241,7 @@ func (p *KeyManager) Identity(ctx context.Context, auditInfo []byte) (*idriver.I
 	nymKey, err := p.Csp.KeyDeriv(
 		userKey,
 		&bccsp.IdemixNymKeyDerivationOpts{
-			Temporary: false,
+			Temporary: temporaryNym,
 			IssuerPK:  p.IssuerPublicKey,
 		},
 	)
@@ -283,6 +299,7 @@ func (p *KeyManager) Identity(ctx context.Context, auditInfo []byte) (*idriver.I
 		NymKeySKI:    nymPublicKey.SKI(),
 		UserKeySKI:   p.userKeySKI,
 		EnrollmentId: enrollmentID,
+		NymKey:       nymKey,
 	}
 	serializedIdentity, err := sID.Serialize()
 	if err != nil {

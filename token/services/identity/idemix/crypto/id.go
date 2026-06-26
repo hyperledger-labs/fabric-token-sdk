@@ -141,13 +141,21 @@ type SigningIdentity struct {
 	NymKeySKI []byte
 	// User secret key identifier
 	UserKeySKI []byte
+	// Ephemeral/derived nym key (only used in memory for ephemeral signers)
+	NymKey bccsp.Key `json:"-"`
 }
 
 // Sign creates a signature using secret keys.
 func (id *SigningIdentity) Sign(msg []byte) ([]byte, error) {
-	nymKey, err := id.CSP.GetKey(id.NymKeySKI)
-	if err != nil {
-		return nil, errors.Wrap(err, "cannot find nym secret key")
+	var nymKey bccsp.Key
+	var err error
+	if id.NymKey != nil {
+		nymKey = id.NymKey
+	} else {
+		nymKey, err = id.CSP.GetKey(id.NymKeySKI)
+		if err != nil {
+			return nil, errors.Wrap(err, "cannot find nym secret key")
+		}
 	}
 
 	// Load the user key

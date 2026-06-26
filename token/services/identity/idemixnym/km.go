@@ -84,6 +84,18 @@ func (k *KeyManager) IdentityType() idriver.IdentityType {
 }
 
 func (k *KeyManager) Identity(ctx context.Context, referenceAuditInfo []byte) (*idriver.IdentityDescriptor, error) {
+	return k.identityWithBackendFunc(ctx, referenceAuditInfo, k.backend.Identity)
+}
+
+// EphemeralIdentity returns the identity descriptor without persisting the derived nym key.
+// This is intended for pre-generated cache identities that do not need to survive a restart.
+func (k *KeyManager) EphemeralIdentity(ctx context.Context, referenceAuditInfo []byte) (*idriver.IdentityDescriptor, error) {
+	return k.identityWithBackendFunc(ctx, referenceAuditInfo, k.backend.EphemeralIdentity)
+}
+
+// identityWithBackendFunc is the core implementation for identity generation.
+// The backendIdentityFunc parameter controls whether the nym key is persisted or ephemeral.
+func (k *KeyManager) identityWithBackendFunc(ctx context.Context, referenceAuditInfo []byte, backendIdentityFunc func(context.Context, []byte) (*idriver.IdentityDescriptor, error)) (*idriver.IdentityDescriptor, error) {
 	var backendAuditInfoRaw []byte
 	if len(referenceAuditInfo) != 0 {
 		// extract the audit infor for the backed
@@ -97,7 +109,7 @@ func (k *KeyManager) Identity(ctx context.Context, referenceAuditInfo []byte) (*
 		}
 	}
 
-	descriptor, err := k.backend.Identity(ctx, backendAuditInfoRaw)
+	descriptor, err := backendIdentityFunc(ctx, backendAuditInfoRaw)
 	if err != nil {
 		return nil, err
 	}
