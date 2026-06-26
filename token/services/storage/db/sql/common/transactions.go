@@ -41,7 +41,6 @@ type transactionTables struct {
 	Movements             string
 	Transactions          string
 	Requests              string
-	Validations           string
 	TransactionEndorseAck string
 }
 
@@ -99,7 +98,6 @@ func NewOwnerTransactionStore(readDB, writeDB *sql.DB, tables TableNames, ci com
 		Movements:             tables.Movements,
 		Transactions:          tables.Transactions,
 		Requests:              tables.Requests,
-		Validations:           tables.Validations,
 		TransactionEndorseAck: tables.TransactionEndorseAck,
 	}, ci, pi, nil, nil), nil
 }
@@ -116,7 +114,6 @@ func NewTransactionStoreWithNotifierAndRecovery(
 		Movements:             tables.Movements,
 		Transactions:          tables.Transactions,
 		Requests:              tables.Requests,
-		Validations:           tables.Validations,
 		TransactionEndorseAck: tables.TransactionEndorseAck,
 	}, ci, pi, notifier, recoveryLeaderFactory), nil
 }
@@ -270,40 +267,6 @@ func (db *TransactionStore) GetStatus(ctx context.Context, txID string) (dbdrive
 	}
 
 	return status, statusMessage, nil
-}
-
-func (db *TransactionStore) QueryValidations(ctx context.Context, params dbdriver.QueryValidationRecordsParams) (dbdriver.ValidationRecordsIterator, error) {
-	validationsTable, requestsTable := q.Table(db.table.Validations), q.Table(db.table.Requests)
-	query, args := q.Select().
-		Fields(
-			validationsTable.Field("tx_id"), requestsTable.Field("request"), common3.FieldName("metadata"),
-			requestsTable.Field("status"), validationsTable.Field("stored_at"),
-		).
-		From(validationsTable.Join(requestsTable,
-			cond.Cmp(validationsTable.Field("tx_id"), "=", requestsTable.Field("tx_id"))),
-		).
-		Where(HasValidationParams(params, db.table.Validations)).
-		Format(db.ci)
-
-	logging.Debug(logger, query, args)
-	rows, err := db.readDB.QueryContext(ctx, query, args...)
-	if err != nil {
-		return nil, err
-	}
-
-	it := common.NewIterator(rows, func(r *dbdriver.ValidationRecord) error {
-		var meta []byte
-		if err := rows.Scan(&r.TxID, &r.TokenRequest, &meta, &r.Status, &r.Timestamp); err != nil {
-			return err
-		}
-
-		return unmarshal(meta, &r.Metadata)
-	})
-	if params.Filter == nil {
-		return it, nil
-	}
-
-	return iterators.Filter(it, params.Filter), nil
 }
 
 func (db *TransactionStore) Notifier() (dbdriver.TransactionNotifier, error) {
@@ -511,13 +474,6 @@ func (db *TransactionStore) GetSchema() string {
 		CREATE INDEX IF NOT EXISTS idx_tx_id_%s ON %s ( tx_id );
 		CREATE INDEX IF NOT EXISTS idx_eid_storedat_%s ON %s ( enrollment_id, stored_at );
 
-		-- validations
-		CREATE TABLE IF NOT EXISTS %s (
-			tx_id TEXT NOT NULL PRIMARY KEY REFERENCES %s,
-			metadata BYTEA NOT NULL,
-			stored_at TIMESTAMP NOT NULL
-		);
-
 		-- tea
 		CREATE TABLE IF NOT EXISTS %s (
 			id CHAR(36) NOT NULL PRIMARY KEY,
@@ -531,7 +487,6 @@ func (db *TransactionStore) GetSchema() string {
 		db.table.Requests, db.table.Requests, db.table.Requests, db.table.Requests, db.table.Requests,
 		db.table.Transactions, db.table.Requests, db.table.Transactions, db.table.Transactions, db.table.Transactions, db.table.Transactions,
 		db.table.Movements, db.table.Requests, db.table.Movements, db.table.Movements, db.table.Movements, db.table.Movements,
-		db.table.Validations, db.table.Requests,
 		db.table.TransactionEndorseAck, db.table.TransactionEndorseAck, db.table.TransactionEndorseAck,
 	)
 }
@@ -667,28 +622,6 @@ func (w *TransactionStoreTransaction) AddMovement(ctx context.Context, rs ...dbd
 		Format()
 	logging.Debug(logger, query, args)
 	_, err := w.txn.ExecContext(ctx, query, args...)
-
-	return ttxDBError(err)
-}
-
-func (w *TransactionStoreTransaction) AddValidationRecord(ctx context.Context, txID string, meta map[string][]byte) error {
-	logger.DebugfContext(ctx, "adding validation record [%s]", txID)
-	if w.txn == nil {
-		return errors.New("no db transaction in progress")
-	}
-	md, err := marshal(meta)
-	if err != nil {
-		return errors.New("can't marshal metadata")
-	}
-	now := time.Now().UTC()
-
-	query, args := q.InsertInto(w.table.Validations).
-		Fields("tx_id", "metadata", "stored_at").
-		Row(txID, md, now).
-		Format()
-	logging.Debug(logger, query, txID, len(md), now)
-
-	_, err = w.txn.ExecContext(ctx, query, args...)
 
 	return ttxDBError(err)
 }

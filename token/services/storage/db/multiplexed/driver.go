@@ -96,6 +96,15 @@ func (d Driver) NewOwnerTransaction(name driver2.PersistenceName, params ...stri
 	return dr.NewOwnerTransaction(name, params...)
 }
 
+func (d Driver) NewEndorser(name driver2.PersistenceName, params ...string) (driver4.EndorserStore, error) {
+	dr, err := d.getDriver(name)
+	if err != nil {
+		return nil, err
+	}
+
+	return dr.NewEndorser(name, params...)
+}
+
 func (d Driver) getDriver(name driver2.PersistenceName) (driver4.Driver, error) {
 	t, err := d.config.GetDriverType(name)
 	if err != nil {

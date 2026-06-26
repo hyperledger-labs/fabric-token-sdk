@@ -26,6 +26,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/finality"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/lookup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/auditdb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/endorserdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/services/cleanup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
@@ -76,6 +77,7 @@ func NewGenericDriver(
 	ttxStoreServiceManager ttxdb.StoreServiceManager,
 	auditStoreServiceManager auditdb.StoreServiceManager,
 	cleanupServiceManager cleanup.ServiceManager,
+	endorserStoreServiceManager endorserdb.StoreServiceManager,
 	metricsProvider metrics.Provider,
 ) driver.Driver {
 	keyTranslator := &keys.Translator{}
@@ -103,7 +105,7 @@ func NewGenericDriver(
 			viewRegistry,
 			identityProvider,
 			keyTranslator,
-			ttxStoreServiceManager,
+			endorserStoreServiceManager,
 		),
 		NewSetupListenerProvider(tmsProvider, tokensManager),
 		ttxStoreServiceManager,
