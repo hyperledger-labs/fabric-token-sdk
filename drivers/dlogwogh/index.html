@@ -4775,7 +4775,7 @@
 <li>Proof size: O(log n) where n is the bit length</li>
 <li>Verification time: O(n) group operations</li>
 <li>
-<p>Implementation: <a href="../../token/core/zkatdlog/nogh/v1/crypto/rp/bulletproof/"><code>crypto/rp/bulletproof/</code></a></p>
+<p>Implementation: <a href="../../token/core/zkatdlog/nogh/v1/crypto/rp/bulletproof"><code>crypto/rp/bulletproof/</code></a></p>
 </li>
 <li>
 <p><strong>Compressed Sigma Protocols (CSP)</strong> (New implementation)</p>
@@ -4783,7 +4783,7 @@
 <li>Based on recursive folding with Fiat-Shamir</li>
 <li>Proof size: O(log n) where n is the bit length</li>
 <li>Faster verification through Lagrange interpolation optimizations</li>
-<li>Implementation: <a href="../../token/core/zkatdlog/nogh/v1/crypto/rp/csp/"><code>crypto/rp/csp/</code></a></li>
+<li>Implementation: <a href="../../token/core/zkatdlog/nogh/v1/crypto/rp/csp"><code>crypto/rp/csp/</code></a></li>
 </ol>
 <p>The proof system is selected via the <code>ProofType</code> parameter in <code>SetupParams</code>:
 - <code>rp.Bulletproof</code> - Uses Bulletproof range proofs (default)
@@ -5075,7 +5075,7 @@ Higher precision allows larger token values but results in larger proofs and slo
 <p>The driver supports two range proof systems. The choice is made during public parameter setup and affects proof generation and verification.</p>
 <h4 id="721-bulletproof-range-proofs">7.2.1 Bulletproof Range Proofs<a class="headerlink" href="#721-bulletproof-range-proofs" title="Permanent link">&para;</a></h4>
 <p>Each output $C_{out,j}$ includes a <strong>Bulletproof</strong> showing $V_j \in [0, 2^{64}-1]$. It uses an <strong>Inner Product Argument (IPA)</strong> to achieve $O(\log n)$ proof size.</p>
-<p><strong>Implementation</strong>: <a href="../../token/core/zkatdlog/nogh/v1/crypto/rp/bulletproof/"><code>crypto/rp/bulletproof/</code></a></p>
+<p><strong>Implementation</strong>: <a href="../../token/core/zkatdlog/nogh/v1/crypto/rp/bulletproof"><code>crypto/rp/bulletproof/</code></a></p>
 <p><strong>Bulletproof Structure</strong>:</p>
 <div class="language-go highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">RangeProof</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span><span class="nx">Commitments</span><span class="w"> </span><span class="p">[]</span><span class="o">*</span><span class="nx">math</span><span class="p">.</span><span class="nx">G1</span><span class="w">  </span><span class="c1">// Bit commitments</span>
@@ -5094,7 +5094,7 @@ Higher precision allows larger token values but results in larger proofs and slo
 - <strong>Prover Time</strong>: $O(n \log n)$ group operations</p>
 <h4 id="722-compressed-sigma-protocol-csp-range-proofs">7.2.2 Compressed Sigma Protocol (CSP) Range Proofs<a class="headerlink" href="#722-compressed-sigma-protocol-csp-range-proofs" title="Permanent link">&para;</a></h4>
 <p><strong>New in commit 586d4f58</strong>: CSP-based range proofs using recursive folding with Fiat-Shamir transformation.</p>
-<p><strong>Implementation</strong>: <a href="../../token/core/zkatdlog/nogh/v1/crypto/rp/csp/"><code>crypto/rp/csp/</code></a></p>
+<p><strong>Implementation</strong>: <a href="../../token/core/zkatdlog/nogh/v1/crypto/rp/csp"><code>crypto/rp/csp/</code></a></p>
 <p><strong>CSP Proof Structure</strong>:</p>
 <div class="language-go highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">CSPProof</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">    </span><span class="nx">Left</span><span class="w">   </span><span class="p">[]</span><span class="o">*</span><span class="nx">mathlib</span><span class="p">.</span><span class="nx">G1</span><span class="w">  </span><span class="c1">// Cross-commitment MSM(gen_L, wit_R)</span>
@@ -5123,7 +5123,7 @@ Higher precision allows larger token values but results in larger proofs and slo
 <hr />
 <h2 id="8-token-operations">8. Token Operations<a class="headerlink" href="#8-token-operations" title="Permanent link">&para;</a></h2>
 <h3 id="81-issue-service">8.1 Issue Service<a class="headerlink" href="#81-issue-service" title="Permanent link">&para;</a></h3>
-<p><strong>Implementation</strong>: <a href="../../token/core/zkatdlog/nogh/v1/issue.go"><code>issue.go</code></a>, <a href="../../token/core/zkatdlog/nogh/v1/issue/"><code>issue/</code></a></p>
+<p><strong>Implementation</strong>: <a href="../../token/core/zkatdlog/nogh/v1/issue.go"><code>issue.go</code></a>, <a href="../../token/core/zkatdlog/nogh/v1/issue"><code>issue/</code></a></p>
 <p>Orchestrates new token creation.</p>
 <h4 id="811-issue-action-structure">8.1.1 Issue Action Structure<a class="headerlink" href="#811-issue-action-structure" title="Permanent link">&para;</a></h4>
 <div class="language-go highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">IssueAction</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
@@ -5167,7 +5167,7 @@ Higher precision allows larger token values but results in larger proofs and slo
 - Application-specific attributes
 - Issuer identity</p>
 <h3 id="82-transfer-service">8.2 Transfer Service<a class="headerlink" href="#82-transfer-service" title="Permanent link">&para;</a></h3>
-<p><strong>Implementation</strong>: <a href="../../token/core/zkatdlog/nogh/v1/transfer.go"><code>transfer.go</code></a>, <a href="../../token/core/zkatdlog/nogh/v1/transfer/"><code>transfer/</code></a></p>
+<p><strong>Implementation</strong>: <a href="../../token/core/zkatdlog/nogh/v1/transfer.go"><code>transfer.go</code></a>, <a href="../../token/core/zkatdlog/nogh/v1/transfer"><code>transfer/</code></a></p>
 <p>Manages ownership movement.</p>
 <h4 id="821-transfer-action-structure">8.2.1 Transfer Action Structure<a class="headerlink" href="#821-transfer-action-structure" title="Permanent link">&para;</a></h4>
 <div class="language-go highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">TransferAction</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
@@ -5271,7 +5271,7 @@ Higher precision allows larger token values but results in larger proofs and slo
 </span><span id="__span-11-22"><a id="__codelineno-11-22" name="__codelineno-11-22" href="#__codelineno-11-22"></a><span class="p">}</span>
 </span></code></pre></div>
 <h3 id="84-tokens-upgrade-service">8.4 Tokens Upgrade Service<a class="headerlink" href="#84-tokens-upgrade-service" title="Permanent link">&para;</a></h3>
-<p><strong>Implementation</strong>: <a href="../../token/core/zkatdlog/nogh/v1/crypto/upgrade/"><code>crypto/upgrade/</code></a></p>
+<p><strong>Implementation</strong>: <a href="../../token/core/zkatdlog/nogh/v1/crypto/upgrade"><code>crypto/upgrade/</code></a></p>
 <p>Allows migrating cleartext <code>FabToken</code> outputs to privacy-preserving <code>ZKAT-DLOG</code> commitments.</p>
 <h4 id="841-upgrade-workflow">8.4.1 Upgrade Workflow<a class="headerlink" href="#841-upgrade-workflow" title="Permanent link">&para;</a></h4>
 <pre class="mermaid"><code>sequenceDiagram
@@ -5322,12 +5322,12 @@ Higher precision allows larger token values but results in larger proofs and slo
 <li>Issues new tokens with equivalent value (via <code>IssueAction.outputs</code>)</li>
 <li>Maintains supply consistency through cryptographic proofs</li>
 </ol>
-<p><strong>Implementation</strong>: See <a href="../../token/core/zkatdlog/nogh/v1/crypto/upgrade/"><code>crypto/upgrade/</code></a> for the upgrade service implementation.</p>
+<p><strong>Implementation</strong>: See <a href="../../token/core/zkatdlog/nogh/v1/crypto/upgrade"><code>crypto/upgrade/</code></a> for the upgrade service implementation.</p>
 <hr />
 <h2 id="9-validation-and-auditing">9. Validation and Auditing<a class="headerlink" href="#9-validation-and-auditing" title="Permanent link">&para;</a></h2>
 <p>The driver provides comprehensive validation and auditing capabilities to ensure transaction integrity and regulatory compliance.</p>
 <h3 id="91-validator">9.1 Validator<a class="headerlink" href="#91-validator" title="Permanent link">&para;</a></h3>
-<p><strong>Implementation</strong>: <a href="../../token/core/zkatdlog/nogh/v1/validator/"><code>validator/</code></a></p>
+<p><strong>Implementation</strong>: <a href="../../token/core/zkatdlog/nogh/v1/validator"><code>validator/</code></a></p>
 <p>The validator performs rigorous checks on token transactions before they are committed to the ledger.</p>
 <h4 id="911-validation-pipeline">9.1.1 Validation Pipeline<a class="headerlink" href="#911-validation-pipeline" title="Permanent link">&para;</a></h4>
 <p>The validation process consists of multiple stages:</p>
@@ -5363,7 +5363,7 @@ Higher precision allows larger token values but results in larger proofs and slo
 <p>The validator is instantiated with the public parameters and requires no additional configuration. It operates statelessly, relying only on the ledger state and the public parameters for validation decisions.</p>
 <p>For implementation details, see <a href="../../token/core/zkatdlog/nogh/v1/validator/validator.go"><code>validator/validator.go</code></a>.</p>
 <h3 id="92-auditor-service">9.2 Auditor Service<a class="headerlink" href="#92-auditor-service" title="Permanent link">&para;</a></h3>
-<p><strong>Implementation</strong>: <a href="../../token/core/zkatdlog/nogh/v1/audit/"><code>audit/</code></a> and <a href="../../token/core/zkatdlog/nogh/v1/auditor.go"><code>auditor.go</code></a></p>
+<p><strong>Implementation</strong>: <a href="../../token/core/zkatdlog/nogh/v1/audit/auditor.go"><code>audit/auditor.go</code></a> and <a href="../../token/core/zkatdlog/nogh/v1/auditor.go"><code>auditor.go</code></a></p>
 <p>The auditor service enables authorized auditors to inspect private transactions and verify compliance without compromising the privacy of non-audited users.</p>
 <h4 id="921-audit-mechanism">9.2.1 Audit Mechanism<a class="headerlink" href="#921-audit-mechanism" title="Permanent link">&para;</a></h4>
 <p>Auditors receive cleartext metadata (via transient data) that includes:
@@ -5372,21 +5372,46 @@ Higher precision allows larger token values but results in larger proofs and slo
 - Owner identities (enrollment IDs)
 - Issuer information</p>
 <p>The auditor verifies that:
-1. Commitments match the cleartext metadata
-2. Proofs are valid
-3. Balance is preserved
-4. All parties are properly authorized</p>
+1. <strong>Structural Correspondence</strong>: Actions and metadata have 1:1 correspondence with correct types
+2. <strong>Commitment Validity</strong>: Token commitments match the cleartext metadata (Pedersen commitments)
+3. <strong>Identity Verification</strong>: Audit info correctly corresponds to identities via <code>InfoMatcher</code>
+4. <strong>Recipient Matching</strong>: Recipients extracted from owners match metadata receivers
+5. <strong>Authorization</strong>: All parties (issuers, senders, receivers) are properly identified</p>
 <h4 id="922-auditor-validation">9.2.2 Auditor Validation<a class="headerlink" href="#922-auditor-validation" title="Permanent link">&para;</a></h4>
-<p>The <code>AuditorCheck</code> method performs the following:</p>
-<ol>
-<li><strong>Deserialize Actions</strong>: Parse the token request into structured actions</li>
-<li><strong>Load Input Tokens</strong>: Retrieve the commitments of input tokens from the ledger</li>
-<li><strong>Verify Metadata</strong>: Check that cleartext metadata matches the commitments</li>
-<li><strong>Validate Proofs</strong>: Verify zero-knowledge proofs using the cleartext values</li>
-<li><strong>Check Authorization</strong>: Ensure all participants are properly identified</li>
-</ol>
+<p>The <a href="../../token/core/zkatdlog/nogh/v1/audit/auditor.go"><code>Auditor.Check()</code></a> method performs comprehensive validation in two phases:</p>
+<p><strong>Phase 1: Structural Validation</strong> (<a href="../../token/core/zkatdlog/nogh/v1/audit/auditor.go"><code>validateStructure()</code></a>)
+- Validates action count matches metadata count
+- Verifies ActionIDs are sequential and correct
+- Ensures action types align with metadata types (no mixed types)
+- Confirms metadata exclusivity (IssueMetadata XOR TransferMetadata)</p>
+<p><strong>Phase 2: Semantic Validation</strong> (per action type)</p>
+<p>For <strong>Issue Actions</strong> (<a href="../../token/core/zkatdlog/nogh/v1/audit/auditor.go"><code>checkIssueAction()</code></a>):
+1. Uses <code>IssueMetadata.Match()</code> to validate structural correspondence
+2. Validates inputs via <a href="../../token/core/zkatdlog/nogh/v1/audit/auditor.go"><code>validateIssueInputs()</code></a>:
+   - Checks TokenID matches for upgrade scenarios
+3. Validates outputs via <a href="../../token/core/zkatdlog/nogh/v1/audit/auditor.go"><code>validateIssueOutputs()</code></a>:
+   - Verifies no redeem outputs in issue actions
+   - Recomputes Pedersen commitments from cleartext (type, value, blinding factor)
+   - Validates commitments match token data
+   - Validates receivers via <a href="../../token/core/zkatdlog/nogh/v1/audit/auditor.go"><code>validateOutputReceivers()</code></a>
+4. Validates issuer identity via <a href="../../token/core/zkatdlog/nogh/v1/audit/auditor.go"><code>validateIssuer()</code></a></p>
+<p>For <strong>Transfer Actions</strong> (<a href="../../token/core/zkatdlog/nogh/v1/audit/auditor.go"><code>checkTransferAction()</code></a>):
+1. Uses <code>TransferMetadata.Match()</code> to validate structural correspondence
+2. Validates inputs via <a href="../../token/core/zkatdlog/nogh/v1/audit/auditor.go"><code>validateTransferInputs()</code></a>:
+   - Ensures exactly one sender per input
+   - Verifies sender identity matches token owner
+   - Validates TokenID matches
+   - Inspects sender identity via <code>InfoMatcher</code>
+3. Validates outputs via <a href="../../token/core/zkatdlog/nogh/v1/audit/auditor.go"><code>validateTransferOutputs()</code></a>:
+   - Validates receivers for non-redeem outputs
+   - Recomputes Pedersen commitments from cleartext
+   - Validates commitments match token data</p>
+<p><strong>Common Validation Methods</strong>:
+- <a href="../../token/core/zkatdlog/nogh/v1/audit/auditor.go"><code>validateOutputReceivers()</code></a>: Extracts recipients from owner, validates count matches, verifies identity matching (with configurable empty identity handling)
+- <a href="../../token/core/zkatdlog/nogh/v1/audit/auditor.go"><code>InspectOutput()</code></a>: Recomputes and verifies Pedersen commitments
+- <a href="../../token/core/zkatdlog/nogh/v1/audit/auditor.go"><code>InspectIdentity()</code></a>: Verifies audit info matches identity via <code>InfoMatcher.MatchIdentity()</code></p>
 <p><strong>Privacy Guarantee</strong>: Only authorized auditors with the correct audit keys can decrypt the metadata. The ledger itself stores only commitments, preserving privacy for all other participants.</p>
-<p>For implementation details, see <a href="../../token/core/zkatdlog/nogh/v1/auditor.go"><code>auditor.go</code></a>.
+<p>For implementation details, see <a href="../../token/core/zkatdlog/nogh/v1/audit/auditor.go"><code>audit/auditor.go</code></a>.
     IS-&gt;&gt;IS: Create IssueAction with Inputs
     IS--&gt;&gt;C: (IssueAction, Metadata)
 <div class="language-text highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>---
@@ -5611,8 +5636,8 @@ Higher precision allows larger token values but results in larger proofs and slo
 </span><span id="__span-21-26"><a id="__codelineno-21-26" name="__codelineno-21-26" href="#__codelineno-21-26"></a><span class="p">}</span>
 </span></code></pre></div>
 <h3 id="107-protobuf-message-definitions">10.7 Protobuf Message Definitions<a class="headerlink" href="#107-protobuf-message-definitions" title="Permanent link">&para;</a></h3>
-<p>The ZKAT-DLOG (NOGH) driver uses Protocol Buffers for all serialized data structures, ensuring consistent communication between nodes and the ledger while guaranteeing backward and forward compatibility. The definitions are located in <a href="../../token/core/zkatdlog/nogh/protos/"><code>token/core/zkatdlog/nogh/protos/</code></a>.</p>
-<h4 id="1071-token-messages-noghactionsproto">10.7.1 Token Messages (<a href="../../token/core/zkatdlog/nogh/protos/noghactions.proto"><code>noghactions.proto</code></a>)<a class="headerlink" href="#1071-token-messages-noghactionsproto" title="Permanent link">&para;</a></h4>
+<p>The ZKAT-DLOG (NOGH) driver uses Protocol Buffers for all serialized data structures, ensuring consistent communication between nodes and the ledger while guaranteeing backward and forward compatibility. The definitions are located in <a href="../../token/core/zkatdlog/nogh/protos"><code>token/core/zkatdlog/nogh/protos/</code></a>.</p>
+<h4 id="1071-token-messages-noghactionsproto">10.7.1 Token Messages (<a href="../../token/core/zkatdlog/nogh/protos/v1/noghactions.proto"><code>noghactions.proto</code></a>)<a class="headerlink" href="#1071-token-messages-noghactionsproto" title="Permanent link">&para;</a></h4>
 <p><strong>Token</strong>: Represents a ZKAT-DLOG token as a Pedersen commitment.
 - <code>owner</code> (bytes): Serialized identity of the owner (Idemix pseudonym for end-users, X.509 for issuers/auditors)
 - <code>data</code> (G1): Elliptic curve point representing the Pedersen commitment to token type, value, and blinding factor</p>
@@ -5638,7 +5663,7 @@ Higher precision allows larger token values but results in larger proofs and slo
 <p><strong>TransferActionInputUpgradeWitness</strong>: Enables in-place upgrades from legacy token formats.
 - <code>output</code> (fabtoken.Token): The original legacy token (e.g., FabToken)
 - <code>blinding_factor</code> (Zr): Blinding factor generated for the commitment</p>
-<h4 id="1072-public-parameters-noghppproto">10.7.2 Public Parameters (<a href="../../token/core/zkatdlog/nogh/protos/noghpp.proto"><code>noghpp.proto</code></a>)<a class="headerlink" href="#1072-public-parameters-noghppproto" title="Permanent link">&para;</a></h4>
+<h4 id="1072-public-parameters-noghppproto">10.7.2 Public Parameters (<a href="../../token/core/zkatdlog/nogh/protos/v1/noghpp.proto"><code>noghpp.proto</code></a>)<a class="headerlink" href="#1072-public-parameters-noghppproto" title="Permanent link">&para;</a></h4>
 <p><strong>PublicParameters</strong>: Defines the cryptographic setup and governance rules.
 - <code>token_driver_name</code> (string): Always <code>"zkatdlognogh"</code>
 - <code>token_driver_version</code> (uint64): Protocol version (currently <code>1</code>)
@@ -5658,7 +5683,7 @@ Higher precision allows larger token values but results in larger proofs and slo
 - <code>Q</code> (G1): Generator Q for the inner product
 - <code>bit_length</code> (uint64): Number of bits in the range (e.g., 64)
 - <code>number_of_rounds</code> (uint64): Number of rounds in the protocol (log₂ of bit_length)</p>
-<h4 id="1073-mathematical-elements-noghmathproto">10.7.3 Mathematical Elements (<a href="../../token/core/zkatdlog/nogh/protos/noghmath.proto"><code>noghmath.proto</code></a>)<a class="headerlink" href="#1073-mathematical-elements-noghmathproto" title="Permanent link">&para;</a></h4>
+<h4 id="1073-mathematical-elements-noghmathproto">10.7.3 Mathematical Elements (<a href="../../token/core/zkatdlog/nogh/protos/v1/noghmath.proto"><code>noghmath.proto</code></a>)<a class="headerlink" href="#1073-mathematical-elements-noghmathproto" title="Permanent link">&para;</a></h4>
 <p><strong>G1</strong>: Elliptic curve point in group G₁.
 - <code>raw</code> (bytes): Compressed point serialization (48 bytes for BLS12-381, 32 bytes for BN254)</p>
 <p><strong>Zr</strong>: Scalar field element.
@@ -5933,26 +5958,25 @@ Higher precision allows larger token values but results in larger proofs and slo
 <h4 id="1321-unit-tests">13.2.1 Unit Tests<a class="headerlink" href="#1321-unit-tests" title="Permanent link">&para;</a></h4>
 <p>Located in <code>*_test.go</code> files throughout the codebase:</p>
 <ul>
-<li><strong>Cryptographic primitives</strong>: <a href="../../token/core/zkatdlog/nogh/v1/crypto/rp/bulletproof_test.go"><code>crypto/rp/bulletproof_test.go</code></a></li>
+<li><strong>Cryptographic primitives</strong>: <a href="../../token/core/zkatdlog/nogh/v1/crypto/rp/bulletproof/rp_test.go"><code>crypto/rp/bulletproof/rp_test.go</code></a></li>
 <li><strong>Token operations</strong>: <a href="../../token/core/zkatdlog/nogh/v1/issue_test.go"><code>issue_test.go</code></a>, <a href="../../token/core/zkatdlog/nogh/v1/transfer_test.go"><code>transfer_test.go</code></a></li>
 <li><strong>Validation</strong>: <a href="../../token/core/zkatdlog/nogh/v1/validator/validator_test.go"><code>validator/validator_test.go</code></a></li>
 </ul>
 <h4 id="1322-integration-tests">13.2.2 Integration Tests<a class="headerlink" href="#1322-integration-tests" title="Permanent link">&para;</a></h4>
-<p>Located in <a href="../../integration/token/"><code>integration/token/</code></a>:</p>
+<p>Located in <a href="../../integration/token"><code>integration/token/</code></a>:</p>
 <ul>
 <li><strong>End-to-end workflows</strong>: Issue → Transfer → Redeem</li>
 <li><strong>Multi-party scenarios</strong>: Multiple issuers, auditors, users</li>
 <li><strong>Network integration</strong>: Fabric network interaction</li>
 </ul>
 <h4 id="1323-regression-tests">13.2.3 Regression Tests<a class="headerlink" href="#1323-regression-tests" title="Permanent link">&para;</a></h4>
-<p>Located in <a href="../../token/core/zkatdlog/nogh/v1/validator/regression/"><code>validator/regression/</code></a>:</p>
+<p>Located in <a href="../../token/core/zkatdlog/nogh/v1/regression"><code>regression/</code></a>:</p>
 <ul>
 <li><strong>Proof compatibility</strong>: Ensure proofs remain valid across versions</li>
 <li><strong>Serialization stability</strong>: Maintain wire format compatibility</li>
 <li><strong>Performance regression</strong>: Track performance changes</li>
 </ul>
 <h4 id="1324-benchmark-tests">13.2.4 Benchmark Tests<a class="headerlink" href="#1324-benchmark-tests" title="Permanent link">&para;</a></h4>
-<p>Located in <a href="../../token/core/zkatdlog/nogh/v1/benchmark/"><code>benchmark/</code></a>:</p>
 <ul>
 <li><strong>Performance measurement</strong>: Proof generation and verification times</li>
 <li><strong>Scalability testing</strong>: Large numbers of inputs/outputs</li>
@@ -5960,7 +5984,6 @@ Higher precision allows larger token values but results in larger proofs and slo
 </ul>
 <p>For detailed benchmark results and analysis, see the <a href="../benchmark/core/dlognogh/dlognogh/">ZKAT-DLOG Benchmark Documentation</a>.</p>
 <h3 id="133-monitoring-and-metrics">13.3 Monitoring and Metrics<a class="headerlink" href="#133-monitoring-and-metrics" title="Permanent link">&para;</a></h3>
-<p><strong>Implementation</strong>: <a href="../../token/core/zkatdlog/nogh/v1/metrics.go"><code>metrics.go</code></a></p>
 <h4 id="1331-key-metrics">13.3.1 Key Metrics<a class="headerlink" href="#1331-key-metrics" title="Permanent link">&para;</a></h4>
 <p>The driver currently implements <strong>2 core performance metrics</strong>:</p>
 <p><strong>Performance Metrics</strong>:
@@ -6000,7 +6023,7 @@ Higher precision allows larger token values but results in larger proofs and slo
 <h3 id="143-implementation-references">14.3 Implementation References<a class="headerlink" href="#143-implementation-references" title="Permanent link">&para;</a></h3>
 <ul>
 <li><a href="https://github.com/IBM/mathlib">IBM Mathlib</a> - Cryptographic library</li>
-<li><a href="https://hyperledger-fabric.readthedocs.io/">Hyperledger Fabric</a> - Blockchain platform</li>
+<li><a href="https://hyperledger-fabric.readthedocs.io">Hyperledger Fabric</a> - Blockchain platform</li>
 <li><a href="https://developers.google.com/protocol-buffers">Protocol Buffers</a> - Serialization format</li>
 </ul>
 <h3 id="144-related-documentation">14.4 Related Documentation<a class="headerlink" href="#144-related-documentation" title="Permanent link">&para;</a></h3>
@@ -6027,18 +6050,17 @@ Higher precision allows larger token values but results in larger proofs and slo
 - <strong>Transfer Service</strong>: <a href="../../token/core/zkatdlog/nogh/v1/transfer.go"><code>transfer.go</code></a>
 - <strong>Auditor Service</strong>: <a href="../../token/core/zkatdlog/nogh/v1/auditor.go"><code>auditor.go</code></a>
 - <strong>Public Parameters</strong>: <a href="../../token/core/zkatdlog/nogh/v1/setup/setup.go"><code>setup/setup.go</code></a>
-- <strong>Token Management</strong>: <a href="../../token/core/zkatdlog/nogh/v1/token/service.go"><code>token/service.go</code></a>
-- <strong>Metrics</strong>: <a href="../../token/core/zkatdlog/nogh/v1/metrics.go"><code>metrics.go</code></a></p>
+- <strong>Token Management</strong>: <a href="../../token/core/zkatdlog/nogh/v1/token/service.go"><code>token/service.go</code></a></p>
 <p><strong>Cryptographic Primitives</strong>:
-- <strong>Issue Logic</strong>: <a href="../../token/core/zkatdlog/nogh/v1/issue/"><code>issue/</code></a>
-- <strong>Transfer Logic</strong>: <a href="../../token/core/zkatdlog/nogh/v1/transfer/"><code>transfer/</code></a>
-- <strong>Audit Logic</strong>: <a href="../../token/core/zkatdlog/nogh/v1/audit/"><code>audit/</code></a>
-- <strong>Validator</strong>: <a href="../../token/core/zkatdlog/nogh/v1/validator/"><code>validator/</code></a>
-- <strong>Upgrade Service</strong>: <a href="../../token/core/zkatdlog/nogh/v1/crypto/upgrade/"><code>crypto/upgrade/</code></a></p>
+- <strong>Issue Logic</strong>: <a href="../../token/core/zkatdlog/nogh/v1/issue"><code>issue/</code></a>
+- <strong>Transfer Logic</strong>: <a href="../../token/core/zkatdlog/nogh/v1/transfer"><code>transfer/</code></a>
+- <strong>Audit Logic</strong>: <a href="../../token/core/zkatdlog/nogh/v1/audit"><code>audit/</code></a>
+- <strong>Validator</strong>: <a href="../../token/core/zkatdlog/nogh/v1/validator"><code>validator/</code></a>
+- <strong>Upgrade Service</strong>: <a href="../../token/core/zkatdlog/nogh/v1/crypto/upgrade"><code>crypto/upgrade/</code></a></p>
 <p><strong>Testing</strong>:
 - <strong>Unit Tests</strong>: <a href="../../token/core/zkatdlog/nogh/v1/issue_test.go"><code>issue_test.go</code></a>, <a href="../../token/core/zkatdlog/nogh/v1/transfer_test.go"><code>transfer_test.go</code></a>
-- <strong>Benchmarks</strong>: <a href="../../token/core/zkatdlog/nogh/v1/benchmark/"><code>benchmark/</code></a>
-- <strong>Integration Tests</strong>: <a href="../../integration/token/fungible/dlog/"><code>integration/token/fungible/dlog/</code></a>, <a href="../../integration/token/nft/dlog/"><code>integration/token/nft/dlog/</code></a></p>
+- <strong>Benchmarks</strong>: <a href="../../token/core/zkatdlog/nogh/v1/benchmark"><code>benchmark/</code></a>
+- <strong>Integration Tests</strong>: <a href="../../integration/token/fungible/dlog"><code>integration/token/fungible/dlog/</code></a>, <a href="../../integration/token/nft/dlog"><code>integration/token/nft/dlog/</code></a></p>
 <hr />
 <h2 id="appendices">Appendices<a class="headerlink" href="#appendices" title="Permanent link">&para;</a></h2>
 <h3 id="appendix-a-cryptographic-parameter-recommendations">Appendix A: Cryptographic Parameter Recommendations<a class="headerlink" href="#appendix-a-cryptographic-parameter-recommendations" title="Permanent link">&para;</a></h3>
