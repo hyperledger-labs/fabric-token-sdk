@@ -1489,6 +1489,15 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#endorser-store-endorserdb" class="md-nav__link">
+    <span class="md-ellipsis">
+      Endorser Store (EndorserDB)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#token-store-tokendb" class="md-nav__link">
     <span class="md-ellipsis">
       Token Store (TokenDB)
@@ -1534,6 +1543,15 @@
   <a href="#transaction-store-ttxdb" class="md-nav__link">
     <span class="md-ellipsis">
       Transaction Store (TTXDB)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#endorser-store-endorserdb_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Endorser Store (EndorserDB)
     </span>
   </a>
   
@@ -2244,6 +2262,15 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#endorser-store-endorserdb" class="md-nav__link">
+    <span class="md-ellipsis">
+      Endorser Store (EndorserDB)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#token-store-tokendb" class="md-nav__link">
     <span class="md-ellipsis">
       Token Store (TokenDB)
@@ -2289,6 +2316,15 @@
   <a href="#transaction-store-ttxdb" class="md-nav__link">
     <span class="md-ellipsis">
       Transaction Store (TTXDB)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#endorser-store-endorserdb_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Endorser Store (EndorserDB)
     </span>
   </a>
   
@@ -2496,13 +2532,20 @@
 - Consistent handling of amounts across all tables (Tokens, Transactions, Movements)</p>
 <p>The SDK uses Go's <code>*big.Int</code> type throughout the codebase to handle these large values, with automatic conversion between database NUMERIC values and in-memory big.Int representations via the <code>BigInt</code> scanner type.</p>
 <h3 id="transaction-audit-store-ttxdb-auditdb">Transaction &amp; Audit Store (TTXDB / AuditDB)<a class="headerlink" href="#transaction-audit-store-ttxdb-auditdb" title="Permanent link">&para;</a></h3>
-<p>These tables track the lifecycle of token requests from assembly to finality. <code>AuditDB</code> uses the same schema but is isolated for compliance reporting.</p>
+<p>The <a href="ttxdb/"><code>ttxdb/auditdb</code></a> manages the token request lifecycle and transactions records.</p>
+<p>The following tables track the lifecycle of token requests from assembly to finality. 
+<code>AuditDB</code> uses the same schema but is isolated for compliance reporting.</p>
 <ul>
 <li><strong>Requests</strong>: Tracks high-level token request state. Contains marshaled requests, current status (Pending, Confirmed, Deleted, Orphan), and application/public metadata.</li>
 <li><strong>Transactions</strong>: Records individual actions (Issue, Transfer, Redeem) within a request, including sender/recipient IDs and amounts (stored as <code>NUMERIC(78, 0)</code>).</li>
 <li><strong>Movements</strong>: Aggregates net value changes per enrollment ID (amounts stored as <code>NUMERIC(78, 0)</code>). Used to efficiently calculate balances and history.</li>
-<li><strong>Validations</strong>: Stores cryptographic validation metadata produced during the request verification phase.</li>
 <li><strong>Endorsements</strong>: Collects digital signatures from participants and auditors required for transaction finality.</li>
+</ul>
+<h3 id="endorser-store-endorserdb">Endorser Store (EndorserDB)<a class="headerlink" href="#endorser-store-endorserdb" title="Permanent link">&para;</a></h3>
+<p>The <a href="endorserdb/"><code>endorserdb</code></a> manages validation records created during the token request endorsement process. It shares the physical database with TTXDB but provides a separate interface for validation-specific operations.</p>
+<ul>
+<li><strong>Validations</strong>: Stores cryptographic validation metadata produced during the request verification phase. The Validations table is self-contained and stores the token request data directly (along with pp_hash) for efficient retrieval. When a validation record is created (typically by endorser nodes), it atomically creates entries in both the Requests table (for foreign key integrity and status tracking) and the Validations table (with embedded token request for direct access), ensuring that non-owner nodes can properly track and recover transactions.</li>
+<li><strong>Requests</strong> (shared): The endorserdb uses the Requests table to track validation status. While the table is shared with TTXDB, the endorserdb interface provides methods specifically for managing validation-related status updates.</li>
 </ul>
 <h3 id="token-store-tokendb">Token Store (TokenDB)<a class="headerlink" href="#token-store-tokendb" title="Permanent link">&para;</a></h3>
 <p>This store serves as the authoritative registry for all tokens (UTXOs) known to the node.</p>
@@ -2537,6 +2580,11 @@
 *   <strong>Transactions</strong>: The individual actions (Issue, Transfer) within a request.
 *   <strong>Movements</strong>: The flow of value (source to destination) once a transaction is finalized.
 *   <strong>Endorsements</strong>: Signatures and acknowledgments received from participants and auditors.</p>
+<h3 id="endorser-store-endorserdb_1">Endorser Store (EndorserDB)<a class="headerlink" href="#endorser-store-endorserdb_1" title="Permanent link">&para;</a></h3>
+<p>The <code>endorserdb</code> manages validation records for token requests during the endorsement process. It is used by the <strong>Endorsement Service</strong> to:
+*   <strong>Validations</strong>: Store validation metadata and token requests validated by endorser nodes.
+*   <strong>Requests</strong> (shared): Track the status of validated token requests.</p>
+<p>The endorserdb shares the same physical database as ttxdb but provides a separate, focused interface for validation-specific operations, improving modularity and separation of concerns.</p>
 <h3 id="token-store-tokendb_1">Token Store (TokenDB)<a class="headerlink" href="#token-store-tokendb_1" title="Permanent link">&para;</a></h3>
 <p>The <code>tokendb</code> is the registry for the current state of all tokens (UTXOs) known to the node. It is used by the <strong>Selector Service</strong> and <strong>Vault Service</strong> to:
 *   <strong>Tokens</strong>: Track unique identifiers, types, quantities, and current owners.

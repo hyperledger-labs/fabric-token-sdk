@@ -38,13 +38,6 @@ package "Transaction & Audit Store (TTXDB / AuditDB)" {
         stored_at : TIMESTAMP <<NOT NULL>>
     }
 
-    entity "Validations" as req_vals {
-        * tx_id : TEXT <<PK, FK, NOT NULL>>
-        --
-        metadata : BYTEA
-        stored_at : TIMESTAMP <<NOT NULL>>
-    }
-
     entity "Endorsements" as tx_ends {
         * id : CHAR(36) <<PK>>
         --
@@ -56,8 +49,18 @@ package "Transaction & Audit Store (TTXDB / AuditDB)" {
 
     txs }o--|| requests : "tx_id"
     movements }o--|| requests : "tx_id"
-    req_vals ||--|| requests : "tx_id"
     tx_ends }o..|| requests : "tx_id (no FK constraint)"
+}
+
+package "Endorser Store (EndorserDB)" {
+    entity "Validations" as req_vals {
+        * tx_id : TEXT <<PK, NOT NULL>>
+        --
+        request : BYTEA
+        metadata : BYTEA
+        pp_hash : BYTEA
+        stored_at : TIMESTAMP <<NOT NULL>>
+    }
 }
 
 package "Token Store (TokenDB)" {
