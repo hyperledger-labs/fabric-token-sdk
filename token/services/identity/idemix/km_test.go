@@ -877,7 +877,7 @@ func TestIdentityWithDifferentAuditInfo(t *testing.T) {
 // without persisting the derived nym key in the key store.
 // This ensures that pre-generated cache pseudonyms do not accumulate on disk.
 func TestEphemeralIdentity(t *testing.T) {
-	testEphemeralIdentity(t, "./testdata/fp256bn_amcl/idemix", math.FP256BN_AMCL)
+	testEphemeralIdentity(t, "./testdata/bls12_381_bbs_gurvy/idemix", math.BLS12_381_BBS_GURVY)
 	testEphemeralIdentity(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS_GURVY)
 }
 

@@ -10,6 +10,10 @@ When the pseudonym cache size is reduced and the service restarts, previously pr
 - [x] Add unit tests for `EphemeralIdentity` in `km_test.go`
 - [x] Add unit test for cache using ephemeral identities in `kmp_test.go`
 - [x] Run unit tests and verify
+- [x] Fix fp256bn_amcl references in TestEphemeralIdentity in km_test.go
+- [x] Fix fp256bn_amcl references in TestCacheUsesEphemeralIdentity in kmp_test.go
+- [x] Remove/fix FP256BN_AMCL benchmark in km_bench_test.go
+- [x] Verify that all unit tests pass successfully
 - [x] Create walkthrough summary
 
 ## Status: ✅ COMPLETE
@@ -17,3 +21,4 @@ When the pseudonym cache size is reduced and the service restarts, previously pr
 ## Notes & Decisions
 - Checked `membership.KeyManager` interface. It doesn't have `EphemeralIdentity`.
 - To avoid modifying `membership.KeyManager` and causing ripple effects, we use type assertion on `keyManager` in `kmp.go` to check for `EphemeralIdentity` method.
+- The `fp256bn_amcl/idemix` testdata was deleted in main branch commit `a10d0d27` and replaced by `bls12_381_bbs_gurvy/idemix`. We must update the new tests/benchmarks in this branch to use the active curves.

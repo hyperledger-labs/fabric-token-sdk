@@ -348,7 +348,7 @@ func TestKeyManagerProviderGetWithRawConfig(t *testing.T) {
 // This validates the fix for issue #1820: when the cache size is reduced,
 // previously cached pseudonyms should not leave orphaned keys on disk.
 func TestCacheUsesEphemeralIdentity(t *testing.T) {
-	testCacheUsesEphemeralIdentity(t, "./testdata/fp256bn_amcl/idemix", math.FP256BN_AMCL)
+	testCacheUsesEphemeralIdentity(t, "./testdata/bls12_381_bbs_gurvy/idemix", math.BLS12_381_BBS_GURVY)
 	testCacheUsesEphemeralIdentity(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS_GURVY)
 }
 
