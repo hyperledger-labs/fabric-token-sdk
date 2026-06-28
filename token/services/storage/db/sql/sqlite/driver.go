@@ -33,6 +33,7 @@ type Driver struct {
 	Token     lazy.Provider[fscSqlite.Config, *TokenStore]
 	AuditTx   lazy.Provider[fscSqlite.Config, *AuditTransactionStore]
 	OwnerTx   lazy.Provider[fscSqlite.Config, *OwnerTransactionStore]
+	Endorser  lazy.Provider[fscSqlite.Config, *EndorserStore]
 	KeyStore  lazy.Provider[fscSqlite.Config, *KeystoreStore]
 }
 
@@ -58,6 +59,7 @@ func NewDriverWithDbProvider(config driver3.Config, dbProvider fscSqlite.DbProvi
 	d.Token = newProviderWithKeyMapper(dbProvider, NewTokenStore)
 	d.AuditTx = newProviderWithKeyMapper(dbProvider, NewAuditTransactionStore)
 	d.OwnerTx = newProviderWithKeyMapper(dbProvider, NewTransactionStore)
+	d.Endorser = newProviderWithKeyMapper(dbProvider, NewEndorserStore)
 	d.KeyStore = newProviderWithKeyMapper(dbProvider, NewKeystoreStore)
 
 	return d
@@ -168,6 +170,15 @@ func (d *Driver) NewOwnerTransaction(name driver2.PersistenceName, params ...str
 	}
 
 	return d.OwnerTx.Get(*opts)
+}
+
+func (d *Driver) NewEndorser(name driver2.PersistenceName, params ...string) (driver3.EndorserStore, error) {
+	opts, err := d.cp.GetOpts(name, params...)
+	if err != nil {
+		return nil, err
+	}
+
+	return d.Endorser.Get(*opts)
 }
 
 func newProviderWithKeyMapper[V common.DBObject](dbProvider fscSqlite.DbProvider, constructor common2.PersistenceConstructor[V]) lazy.Provider[fscSqlite.Config, V] {

@@ -24,7 +24,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
-	endorsement2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/endorsement"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/finality"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/lookup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx/endorsement"
@@ -34,6 +33,8 @@ import (
 	pp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx/pp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx/qe"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/auditdb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/endorserdb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/services/cleanup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"go.opentelemetry.io/otel/trace"
@@ -57,6 +58,8 @@ func NewDriver(
 	qsProvider queryservice.Provider,
 	ttxStoreServiceManager ttxdb.StoreServiceManager,
 	auditStoreServiceManager auditdb.StoreServiceManager,
+	cleanupServiceManager cleanup.ServiceManager,
+	endorserStoreServiceManager endorserdb.StoreServiceManager,
 	queryServiceProvider queryservice.Provider,
 	finalityProvider *finalityx.Provider,
 	metricsProvider metrics.Provider,
@@ -80,6 +83,7 @@ func NewDriver(
 	d := &Driver{
 		ttxStoreServiceManager:     ttxStoreServiceManager,
 		auditStoreServiceManager:   auditStoreServiceManager,
+		cleanupServiceManager:      cleanupServiceManager,
 		fnsProvider:                fnsProvider,
 		tokensManager:              tokensManager,
 		configService:              configs,
@@ -108,7 +112,7 @@ func NewDriver(
 			kt,
 			vkp,
 			tmsProvider,
-			endorsement2.NewStorageProvider(ttxStoreServiceManager),
+			endorserStoreServiceManager,
 			fnsProvider,
 		),
 		setupListenerProvider: lookup2.NewSetupListenerProvider(
@@ -127,6 +131,7 @@ func NewDriver(
 type Driver struct {
 	ttxStoreServiceManager     ttxdb.StoreServiceManager
 	auditStoreServiceManager   auditdb.StoreServiceManager
+	cleanupServiceManager      cleanup.ServiceManager
 	fnsProvider                *fabric2.NetworkServiceProvider
 	tokensManager              *tokens.ServiceManager
 	configService              *config.Service
@@ -189,6 +194,7 @@ func (d *Driver) New(network, channel string) (driver.Network, error) {
 	return NewNetwork(
 		d.ttxStoreServiceManager,
 		d.auditStoreServiceManager,
+		d.cleanupServiceManager,
 		fns,
 		ch,
 		d.configService,

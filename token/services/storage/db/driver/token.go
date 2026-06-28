@@ -114,6 +114,27 @@ const (
 	NonSpendableOnly
 )
 
+// DeletedToken represents a token that has been deleted and is ready for keystore cleanup
+type DeletedToken struct {
+	// TxID is the ID of the transaction that created the token
+	TxID string
+	// Index is the index in the transaction
+	Index uint64
+	// OwnerIdentity is the serialized owner identity used to derive SKIs for key deletion
+	OwnerIdentity []byte
+	// OwnerType is the type of the owner identity (e.g., "idemix", "x509")
+	OwnerType string
+	// DeletedAt is when the token was marked as deleted
+	DeletedAt time.Time
+}
+
+// CleanupLeadership represents an acquired leadership session for keystore cleanup operations.
+// It uses the same pattern as RecoveryLeadership for consistency.
+type CleanupLeadership interface {
+	// Close releases the leadership and any associated resources
+	Close() error
+}
+
 // CertificationStore defines a database to manager token certifications
 type CertificationStore interface {
 	// ExistsCertification returns true if a certification for the passed token exists,
@@ -237,6 +258,19 @@ type TokenStore interface {
 	SetSupportedTokenFormats(formats []token.Format) error
 	// Notifier returns a TokenNotifier for this store to subscribe to token changes.
 	Notifier() (TokenNotifier, error)
+	// GetDeletedTokensPendingSKICleanup returns deleted tokens older than the specified duration that haven't had their SKI keys cleaned yet.
+	// This is used by the keystore cleanup service to identify tokens whose cryptographic keys can be safely removed.
+	// Only tokens without a record in the token_ski_cleanups table are returned.
+	GetDeletedTokensPendingSKICleanup(ctx context.Context, olderThan time.Duration, limit int) ([]DeletedToken, error)
+	// MarkTokenCleaned marks a token as having its cryptographic keys cleaned up.
+	// This prevents the cleanup service from processing the same token multiple times.
+	// The cleanedBy parameter identifies which instance performed the cleanup for audit purposes.
+	MarkTokenCleaned(ctx context.Context, txID string, index uint64, cleanedBy string) error
+	// AcquireCleanupLeadership attempts to acquire leadership for keystore cleanup operations.
+	// Returns (leadership, true, nil) if leadership was acquired.
+	// Returns (nil, false, nil) if leadership is held by another instance.
+	// Returns (nil, false, error) if an error occurred.
+	AcquireCleanupLeadership(ctx context.Context, lockID int64) (CleanupLeadership, bool, error)
 }
 
 type (

@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/actions"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/v1/actions"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

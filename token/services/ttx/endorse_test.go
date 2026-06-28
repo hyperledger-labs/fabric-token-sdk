@@ -81,10 +81,13 @@ func newTestEndorseViewContext(t *testing.T, input *TestEndorseViewContextInput)
 	np.GetNetworkReturns(network, nil)
 
 	req := token.NewRequest(nil, "an_anchor")
-	req.Metadata.Issues = []*driver.IssueMetadata{
+	req.Metadata.Actions = []*driver.ActionMetadataEntry{
 		{
-			Issuer: driver.AuditableIdentity{
-				Identity: []byte("an_issuer"),
+			ActionID: 0,
+			IssueMetadata: &driver.IssueMetadata{
+				Issuer: driver.AuditableIdentity{
+					Identity: []byte("an_issuer"),
+				},
 			},
 		},
 	}

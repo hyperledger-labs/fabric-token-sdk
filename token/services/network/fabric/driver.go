@@ -26,6 +26,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/finality"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/lookup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/auditdb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/endorserdb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/services/cleanup"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"go.opentelemetry.io/otel/trace"
@@ -57,6 +59,7 @@ type Driver struct {
 	setupListenerProvider           SetupListenerProvider
 	ttxStoreServiceManager          ttxdb.StoreServiceManager
 	auditStoreServiceManager        auditdb.StoreServiceManager
+	cleanupServiceManager           cleanup.ServiceManager
 	metricsProvider                 metrics.Provider
 }
 
@@ -73,6 +76,8 @@ func NewGenericDriver(
 	configService cdriver.ConfigService,
 	ttxStoreServiceManager ttxdb.StoreServiceManager,
 	auditStoreServiceManager auditdb.StoreServiceManager,
+	cleanupServiceManager cleanup.ServiceManager,
+	endorserStoreServiceManager endorserdb.StoreServiceManager,
 	metricsProvider metrics.Provider,
 ) driver.Driver {
 	keyTranslator := &keys.Translator{}
@@ -100,11 +105,12 @@ func NewGenericDriver(
 			viewRegistry,
 			identityProvider,
 			keyTranslator,
-			ttxStoreServiceManager,
+			endorserStoreServiceManager,
 		),
 		NewSetupListenerProvider(tmsProvider, tokensManager),
 		ttxStoreServiceManager,
 		auditStoreServiceManager,
+		cleanupServiceManager,
 		metricsProvider,
 		config2.GenericDriver,
 	)
@@ -129,6 +135,7 @@ func NewDriver(
 	setupListenerProvider SetupListenerProvider,
 	ttxStoreServiceManager ttxdb.StoreServiceManager,
 	auditStoreServiceManager auditdb.StoreServiceManager,
+	cleanupServiceManager cleanup.ServiceManager,
 	metricsProvider metrics.Provider,
 	supportedDrivers ...string,
 ) *Driver {
@@ -152,6 +159,7 @@ func NewDriver(
 		setupListenerProvider:           setupListenerProvider,
 		ttxStoreServiceManager:          ttxStoreServiceManager,
 		auditStoreServiceManager:        auditStoreServiceManager,
+		cleanupServiceManager:           cleanupServiceManager,
 		metricsProvider:                 metricsProvider,
 	}
 }
@@ -205,6 +213,7 @@ func (d *Driver) New(network, channel string) (driver.Network, error) {
 		d.setupListenerProvider,
 		d.ttxStoreServiceManager,
 		d.auditStoreServiceManager,
+		d.cleanupServiceManager,
 		d.metricsProvider,
 		NewLedger(ch, fns.Name(), d.keyTranslator),
 	), nil

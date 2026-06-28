@@ -20,12 +20,13 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/benchmark"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/issue"
 	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
+	testing2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/testutils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/validator"
-	testing2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/validator/testutils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	mock3 "github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/v1/request"
 	benchmark2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/benchmark"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemixnym"
@@ -68,7 +69,7 @@ func TestIssueValidateErrors(t *testing.T) {
 	require.NoError(t, err)
 
 	issueAction := &issue.Action{}
-	err = issueAction.Deserialize(env.TRWithIssue.Issues[0])
+	err = issueAction.Deserialize(env.TRWithIssue.GetIssues()[0])
 	require.NoError(t, err)
 
 	newCtx := func() *validator.Context {
@@ -135,7 +136,7 @@ func TestIssueValidateErrors(t *testing.T) {
 	err = validator.IssueValidate(context.Background(), newCtx())
 	require.Error(t, err)
 	// Reset to valid state
-	err = issueAction.Deserialize(env.TRWithIssue.Issues[0])
+	err = issueAction.Deserialize(env.TRWithIssue.GetIssues()[0])
 	require.NoError(t, err)
 
 	// Case 8: Success with issuers list
@@ -435,13 +436,17 @@ func TestTransferHTLCValidateErrors(t *testing.T) {
 func TestDeserializeActionsErrors(t *testing.T) {
 	ad := &validator.ActionDeserializer{}
 	tr := &driver.TokenRequest{
-		Issues: [][]byte{[]byte("invalid")},
+		Actions: []*driver.TypedAction{
+			{Type: request.ActionType_ACTION_TYPE_ISSUE, Raw: []byte("invalid")},
+		},
 	}
 	_, _, err := ad.DeserializeActions(tr)
 	require.Error(t, err)
 
 	tr = &driver.TokenRequest{
-		Transfers: [][]byte{[]byte("invalid")},
+		Actions: []*driver.TypedAction{
+			{Type: request.ActionType_ACTION_TYPE_TRANSFER, Raw: []byte("invalid")},
+		},
 	}
 	_, _, err = ad.DeserializeActions(tr)
 	require.Error(t, err)

@@ -132,6 +132,26 @@ func (db *KeystoreStore) GetRaw(key string) ([]byte, error) {
 	return raw, nil
 }
 
+func (db *KeystoreStore) Delete(key string) error {
+	if len(key) == 0 {
+		return errors.New("cannot delete empty key")
+	}
+
+	query, args := q.DeleteFrom(db.table.KeyStore).
+		Where(cond.Eq("key", key)).
+		Format(db.ci)
+	logging.Debug(logger, query, args)
+
+	_, err := db.writeDB.Exec(query, args...)
+	if err != nil {
+		return errors.Wrapf(err, "failed deleting key [%s]", key)
+	}
+
+	logger.Debugf("deleted key [%s] successfully", key)
+
+	return nil
+}
+
 func (db *KeystoreStore) GetSchema() string {
 	return fmt.Sprintf(`
 		CREATE TABLE IF NOT EXISTS %s (

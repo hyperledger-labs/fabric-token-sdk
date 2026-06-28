@@ -72,12 +72,16 @@ func (n *TokenNotifier) Subscribe(callback func(tokensdriver.Operation, tokensdr
 }
 
 func NewTokenStoreWithNotifier(dbs *scommon.RWDB, tableNames sqlcommon.TableNames, notifier *TokenNotifier) (*TokenStore, error) {
-	baseStore, err := sqlcommon.NewTokenStoreWithNotifier(
+	// Create cleanup leader factory using PostgreSQL advisory locks
+	cleanupLeaderFactory := NewCleanupLeaderFactory()
+
+	baseStore, err := sqlcommon.NewTokenStoreWithNotifierAndCleanup(
 		dbs.ReadDB,
 		dbs.WriteDB,
 		tableNames,
 		NewConditionInterpreter(),
 		notifier,
+		cleanupLeaderFactory,
 	)
 	if err != nil {
 		return nil, err
