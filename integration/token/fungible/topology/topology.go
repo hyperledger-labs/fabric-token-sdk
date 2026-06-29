@@ -12,8 +12,8 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabricx"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/support/libp2p"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/monitoring"
-	viewsdk "github.com/hyperledger-labs/fabric-smart-client/platform/view/sdk/dig"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
@@ -210,7 +210,7 @@ func Topology(opts common.Opts) []api.Topology {
 			}
 		}
 
-		fscTopology.ListNodes("lib-p2p-bootstrap-node")[0].AddSDK(&viewsdk.SDK{})
+		fscTopology.ListNodes("lib-p2p-bootstrap-node")[0].AddSDK(&libp2p.SDK{})
 
 		// add the rest of the SDKs
 		for i := 1; i < len(opts.SDKs); i++ {

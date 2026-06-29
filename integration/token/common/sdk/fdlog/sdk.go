@@ -9,9 +9,9 @@ package fdlog
 import (
 	"errors"
 
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/support/libp2p"
 	dig2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/sdk/dig"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/sdk/libp2p"
 	dlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
 	tokensdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/dig"
