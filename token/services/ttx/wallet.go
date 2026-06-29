@@ -141,7 +141,7 @@ func MyAuditorWallet(context view.Context, opts ...token.ServiceOption) *token.A
 		return nil
 	}
 	w, err := tms.WalletManager().AuditorWallet(context.Context(), "")
-	if err != nil {
+	if err != nil || w == nil {
 		return nil
 	}
 
@@ -157,7 +157,7 @@ func GetAuditorWallet(context view.Context, opts ...token.ServiceOption) *token.
 		return nil
 	}
 	w, err := tms.WalletManager().AuditorWallet(context.Context(), "")
-	if err != nil {
+	if err != nil || w == nil {
 		return nil
 	}
 

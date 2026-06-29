@@ -53,10 +53,16 @@ func (f *ReceiveTransactionView) Call(context view.Context) (any, error) {
 		return nil, err
 	}
 	if len(raw) == 0 {
-		info := context.Session().Info()
-		logger.ErrorfContext(context.Context(), "received empty message, session closed [%s:%v]: [%s]", info.ID, info.Closed, string(debug.Stack()))
+		session := context.Session()
+		if session != nil {
+			info := session.Info()
+			logger.ErrorfContext(context.Context(), "received empty message, session closed [%s:%v]: [%s]", info.ID, info.Closed, string(debug.Stack()))
 
-		return nil, errors.Errorf("received empty message, session closed [%s:%v]", info.ID, info.Closed)
+			return nil, errors.Errorf("received empty message, session closed [%s:%v]", info.ID, info.Closed)
+		}
+		logger.ErrorfContext(context.Context(), "received empty message, session not available: [%s]", string(debug.Stack()))
+
+		return nil, errors.Errorf("received empty message, session not available")
 	}
 
 	env, err := jsession.UnwrapEnvelope(raw, "")

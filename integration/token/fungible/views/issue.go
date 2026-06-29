@@ -8,6 +8,7 @@ package views
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -52,14 +53,22 @@ func (p *IssueCashView) Call(context view.Context) (any, error) {
 	// Notice that, this step would not be required if the issuer knew already which
 	// identity the recipient wants to use.
 	recipient, err := ttx.RequestRecipientIdentity(context, p.Recipient, ServiceOpts(p.TMSID, ttx.WithRecipientWalletID(p.RecipientWalletID))...)
-	assert.NoError(err, "failed getting recipient identity")
+	if err != nil {
+		return nil, fmt.Errorf("failed getting recipient identity: %w", err)
+	}
 
 	// match recipient EID
 	tms, err := token.GetManagementService(context, ServiceOpts(p.TMSID)...)
-	assert.NoError(err)
+	if err != nil {
+		return nil, fmt.Errorf("failed getting management service: %w", err)
+	}
 	eID, err := tms.WalletManager().GetEnrollmentID(context.Context(), recipient)
-	assert.NoError(err, "failed to get enrollment id for recipient [%s]", recipient)
-	assert.True(strings.HasPrefix(eID, p.RecipientEID), "recipient EID [%s] does not match the expected one [%s]", eID, p.RecipientEID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get enrollment id for recipient [%s]: %w", recipient, err)
+	}
+	if !strings.HasPrefix(eID, p.RecipientEID) {
+		return nil, fmt.Errorf("recipient EID [%s] does not match the expected one [%s]", eID, p.RecipientEID)
+	}
 
 	// Before assembling the transaction, the issuer can perform any activity that best fits the business process.
 	// In this example, if the token type is USD, the issuer checks that no more than 230 units of USD
@@ -90,11 +99,16 @@ func (p *IssueCashView) Call(context view.Context) (any, error) {
 	var tx *ttx.Transaction
 	var auditorID view.Identity
 	idProvider, err := id.GetProvider(context)
-	assert.NoError(err, "failed getting id provider")
+	if err != nil {
+		return nil, fmt.Errorf("failed getting id provider: %w", err)
+	}
 	if len(p.Auditor) == 0 {
 		auditorID = idProvider.DefaultIdentity()
 	} else {
 		auditorID = idProvider.Identity(p.Auditor)
+	}
+	if len(auditorID) == 0 {
+		return nil, fmt.Errorf("failed to get auditor identity: auditor identity is nil or empty for auditor [%s]", p.Auditor)
 	}
 	opts := TxOpts(p.TMSID, ttx.WithAuditor(auditorID))
 	if p.Anonymous {
@@ -128,6 +142,15 @@ func (p *IssueCashView) Call(context view.Context) (any, error) {
 	if p.SkipAuditorSignatureVerification {
 		eOpts = append(eOpts, ttx.WithSkipAuditorSignatureVerification())
 	}
+
+	// Validate transaction and auditor before collecting endorsements
+	if tx == nil {
+		return nil, errors.New("transaction is nil before collecting endorsements")
+	}
+	if len(auditorID) == 0 {
+		return nil, errors.New("auditor identity is invalid before collecting endorsements")
+	}
+
 	_, err = context.RunView(ttx.NewCollectEndorsementsView(tx, eOpts...))
 	assert.NoError(err, "failed to sign issue transaction for "+tx.ID())
 

@@ -55,7 +55,7 @@ func TestConfig_GetNumRetries(t *testing.T) {
 		{
 			name:     "default when zero",
 			config:   &Config{NumRetries: 0},
-			expected: defaultNumRetries,
+			expected: defaultMaxRetries,
 		},
 		{
 			name:     "custom value",

@@ -279,7 +279,7 @@ func TSaveAndGetToken(t *testing.T, db TestTokenDB) {
 
 func getTokensBy(t *testing.T, db TestTokenDB, ownerEID string, typ token.Type) []*token.UnspentToken {
 	t.Helper()
-	it, err := db.UnspentTokensIteratorBy(t.Context(), ownerEID, typ)
+	it, err := db.UnspentTokensIteratorBy(t.Context(), ownerEID, typ, 0)
 	require.NoError(t, err)
 
 	tokens, err := iterators.ReadAllPointers(it)
