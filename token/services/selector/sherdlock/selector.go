@@ -97,10 +97,21 @@ func (m *StubbornSelector) Select(ctx context.Context, ownerFilter token.OwnerFi
 		if tokens, quantity, err := m.selectWithoutMetrics(timeoutCtx, ownerFilter, q, tokenType); err == nil || !errors.Is(err, token.SelectorSufficientButLockedFunds) {
 			m.metrics.SelectionDuration.Observe(time.Since(start).Seconds())
 
-			// Check if we hit the timeout
+			// Check if we hit the selector's own timeout (not the caller's context cancellation).
 			if errors.Is(err, context.DeadlineExceeded) {
 				if unlockErr := m.locker.UnlockAll(ctx); unlockErr != nil {
 					m.logger.Errorf("failed to unlock tokens after timeout: %s", unlockErr)
+				}
+				// If the caller's context is still alive, this is our own selectionTimeout firing.
+				// If tokens were seen but contended, surface as SelectorSufficientButLockedFunds
+				// so callers can distinguish contention from genuine system failures.
+				if ctx.Err() == nil && m.lockAttemptsCount > 0 {
+					m.metrics.SelectionOutcome.With(outcomeLabel, "locked_funds").Add(1)
+					return nil, nil, errors.Wrapf(
+						token.SelectorSufficientButLockedFunds,
+						"token selection aborted: exceeded timeout (%v) after examining %d tokens and %d lock attempts",
+						m.selectionTimeout, m.tokensIteratedCount, m.lockAttemptsCount,
+					)
 				}
 				m.metrics.SelectionOutcome.With(outcomeLabel, "error").Add(1)
 
@@ -139,15 +150,20 @@ func (m *StubbornSelector) Select(ctx context.Context, ownerFilter token.OwnerFi
 				m.logger.Errorf("failed to unlock tokens on context cancellation: %s", err)
 			}
 			m.metrics.SelectionDuration.Observe(time.Since(start).Seconds())
-			m.metrics.SelectionOutcome.With(outcomeLabel, "error").Add(1)
 
-			if errors.Is(timeoutCtx.Err(), context.DeadlineExceeded) {
-				return nil, nil, fmt.Errorf(
-					"token selection aborted: exceeded timeout (%v) after examining %d tokens and %d lock attempts: %w",
-					m.selectionTimeout, m.tokensIteratedCount, m.lockAttemptsCount, timeoutCtx.Err(),
+			// If the caller's context is still alive, the timeout is our own selectionTimeout.
+			// Tokens are contended (we already went through one SelectorSufficientButLockedFunds cycle
+			// to get here), so surface as SelectorSufficientButLockedFunds so callers can retry.
+			if errors.Is(timeoutCtx.Err(), context.DeadlineExceeded) && ctx.Err() == nil {
+				m.metrics.SelectionOutcome.With(outcomeLabel, "locked_funds").Add(1)
+				return nil, nil, errors.Wrapf(
+					token.SelectorSufficientButLockedFunds,
+					"token selection aborted: exceeded timeout (%v) after examining %d tokens and %d lock attempts",
+					m.selectionTimeout, m.tokensIteratedCount, m.lockAttemptsCount,
 				)
 			}
 
+			m.metrics.SelectionOutcome.With(outcomeLabel, "error").Add(1)
 			return nil, nil, timeoutCtx.Err()
 		}
 		m.logger.DebugfContext(ctx, "Now it is our turn to retry...")
