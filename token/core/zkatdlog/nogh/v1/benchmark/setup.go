@@ -25,19 +25,19 @@ import (
 
 	"github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
+	math2 "github.com/LFDT-Panurus/panurus/token/core/common/crypto/math"
+	"github.com/LFDT-Panurus/panurus/token/core/zkatdlog/nogh/v1/crypto/rp"
+	executor "github.com/LFDT-Panurus/panurus/token/core/zkatdlog/nogh/v1/crypto/rp/executor"
+	"github.com/LFDT-Panurus/panurus/token/core/zkatdlog/nogh/v1/setup"
+	"github.com/LFDT-Panurus/panurus/token/driver"
+	"github.com/LFDT-Panurus/panurus/token/services/identity"
+	idemix2 "github.com/LFDT-Panurus/panurus/token/services/identity/idemix"
+	"github.com/LFDT-Panurus/panurus/token/services/identity/idemix/crypto"
+	"github.com/LFDT-Panurus/panurus/token/services/identity/idemixnym"
+	ix509 "github.com/LFDT-Panurus/panurus/token/services/identity/x509"
+	crypto2 "github.com/LFDT-Panurus/panurus/token/services/identity/x509/crypto"
+	"github.com/LFDT-Panurus/panurus/token/services/storage/db/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	math2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common/crypto/math"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp"
-	executor "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp/executor"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	idemix2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemixnym"
-	ix509 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
-	crypto2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509/crypto"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/kvs"
 )
 
 type SetupConfigurationSer struct {
@@ -492,7 +492,7 @@ type Signer struct {
 	SK     *ecdsa.PrivateKey
 	Signer driver.Signer
 
-	ID        []byte
+	ID        driver.Identity
 	AuditInfo []byte
 }
 

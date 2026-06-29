@@ -12,8 +12,8 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/model"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/service/logging"
+	"github.com/LFDT-Panurus/panurus/integration/nwo/txgen/model"
+	"github.com/LFDT-Panurus/panurus/integration/nwo/txgen/service/logging"
 
 	"github.com/gin-gonic/gin"
 	"go.yaml.in/yaml/v3"

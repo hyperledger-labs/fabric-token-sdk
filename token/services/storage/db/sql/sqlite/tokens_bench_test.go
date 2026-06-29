@@ -11,7 +11,7 @@ import (
 
 	_ "modernc.org/sqlite"
 
-	sqlcommon "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/common"
+	sqlcommon "github.com/LFDT-Panurus/panurus/token/services/storage/db/sql/common"
 )
 
 func openBenchTokenStore(b *testing.B) (*sqlcommon.TokenStore, func()) {

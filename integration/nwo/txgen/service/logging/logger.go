@@ -19,5 +19,5 @@ func MustGetLogger(params ...string) Logger {
 }
 
 func GetLogger(params ...string) (Logger, error) {
-	return logging.GetLoggerWithReplacements(map[string]string{"github.com.hyperledger-labs.fabric-token-sdk.integration": "fts"}, params)
+	return logging.GetLoggerWithReplacements(map[string]string{"github.com.hyperledger-labs.panurus.integration": "fts"}, params)
 }

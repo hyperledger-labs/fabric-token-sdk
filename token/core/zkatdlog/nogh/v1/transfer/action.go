@@ -8,19 +8,19 @@ package transfer
 
 import (
 	math "github.com/IBM/mathlib"
+	factions "github.com/LFDT-Panurus/panurus/token/core/fabtoken/protos-go/v1/actions"
+	fv1 "github.com/LFDT-Panurus/panurus/token/core/fabtoken/v1/actions"
+	"github.com/LFDT-Panurus/panurus/token/core/zkatdlog/nogh/protos-go/utils"
+	"github.com/LFDT-Panurus/panurus/token/core/zkatdlog/nogh/protos-go/v1/actions"
+	"github.com/LFDT-Panurus/panurus/token/core/zkatdlog/nogh/v1/crypto/rp"
+	"github.com/LFDT-Panurus/panurus/token/core/zkatdlog/nogh/v1/token"
+	"github.com/LFDT-Panurus/panurus/token/driver"
+	protosv1 "github.com/LFDT-Panurus/panurus/token/driver/protos-go/v1"
+	"github.com/LFDT-Panurus/panurus/token/services/utils/protos"
+	"github.com/LFDT-Panurus/panurus/token/services/utils/slices"
+	token2 "github.com/LFDT-Panurus/panurus/token/token"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
-	factions "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/actions"
-	fv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/actions"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/actions"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/pp"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/utils"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/protos"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/slices"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 const ProtocolV1 = 1
@@ -35,10 +35,10 @@ type ActionInput struct {
 
 // ToProtos converts the ActionInput to its protobuf representation.
 func (a *ActionInput) ToProtos() (*actions.TransferActionInput, error) {
-	var id *actions.TokenID
+	var id *protosv1.TokenID
 	if a.ID != nil {
-		id = &actions.TokenID{
-			Id:    a.ID.TxId,
+		id = &protosv1.TokenID{
+			TxId:  a.ID.TxId,
 			Index: a.ID.Index,
 		}
 	}
@@ -84,7 +84,7 @@ func (a *ActionInput) ToProtos() (*actions.TransferActionInput, error) {
 func (a *ActionInput) FromProtos(input *actions.TransferActionInput) error {
 	if input.TokenId != nil {
 		a.ID = &token2.ID{
-			TxId:  input.TokenId.Id,
+			TxId:  input.TokenId.TxId,
 			Index: input.TokenId.Index,
 		}
 	}
@@ -384,9 +384,9 @@ func (t *Action) Serialize() ([]byte, error) {
 		return nil, errors.Wrap(err, "failed to serialize outputs")
 	}
 
-	var issuer *pp.Identity
+	var issuer *protosv1.Identity
 	if t.Issuer != nil {
-		issuer = &pp.Identity{
+		issuer = &protosv1.Identity{
 			Raw: t.Issuer.Bytes(),
 		}
 	}

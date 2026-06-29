@@ -1,14 +1,14 @@
 # Token-SDK Configuration Example
 
-The following example provides descriptions for the various keys required by the Token SDK.
+The following example provides descriptions for the various keys required by Panurus.
 
 ```yaml
-# ------------------- Token SDK Configuration -------------------------
+# ------------------- Panurus Configuration -------------------------
 token:
   # version is the version of this configuration structure. 
   # If not specified, the latest version is used.
   version: v1
-  # enabled determines if the Token SDK is enabled.
+  # enabled determines if Panurus is enabled.
   enabled: true
 
   # selector configuration allows the use of different implementations of the token selector.
@@ -42,7 +42,7 @@ token:
 
   # When we are interested in knowing when a transaction reaches finality, we subscribe to the Finality Listener Manager for the finality event of that transaction.
   # This configuration specifies the way the manager is instantiated (i.e., how it gets notified about the finality events, how often it checks).
- finality:
+  finality:
     # Only applicable for fabric networks.
     # The manager subscribes to the delivery service and receives all final transactions.
     #   This manager keeps two structures: an LRU cache of recently finalized transactions, and a list of listeners that are waiting for future transactions.
@@ -103,7 +103,7 @@ token:
       namespace: tns # the name of the channel's namespace this TMS refers to, if applicable
 
       # sections dedicated to the definition of the storage.
-      # The Token SDK uses multiple databases to keep track of transactions, tokens, identities, and audit records where applicable.
+      # Panurus uses multiple databases to keep track of transactions, tokens, identities, and audit records where applicable.
       # These are the available databases:
       # ttxdb: stores records of transactions.
       # tokendb: stores information about the available tokens.
@@ -208,6 +208,56 @@ token:
               # Set to 0 to disable the promotion; the row stays Pending and is re-claimed
               # on every sweep until it either resolves or an operator intervenes.
               notFoundGracePeriod: 30m
+
+        # storage service configuration
+        storage:
+          # cleanup config controls automatic deletion of cryptographic keys from the keystore
+          # for tokens that have been deleted (spent, expired, or invalidated).
+          # If omitted, the cleanup manager uses its built-in defaults (disabled by default).
+          cleanup:
+            # enabled determines whether keystore cleanup runs. Default: false.
+            # Must be explicitly enabled. This is a conservative default to prevent
+            # unexpected key deletion in existing deployments.
+            enabled: false
+            
+            # ttl is the minimum age of deleted tokens before their keys are eligible for cleanup. Default: 24h.
+            # This ensures tokens are truly finalized before key deletion.
+            # Increase this value for additional safety margin in high-latency networks.
+            # Relationship: Should be significantly greater than transaction finality time.
+            ttl: 24h
+            
+            # scanInterval is how often the cleanup manager scans for deleted tokens. Default: 1h.
+            # Lower values provide faster cleanup but increase database load.
+            # Higher values reduce overhead but delay key removal.
+            # Relationship: Should be less than ttl to ensure timely cleanup.
+            # Performance impact: Each scan queries the token database for deleted tokens.
+            scanInterval: 1h
+            
+            # batchSize is the maximum number of deleted tokens processed per scan. Default: 100.
+            # Limits the number of tokens processed in a single cleanup sweep.
+            # Increase for high-volume environments with many deleted tokens.
+            # Performance impact: Larger batches reduce scan overhead but increase memory usage and processing time per sweep.
+            batchSize: 100
+            
+            # workerCount is the number of local workers that process tokens in parallel. Default: 1.
+            # Increase to improve cleanup throughput in high-volume scenarios.
+            # Decrease to reduce resource consumption on constrained systems.
+            # Performance impact: More workers increase CPU utilization during cleanup sweeps.
+            workerCount: 1
+            
+            # advisoryLockID is the PostgreSQL advisory lock identifier used for cleanup leader election.
+            # This ensures only one replica performs cleanup sweeps at a time in multi-instance deployments.
+            # Default: 8389190333894887277 (hex: 0x74746b636c65616e, ASCII: "ttkclean")
+            # The default value is derived from the ASCII encoding of "ttkclean" (Token Transaction Keystore Cleanup).
+            # Only change this if you need to run multiple independent cleanup managers on the same database.
+            # Note: PostgreSQL advisory locks use 64-bit integers. This value must be unique across your application.
+            advisoryLockID: 8389190333894887277
+            
+            # instanceID identifies this replica in logs and monitoring.
+            # If empty, a unique identifier is generated automatically at startup.
+            # Set this explicitly in containerized environments for consistent identity across restarts.
+            # This helps with debugging and tracking which instance performed cleanup operations.
+            instanceID:
 
       # auditor-specific settings
       auditor:
@@ -322,7 +372,7 @@ token:
 
 ## Minimal Token-SDK Configuration
 
-The Token SDK can start with the following minimal configuration:
+Panurus can start with the following minimal configuration:
 
 ```yaml
 token:
@@ -445,6 +495,79 @@ Default values:
    - Increase `workerCount` to 8-16 to improve parallel processing
    - Decrease `scanInterval` to 2-3s for faster recovery detection
 
+
+### Optional: token.tms.<name>.services.storage.cleanup
+
+If not specified, the default configuration is:
+
+```yaml
+token:
+  tms:
+    <name>:
+      services:
+        storage:
+          cleanup:
+            enabled: false
+            ttl: 24h
+            scanInterval: 1h
+            batchSize: 100
+            workerCount: 1
+            advisoryLockID: 8389190333894887277
+            instanceID:
+```
+
+Default values:
+
+- enabled: false
+- ttl: 24h
+- scanInterval: 1h
+- batchSize: 100
+- workerCount: 1
+- advisoryLockID: 8389190333894887277 (`0x74746b636c65616e`)
+- instanceID: empty, auto-generated when the cleanup manager starts
+
+**Parameter Relationships and Tuning:**
+
+- **Cleanup is disabled by default** and must be explicitly enabled. This is a conservative default to prevent unexpected key deletion in existing deployments.
+- **Only deleted tokens older than `ttl` are considered for cleanup** to ensure tokens are truly finalized before key deletion.
+- **The manager validates** that `ttl`, `scanInterval`, `batchSize`, and `workerCount` are all greater than zero.
+- **`advisoryLockID`** is used to acquire PostgreSQL advisory-lock leadership so that only one replica performs a cleanup sweep at a time. The default value (8389190333894887277 or 0x74746b636c65616e) represents the ASCII string "ttkclean" (Token Transaction Keystore Cleanup) encoded as a 64-bit integer.
+- **`instanceID`** is used to identify this replica in logs and monitoring; if omitted, the manager generates a unique identifier automatically at startup.
+
+**Tuning Recommendations:**
+
+1. **For High-Volume Environments:**
+   - Increase `batchSize` to 200-500 to process more tokens per sweep
+   - Increase `workerCount` to 8-16 to improve parallel key deletion
+   - Decrease `scanInterval` to 30m for more frequent cleanup
+
+2. **For Resource-Constrained Systems:**
+   - Decrease `workerCount` to 2 to reduce CPU usage
+   - Increase `scanInterval` to 2-4h to reduce database load
+   - Keep default `batchSize` to limit memory usage
+
+3. **For Security-Sensitive Deployments:**
+   - Decrease `ttl` to 12h for faster key removal
+   - Decrease `scanInterval` to 30m for more frequent cleanup
+   - Monitor cleanup metrics to ensure timely processing
+
+4. **For Multi-Instance Deployments:**
+   - **PostgreSQL Required**: Multi-instance deployments require PostgreSQL for distributed coordination via advisory locks
+   - Keep default `advisoryLockID` unless running multiple independent cleanup systems
+   - Consider setting explicit `instanceID` values for easier debugging and monitoring
+
+5. **For Single-Node Deployments:**
+   - **SQLite Supported**: SQLite can be used for single-node deployments and handles node restarts gracefully
+   - Cleanup works automatically after node restarts by scanning for eligible tokens
+   - **Important**: Do not use SQLite with multiple replicas as it lacks the advisory lock mechanism for leader election
+
+**Performance Considerations:**
+- Each scan queries the token database, so `scanInterval` directly affects database load
+- `workerCount` affects CPU utilization during cleanup sweeps
+- `batchSize` affects memory usage and the duration of each cleanup sweep
+- The relationship `scanInterval < ttl` ensures timely cleanup without premature processing
+
+---
 ---
 
 ### Optional: token.tms.<name>.auditor.lock

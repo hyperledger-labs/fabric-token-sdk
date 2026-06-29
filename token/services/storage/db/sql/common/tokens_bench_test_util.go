@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/benchmark"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
-	tokentype "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/LFDT-Panurus/panurus/token/services/benchmark"
+	"github.com/LFDT-Panurus/panurus/token/services/storage/db/driver"
+	tokentype "github.com/LFDT-Panurus/panurus/token/token"
 )
 
 func SeedBenchTokens(b *testing.B, store *TokenStore, n int) {

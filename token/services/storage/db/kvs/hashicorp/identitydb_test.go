@@ -10,10 +10,10 @@ import (
 	"fmt"
 	"testing"
 
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs/hashicorp"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/dbtest"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/kvs"
+	token2 "github.com/LFDT-Panurus/panurus/token"
+	"github.com/LFDT-Panurus/panurus/token/services/identity/storage/kvs/hashicorp"
+	"github.com/LFDT-Panurus/panurus/token/services/storage/db/dbtest"
+	"github.com/LFDT-Panurus/panurus/token/services/storage/db/kvs"
 	"github.com/stretchr/testify/require"
 )
 

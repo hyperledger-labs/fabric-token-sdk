@@ -25,7 +25,7 @@
 
 ## 1. Introduction
 
-The **Zero-Knowledge Authenticated Token based on Discrete Logarithm (ZKAT-DLOG)** driver, specifically the **No Graph Hiding (NOGH)** variant, is a privacy-preserving token implementation for the Fabric Token SDK. It leverages Zero-Knowledge Proofs (ZKP) to hide token types and values while revealing the spending graph.
+The **Zero-Knowledge Authenticated Token based on Discrete Logarithm (ZKAT-DLOG)** driver, specifically the **No Graph Hiding (NOGH)** variant, is a privacy-preserving token implementation for Panurus. It leverages Zero-Knowledge Proofs (ZKP) to hide token types and values while revealing the spending graph.
 
 **Implementation Path**: [`token/core/zkatdlog/nogh/v1`](../../token/core/zkatdlog/nogh/v1)
 
@@ -143,13 +143,13 @@ The public parameters include three Pedersen generators `[g_0, g_1, g_2]` used f
    - Based on Inner Product Arguments (IPA)
    - Proof size: O(log n) where n is the bit length
    - Verification time: O(n) group operations
-   - Implementation: [`crypto/rp/bulletproof/`](../../token/core/zkatdlog/nogh/v1/crypto/rp/bulletproof/)
+   - Implementation: [`crypto/rp/bulletproof/`](../../token/core/zkatdlog/nogh/v1/crypto/rp/bulletproof)
 
 2. **Compressed Sigma Protocols (CSP)** (New implementation)
    - Based on recursive folding with Fiat-Shamir
    - Proof size: O(log n) where n is the bit length
    - Faster verification through Lagrange interpolation optimizations
-   - Implementation: [`crypto/rp/csp/`](../../token/core/zkatdlog/nogh/v1/crypto/rp/csp/)
+   - Implementation: [`crypto/rp/csp/`](../../token/core/zkatdlog/nogh/v1/crypto/rp/csp)
 
 The proof system is selected via the `ProofType` parameter in `SetupParams`:
 - `rp.Bulletproof` - Uses Bulletproof range proofs (default)
@@ -512,7 +512,7 @@ The driver supports two range proof systems. The choice is made during public pa
 
 Each output $C_{out,j}$ includes a **Bulletproof** showing $V_j \in [0, 2^{64}-1]$. It uses an **Inner Product Argument (IPA)** to achieve $O(\log n)$ proof size.
 
-**Implementation**: [`crypto/rp/bulletproof/`](../../token/core/zkatdlog/nogh/v1/crypto/rp/bulletproof/)
+**Implementation**: [`crypto/rp/bulletproof/`](../../token/core/zkatdlog/nogh/v1/crypto/rp/bulletproof)
 
 **Bulletproof Structure**:
 
@@ -538,7 +538,7 @@ type RangeProof struct {
 
 **New in commit 586d4f58**: CSP-based range proofs using recursive folding with Fiat-Shamir transformation.
 
-**Implementation**: [`crypto/rp/csp/`](../../token/core/zkatdlog/nogh/v1/crypto/rp/csp/)
+**Implementation**: [`crypto/rp/csp/`](../../token/core/zkatdlog/nogh/v1/crypto/rp/csp)
 
 **CSP Proof Structure**:
 
@@ -579,7 +579,7 @@ The verifier reproduces Fiat-Shamir challenges and performs final verification u
 
 ### 8.1 Issue Service
 
-**Implementation**: [`issue.go`](../../token/core/zkatdlog/nogh/v1/issue.go), [`issue/`](../../token/core/zkatdlog/nogh/v1/issue/)
+**Implementation**: [`issue.go`](../../token/core/zkatdlog/nogh/v1/issue.go), [`issue/`](../../token/core/zkatdlog/nogh/v1/issue)
 
 Orchestrates new token creation.
 
@@ -636,7 +636,7 @@ sequenceDiagram
 
 ### 8.2 Transfer Service
 
-**Implementation**: [`transfer.go`](../../token/core/zkatdlog/nogh/v1/transfer.go), [`transfer/`](../../token/core/zkatdlog/nogh/v1/transfer/)
+**Implementation**: [`transfer.go`](../../token/core/zkatdlog/nogh/v1/transfer.go), [`transfer/`](../../token/core/zkatdlog/nogh/v1/transfer)
 
 Manages ownership movement.
 
@@ -761,7 +761,7 @@ func (t *Token) ToClear(meta *Metadata, pp *PublicParams) (*token.Token, error) 
 
 ### 8.4 Tokens Upgrade Service
 
-**Implementation**: [`crypto/upgrade/`](../../token/core/zkatdlog/nogh/v1/crypto/upgrade/)
+**Implementation**: [`crypto/upgrade/`](../../token/core/zkatdlog/nogh/v1/crypto/upgrade)
 
 Allows migrating cleartext `FabToken` outputs to privacy-preserving `ZKAT-DLOG` commitments.
 
@@ -827,7 +827,7 @@ For tokens that cannot be upgraded in-place (e.g., incompatible precision or maj
    - Issues new tokens with equivalent value (via `IssueAction.outputs`)
    - Maintains supply consistency through cryptographic proofs
 
-**Implementation**: See [`crypto/upgrade/`](../../token/core/zkatdlog/nogh/v1/crypto/upgrade/) for the upgrade service implementation.
+**Implementation**: See [`crypto/upgrade/`](../../token/core/zkatdlog/nogh/v1/crypto/upgrade) for the upgrade service implementation.
 
 ---
 
@@ -837,7 +837,7 @@ The driver provides comprehensive validation and auditing capabilities to ensure
 
 ### 9.1 Validator
 
-**Implementation**: [`validator/`](../../token/core/zkatdlog/nogh/v1/validator/)
+**Implementation**: [`validator/`](../../token/core/zkatdlog/nogh/v1/validator)
 
 The validator performs rigorous checks on token transactions before they are committed to the ledger.
 
@@ -884,7 +884,7 @@ For implementation details, see [`validator/validator.go`](../../token/core/zkat
 
 ### 9.2 Auditor Service
 
-**Implementation**: [`audit/`](../../token/core/zkatdlog/nogh/v1/audit/) and [`auditor.go`](../../token/core/zkatdlog/nogh/v1/auditor.go)
+**Implementation**: [`audit/auditor.go`](../../token/core/zkatdlog/nogh/v1/audit/auditor.go) and [`auditor.go`](../../token/core/zkatdlog/nogh/v1/auditor.go)
 
 The auditor service enables authorized auditors to inspect private transactions and verify compliance without compromising the privacy of non-audited users.
 
@@ -897,24 +897,55 @@ Auditors receive cleartext metadata (via transient data) that includes:
 - Issuer information
 
 The auditor verifies that:
-1. Commitments match the cleartext metadata
-2. Proofs are valid
-3. Balance is preserved
-4. All parties are properly authorized
+1. **Structural Correspondence**: Actions and metadata have 1:1 correspondence with correct types
+2. **Commitment Validity**: Token commitments match the cleartext metadata (Pedersen commitments)
+3. **Identity Verification**: Audit info correctly corresponds to identities via `InfoMatcher`
+4. **Recipient Matching**: Recipients extracted from owners match metadata receivers
+5. **Authorization**: All parties (issuers, senders, receivers) are properly identified
 
 #### 9.2.2 Auditor Validation
 
-The `AuditorCheck` method performs the following:
+The [`Auditor.Check()`](../../token/core/zkatdlog/nogh/v1/audit/auditor.go) method performs comprehensive validation in two phases:
 
-1. **Deserialize Actions**: Parse the token request into structured actions
-2. **Load Input Tokens**: Retrieve the commitments of input tokens from the ledger
-3. **Verify Metadata**: Check that cleartext metadata matches the commitments
-4. **Validate Proofs**: Verify zero-knowledge proofs using the cleartext values
-5. **Check Authorization**: Ensure all participants are properly identified
+**Phase 1: Structural Validation** ([`validateStructure()`](../../token/core/zkatdlog/nogh/v1/audit/auditor.go))
+- Validates action count matches metadata count
+- Verifies ActionIDs are sequential and correct
+- Ensures action types align with metadata types (no mixed types)
+- Confirms metadata exclusivity (IssueMetadata XOR TransferMetadata)
+
+**Phase 2: Semantic Validation** (per action type)
+
+For **Issue Actions** ([`checkIssueAction()`](../../token/core/zkatdlog/nogh/v1/audit/auditor.go)):
+1. Uses `IssueMetadata.Match()` to validate structural correspondence
+2. Validates inputs via [`validateIssueInputs()`](../../token/core/zkatdlog/nogh/v1/audit/auditor.go):
+   - Checks TokenID matches for upgrade scenarios
+3. Validates outputs via [`validateIssueOutputs()`](../../token/core/zkatdlog/nogh/v1/audit/auditor.go):
+   - Verifies no redeem outputs in issue actions
+   - Recomputes Pedersen commitments from cleartext (type, value, blinding factor)
+   - Validates commitments match token data
+   - Validates receivers via [`validateOutputReceivers()`](../../token/core/zkatdlog/nogh/v1/audit/auditor.go)
+4. Validates issuer identity via [`validateIssuer()`](../../token/core/zkatdlog/nogh/v1/audit/auditor.go)
+
+For **Transfer Actions** ([`checkTransferAction()`](../../token/core/zkatdlog/nogh/v1/audit/auditor.go)):
+1. Uses `TransferMetadata.Match()` to validate structural correspondence
+2. Validates inputs via [`validateTransferInputs()`](../../token/core/zkatdlog/nogh/v1/audit/auditor.go):
+   - Ensures exactly one sender per input
+   - Verifies sender identity matches token owner
+   - Validates TokenID matches
+   - Inspects sender identity via `InfoMatcher`
+3. Validates outputs via [`validateTransferOutputs()`](../../token/core/zkatdlog/nogh/v1/audit/auditor.go):
+   - Validates receivers for non-redeem outputs
+   - Recomputes Pedersen commitments from cleartext
+   - Validates commitments match token data
+
+**Common Validation Methods**:
+- [`validateOutputReceivers()`](../../token/core/zkatdlog/nogh/v1/audit/auditor.go): Extracts recipients from owner, validates count matches, verifies identity matching (with configurable empty identity handling)
+- [`InspectOutput()`](../../token/core/zkatdlog/nogh/v1/audit/auditor.go): Recomputes and verifies Pedersen commitments
+- [`InspectIdentity()`](../../token/core/zkatdlog/nogh/v1/audit/auditor.go): Verifies audit info matches identity via `InfoMatcher.MatchIdentity()`
 
 **Privacy Guarantee**: Only authorized auditors with the correct audit keys can decrypt the metadata. The ledger itself stores only commitments, preserving privacy for all other participants.
 
-For implementation details, see [`auditor.go`](../../token/core/zkatdlog/nogh/v1/auditor.go).
+For implementation details, see [`audit/auditor.go`](../../token/core/zkatdlog/nogh/v1/audit/auditor.go).
     IS->>IS: Create IssueAction with Inputs
     IS-->>C: (IssueAction, Metadata)
 ```
@@ -1176,9 +1207,9 @@ func (p *PublicParams) Serialize() ([]byte, error) {
 
 ### 10.7 Protobuf Message Definitions
 
-The ZKAT-DLOG (NOGH) driver uses Protocol Buffers for all serialized data structures, ensuring consistent communication between nodes and the ledger while guaranteeing backward and forward compatibility. The definitions are located in [`token/core/zkatdlog/nogh/protos/`](../../token/core/zkatdlog/nogh/protos/).
+The ZKAT-DLOG (NOGH) driver uses Protocol Buffers for all serialized data structures, ensuring consistent communication between nodes and the ledger while guaranteeing backward and forward compatibility. The definitions are located in [`token/core/zkatdlog/nogh/protos/`](../../token/core/zkatdlog/nogh/protos).
 
-#### 10.7.1 Token Messages ([`noghactions.proto`](../../token/core/zkatdlog/nogh/protos/noghactions.proto))
+#### 10.7.1 Token Messages ([`noghactions.proto`](../../token/core/zkatdlog/nogh/protos/v1/noghactions.proto))
 
 **Token**: Represents a ZKAT-DLOG token as a Pedersen commitment.
 - `owner` (bytes): Serialized identity of the owner (Idemix pseudonym for end-users, X.509 for issuers/auditors)
@@ -1210,7 +1241,7 @@ The ZKAT-DLOG (NOGH) driver uses Protocol Buffers for all serialized data struct
 - `output` (fabtoken.Token): The original legacy token (e.g., FabToken)
 - `blinding_factor` (Zr): Blinding factor generated for the commitment
 
-#### 10.7.2 Public Parameters ([`noghpp.proto`](../../token/core/zkatdlog/nogh/protos/noghpp.proto))
+#### 10.7.2 Public Parameters ([`noghpp.proto`](../../token/core/zkatdlog/nogh/protos/v1/noghpp.proto))
 
 **PublicParameters**: Defines the cryptographic setup and governance rules.
 - `token_driver_name` (string): Always `"zkatdlognogh"`
@@ -1233,7 +1264,7 @@ The ZKAT-DLOG (NOGH) driver uses Protocol Buffers for all serialized data struct
 - `bit_length` (uint64): Number of bits in the range (e.g., 64)
 - `number_of_rounds` (uint64): Number of rounds in the protocol (log₂ of bit_length)
 
-#### 10.7.3 Mathematical Elements ([`noghmath.proto`](../../token/core/zkatdlog/nogh/protos/noghmath.proto))
+#### 10.7.3 Mathematical Elements ([`noghmath.proto`](../../token/core/zkatdlog/nogh/protos/v1/noghmath.proto))
 
 **G1**: Elliptic curve point in group G₁.
 - `raw` (bytes): Compressed point serialization (48 bytes for BLS12-381, 32 bytes for BN254)
@@ -1566,13 +1597,13 @@ var (
 
 Located in `*_test.go` files throughout the codebase:
 
-- **Cryptographic primitives**: [`crypto/rp/bulletproof_test.go`](../../token/core/zkatdlog/nogh/v1/crypto/rp/bulletproof_test.go)
+- **Cryptographic primitives**: [`crypto/rp/bulletproof/rp_test.go`](../../token/core/zkatdlog/nogh/v1/crypto/rp/bulletproof/rp_test.go)
 - **Token operations**: [`issue_test.go`](../../token/core/zkatdlog/nogh/v1/issue_test.go), [`transfer_test.go`](../../token/core/zkatdlog/nogh/v1/transfer_test.go)
 - **Validation**: [`validator/validator_test.go`](../../token/core/zkatdlog/nogh/v1/validator/validator_test.go)
 
 #### 13.2.2 Integration Tests
 
-Located in [`integration/token/`](../../integration/token/):
+Located in [`integration/token/`](../../integration/token):
 
 - **End-to-end workflows**: Issue → Transfer → Redeem
 - **Multi-party scenarios**: Multiple issuers, auditors, users
@@ -1580,15 +1611,13 @@ Located in [`integration/token/`](../../integration/token/):
 
 #### 13.2.3 Regression Tests
 
-Located in [`validator/regression/`](../../token/core/zkatdlog/nogh/v1/validator/regression/):
+Located in [`regression/`](../../token/core/zkatdlog/nogh/v1/regression):
 
 - **Proof compatibility**: Ensure proofs remain valid across versions
 - **Serialization stability**: Maintain wire format compatibility
 - **Performance regression**: Track performance changes
 
 #### 13.2.4 Benchmark Tests
-
-Located in [`benchmark/`](../../token/core/zkatdlog/nogh/v1/benchmark/):
 
 - **Performance measurement**: Proof generation and verification times
 - **Scalability testing**: Large numbers of inputs/outputs
@@ -1597,8 +1626,6 @@ Located in [`benchmark/`](../../token/core/zkatdlog/nogh/v1/benchmark/):
 For detailed benchmark results and analysis, see the [ZKAT-DLOG Benchmark Documentation](./benchmark/core/dlognogh/dlognogh.md).
 
 ### 13.3 Monitoring and Metrics
-
-**Implementation**: [`metrics.go`](../../token/core/zkatdlog/nogh/v1/metrics.go)
 
 #### 13.3.1 Key Metrics
 
@@ -1649,15 +1676,15 @@ type Metrics struct {
 ### 14.3 Implementation References
 
 - [IBM Mathlib](https://github.com/IBM/mathlib) - Cryptographic library
-- [Hyperledger Fabric](https://hyperledger-fabric.readthedocs.io/) - Blockchain platform
+- [Hyperledger Fabric](https://hyperledger-fabric.readthedocs.io) - Blockchain platform
 - [Protocol Buffers](https://developers.google.com/protocol-buffers) - Serialization format
 
 ### 14.4 Related Documentation
 
 - [**Driver API**](../driverapi.md) - Token driver interface specification
-- [**Token SDK Overview**](../tokensdk.md) - High-level SDK architecture and concepts
+- [**Panurus Overview**](../tokensdk.md) - High-level SDK architecture and concepts
 - [**Token API**](../tokenapi.md) - Public API for token operations
-- [**Token SDK Usage**](../token_sdk_usage.md) - Practical usage examples
+- [**Panurus Usage**](../token_sdk_usage.md) - Practical usage examples
 - [**Upgradability Guide**](../upgradability.md) - Token and driver upgrade procedures
 - [**Public Parameters Lifecycle**](../public_parameters.md) - PP generation and management
 - [**Services Overview**](../services.md) - SDK service architecture
@@ -1678,19 +1705,18 @@ type Metrics struct {
 - **Auditor Service**: [`auditor.go`](../../token/core/zkatdlog/nogh/v1/auditor.go)
 - **Public Parameters**: [`setup/setup.go`](../../token/core/zkatdlog/nogh/v1/setup/setup.go)
 - **Token Management**: [`token/service.go`](../../token/core/zkatdlog/nogh/v1/token/service.go)
-- **Metrics**: [`metrics.go`](../../token/core/zkatdlog/nogh/v1/metrics.go)
 
 **Cryptographic Primitives**:
-- **Issue Logic**: [`issue/`](../../token/core/zkatdlog/nogh/v1/issue/)
-- **Transfer Logic**: [`transfer/`](../../token/core/zkatdlog/nogh/v1/transfer/)
-- **Audit Logic**: [`audit/`](../../token/core/zkatdlog/nogh/v1/audit/)
-- **Validator**: [`validator/`](../../token/core/zkatdlog/nogh/v1/validator/)
-- **Upgrade Service**: [`crypto/upgrade/`](../../token/core/zkatdlog/nogh/v1/crypto/upgrade/)
+- **Issue Logic**: [`issue/`](../../token/core/zkatdlog/nogh/v1/issue)
+- **Transfer Logic**: [`transfer/`](../../token/core/zkatdlog/nogh/v1/transfer)
+- **Audit Logic**: [`audit/`](../../token/core/zkatdlog/nogh/v1/audit)
+- **Validator**: [`validator/`](../../token/core/zkatdlog/nogh/v1/validator)
+- **Upgrade Service**: [`crypto/upgrade/`](../../token/core/zkatdlog/nogh/v1/crypto/upgrade)
 
 **Testing**:
 - **Unit Tests**: [`issue_test.go`](../../token/core/zkatdlog/nogh/v1/issue_test.go), [`transfer_test.go`](../../token/core/zkatdlog/nogh/v1/transfer_test.go)
-- **Benchmarks**: [`benchmark/`](../../token/core/zkatdlog/nogh/v1/benchmark/)
-- **Integration Tests**: [`integration/token/fungible/dlog/`](../../integration/token/fungible/dlog/), [`integration/token/nft/dlog/`](../../integration/token/nft/dlog/)
+- **Benchmarks**: [`benchmark/`](../../token/core/zkatdlog/nogh/v1/benchmark)
+- **Integration Tests**: [`integration/token/fungible/dlog/`](../../integration/token/fungible/dlog), [`integration/token/nft/dlog/`](../../integration/token/nft/dlog)
 
 ---
 
@@ -1747,4 +1773,4 @@ type Metrics struct {
 
 ---
 
-*This specification document is maintained by the Fabric Token SDK team. For questions or contributions, please refer to the [CONTRIBUTING.md](../../CONTRIBUTING.md) guidelines.*
+*This specification document is maintained by Panurus team. For questions or contributions, please refer to the [CONTRIBUTING.md](../../CONTRIBUTING.md) guidelines.*

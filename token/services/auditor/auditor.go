@@ -10,20 +10,20 @@ import (
 	"context"
 	"time"
 
+	"github.com/LFDT-Panurus/panurus/token"
+	"github.com/LFDT-Panurus/panurus/token/core/common/metrics"
+	"github.com/LFDT-Panurus/panurus/token/services/logging"
+	"github.com/LFDT-Panurus/panurus/token/services/network"
+	"github.com/LFDT-Panurus/panurus/token/services/network/driver"
+	"github.com/LFDT-Panurus/panurus/token/services/storage"
+	"github.com/LFDT-Panurus/panurus/token/services/storage/auditdb"
+	"github.com/LFDT-Panurus/panurus/token/services/tokens"
+	"github.com/LFDT-Panurus/panurus/token/services/ttx/dep"
+	"github.com/LFDT-Panurus/panurus/token/services/ttx/finality"
+	"github.com/LFDT-Panurus/panurus/token/services/utils"
+	token2 "github.com/LFDT-Panurus/panurus/token/token"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
-	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/auditdb"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/finality"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -32,9 +32,9 @@ var logger = logging.MustGetLogger()
 //go:generate counterfeiter -o mock/transaction.go -fake-name Transaction . Transaction
 //go:generate counterfeiter -o mock/network_provider.go -fake-name NetworkProvider . NetworkProvider
 //go:generate counterfeiter -o mock/check_service.go -fake-name CheckService . CheckService
-//go:generate counterfeiter -o mock/network_driver.go -fake-name Network github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver.Network
-//go:generate counterfeiter -o mock/audit_transaction_store.go -fake-name AuditTransactionStore github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver.AuditTransactionStore
-//go:generate counterfeiter -o mock/tst.go -fake-name TransactionStoreTransaction github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver.TransactionStoreTransaction
+//go:generate counterfeiter -o mock/network_driver.go -fake-name Network github.com/LFDT-Panurus/panurus/token/services/network/driver.Network
+//go:generate counterfeiter -o mock/audit_transaction_store.go -fake-name AuditTransactionStore github.com/LFDT-Panurus/panurus/token/services/storage/db/driver.AuditTransactionStore
+//go:generate counterfeiter -o mock/tst.go -fake-name TransactionStoreTransaction github.com/LFDT-Panurus/panurus/token/services/storage/db/driver.TransactionStoreTransaction
 
 // TxStatus is the status of a transaction
 type TxStatus = auditdb.TxStatus

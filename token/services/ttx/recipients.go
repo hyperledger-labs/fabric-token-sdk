@@ -11,13 +11,13 @@ import (
 	"encoding/asn1"
 	"time"
 
+	"github.com/LFDT-Panurus/panurus/token"
+	"github.com/LFDT-Panurus/panurus/token/services/identity/boolpolicy"
+	"github.com/LFDT-Panurus/panurus/token/services/identity/multisig"
+	session2 "github.com/LFDT-Panurus/panurus/token/services/utils/json/session"
+	view3 "github.com/LFDT-Panurus/panurus/token/services/utils/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/endpoint"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/boolpolicy"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/multisig"
-	session2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
-	view3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/view"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 )

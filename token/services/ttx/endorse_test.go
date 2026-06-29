@@ -11,15 +11,15 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/LFDT-Panurus/panurus/token"
+	"github.com/LFDT-Panurus/panurus/token/driver"
+	"github.com/LFDT-Panurus/panurus/token/driver/mock"
+	"github.com/LFDT-Panurus/panurus/token/services/ttx"
+	mock2 "github.com/LFDT-Panurus/panurus/token/services/ttx/dep/mock"
+	"github.com/LFDT-Panurus/panurus/token/services/ttx/dep/tokenapi"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/endpoint"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
-	mock2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep/mock"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep/tokenapi"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -81,10 +81,13 @@ func newTestEndorseViewContext(t *testing.T, input *TestEndorseViewContextInput)
 	np.GetNetworkReturns(network, nil)
 
 	req := token.NewRequest(nil, "an_anchor")
-	req.Metadata.Issues = []*driver.IssueMetadata{
+	req.Metadata.Actions = []*driver.ActionMetadataEntry{
 		{
-			Issuer: driver.AuditableIdentity{
-				Identity: []byte("an_issuer"),
+			ActionID: 0,
+			IssueMetadata: &driver.IssueMetadata{
+				Issuer: driver.AuditableIdentity{
+					Identity: []byte("an_issuer"),
+				},
 			},
 		},
 	}

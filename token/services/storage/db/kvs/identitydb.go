@@ -11,12 +11,12 @@ import (
 	"encoding/base64"
 	"fmt"
 
+	"github.com/LFDT-Panurus/panurus/token"
+	tdriver "github.com/LFDT-Panurus/panurus/token/driver"
+	idriver "github.com/LFDT-Panurus/panurus/token/services/identity/driver"
+	"github.com/LFDT-Panurus/panurus/token/services/storage"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/kvs"
-	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
 )
 
 const (

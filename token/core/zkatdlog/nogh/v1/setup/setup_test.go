@@ -12,8 +12,8 @@ import (
 	"testing"
 
 	math3 "github.com/IBM/mathlib"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/LFDT-Panurus/panurus/token/core/zkatdlog/nogh/v1/crypto/rp"
+	"github.com/LFDT-Panurus/panurus/token/driver"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

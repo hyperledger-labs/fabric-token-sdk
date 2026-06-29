@@ -9,14 +9,17 @@ package driver
 import (
 	"context"
 
+	"github.com/LFDT-Panurus/panurus/token"
+	"github.com/LFDT-Panurus/panurus/token/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
 // Keystore provides a minimal key/value style interface used by the identity
 // service to persist arbitrary cryptographic key objects keyed by an identifier.
+//
+// The `id` parameter is expected to be the hexadecimal representation of the key's
+// Subject Key Identifier (SKI). Other packages may depend on this convention.
 //
 // Implementations should treat the provided `key` as an opaque value.
 // For Put the caller supplies the value to store; for Get the caller supplies a
@@ -33,6 +36,11 @@ type Keystore interface {
 	// provided `key` parameter.
 	// If no entry exists for id, implementations should return an error describing the missing entry.
 	Get(id string, key any) error
+
+	// Delete removes the key with the given identifier.
+	// If the key does not exist, implementations should return nil (idempotent).
+	Delete(id string) error
+
 	// Close closes the store
 	Close() error
 }

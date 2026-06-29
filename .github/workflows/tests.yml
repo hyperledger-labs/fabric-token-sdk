@@ -46,6 +46,9 @@ jobs:
       - name: Run checks
         run: make checks
 
+      - name: Run linter
+        run: make lint
+
   utest:
     needs: checks
     runs-on: ubuntu-latest

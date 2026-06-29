@@ -9,12 +9,12 @@ package ttx
 import (
 	"time"
 
+	"github.com/LFDT-Panurus/panurus/token"
+	jsession "github.com/LFDT-Panurus/panurus/token/services/utils/json/session"
+	token2 "github.com/LFDT-Panurus/panurus/token/token"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/endpoint"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	jsession "github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/json/session"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 type WithdrawalRequest struct {
