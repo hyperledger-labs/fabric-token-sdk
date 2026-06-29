@@ -12,12 +12,11 @@
 package pp
 
 import (
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
-
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -93,7 +92,7 @@ const file_pp_proto_rawDesc = "" +
 	"\n" +
 	"identifier\x18\x01 \x01(\tR\n" +
 	"identifier\x12\x10\n" +
-	"\x03raw\x18\x02 \x01(\fR\x03rawBKZIgithub.com/LFDT-Panurus/panurus/token/driver/protos-go/v1/ppb\x06proto3"
+	"\x03raw\x18\x02 \x01(\fR\x03rawB>Z<github.com/LFDT-Panurus/panurus/token/driver/protos-go/v1/ppb\x06proto3"
 
 var (
 	file_pp_proto_rawDescOnce sync.Once

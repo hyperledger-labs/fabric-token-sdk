@@ -12,14 +12,13 @@
 package pp
 
 import (
-	reflect "reflect"
-	sync "sync"
-	unsafe "unsafe"
-
 	math "github.com/LFDT-Panurus/panurus/token/core/zkatdlog/nogh/protos-go/v1/math"
 	v1 "github.com/LFDT-Panurus/panurus/token/driver/protos-go/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	reflect "reflect"
+	sync "sync"
+	unsafe "unsafe"
 )
 
 const (
@@ -439,7 +438,7 @@ const file_noghpp_proto_rawDesc = "" +
 	"\x16csp_range_proof_params\x18\f \x01(\v27.fabric_token_sdk.token.zkatdlog.v1.CSPRangeProofParamsR\x13cspRangeProofParams\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\fR\x05value:\x028\x01BWZUgithub.com/LFDT-Panurus/panurus/token/core/zkatdlog/nogh/protos-go/v1/ppb\x06proto3"
+	"\x05value\x18\x02 \x01(\fR\x05value:\x028\x01BJZHgithub.com/LFDT-Panurus/panurus/token/core/zkatdlog/nogh/protos-go/v1/ppb\x06proto3"
 
 var (
 	file_noghpp_proto_rawDescOnce sync.Once
