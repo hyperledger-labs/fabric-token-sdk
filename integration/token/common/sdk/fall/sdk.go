@@ -9,6 +9,7 @@ package fall
 import (
 	"errors"
 
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/support/libp2p"
 	dig2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/sdk/dig"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services"
 	fabtoken "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/driver"
@@ -24,11 +25,11 @@ type SDK struct {
 }
 
 func NewSDK(registry services.Registry) *SDK {
-	return &SDK{SDK: tokensdk.NewSDK(registry)}
+	return &SDK{SDK: libp2p.NewFrom(tokensdk.NewSDK(registry))}
 }
 
 func NewFrom(sdk dig2.SDK) *SDK {
-	return &SDK{SDK: sdk}
+	return &SDK{SDK: libp2p.NewFrom(sdk)}
 }
 
 func (p *SDK) Install() error {

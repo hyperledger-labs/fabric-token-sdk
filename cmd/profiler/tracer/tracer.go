@@ -98,6 +98,7 @@ func Disable() {
 func IsEnabled() bool {
 	mu.Lock()
 	defer mu.Unlock()
+
 	return enabled
 }
 
@@ -105,6 +106,7 @@ func IsEnabled() bool {
 func IsDiscoveryMode() bool {
 	mu.Lock()
 	defer mu.Unlock()
+
 	return discoveryMode
 }
 
@@ -245,6 +247,7 @@ func PrintWithOptions(opts PrintOptions) {
 
 	if rootNode == nil {
 		fmt.Println("No trace data available")
+
 		return
 	}
 
@@ -253,6 +256,7 @@ func PrintWithOptions(opts PrintOptions) {
 		startNode = findNode(rootNode, opts.RootFunction)
 		if startNode == nil {
 			fmt.Printf("Root function '%s' not found in trace\n", opts.RootFunction)
+
 			return
 		}
 	}
@@ -378,6 +382,7 @@ func findNode(node *CallNode, name string) *CallNode {
 			return found
 		}
 	}
+
 	return nil
 }
 
@@ -393,9 +398,7 @@ func aggregateNode(node *CallNode) {
 		if existing, found := childMap[child.Name]; found {
 			existing.CallCount++
 			existing.Duration += child.Duration
-			for _, grandchild := range child.Children {
-				existing.Children = append(existing.Children, grandchild)
-			}
+			existing.Children = append(existing.Children, child.Children...)
 		} else {
 			childMap[child.Name] = child
 			uniqueChildren = append(uniqueChildren, child)
@@ -406,49 +409,6 @@ func aggregateNode(node *CallNode) {
 
 	for _, child := range node.Children {
 		aggregateNode(child)
-	}
-}
-
-func printNode(node *CallNode, prefix string, isLast bool, rootDuration time.Duration, opts PrintOptions) {
-	if node == nil {
-		return
-	}
-
-	percent := (float64(node.Duration) / float64(rootDuration)) * 100
-	if opts.MinPercentage > 0 && percent < opts.MinPercentage {
-		return
-	}
-
-	connector := "├── "
-	if isLast {
-		connector = "└── "
-	}
-
-	callInfo := ""
-	if opts.AggregateLoops && node.CallCount > 1 {
-		callInfo = fmt.Sprintf(" x%d", node.CallCount)
-	}
-
-	timeInfo := ""
-	if opts.ShowAbsolute && opts.ShowPercent {
-		timeInfo = fmt.Sprintf(" [%v, %.2f%%]", node.Duration, percent)
-	} else if opts.ShowAbsolute {
-		timeInfo = fmt.Sprintf(" [%v]", node.Duration)
-	} else if opts.ShowPercent {
-		timeInfo = fmt.Sprintf(" [%.2f%%]", percent)
-	}
-
-	fmt.Printf("%s%s%s%s%s\n", prefix, connector, node.Name, callInfo, timeInfo)
-
-	childPrefix := prefix
-	if isLast {
-		childPrefix += "    "
-	} else {
-		childPrefix += "│   "
-	}
-
-	for i, child := range node.Children {
-		printNode(child, childPrefix, i == len(node.Children)-1, rootDuration, opts)
 	}
 }
 
@@ -515,6 +475,7 @@ func PrintSummaryWithOptions(topN int, rootFunctionName string, opts PrintOption
 
 	if rootNode == nil {
 		fmt.Println("No trace data available")
+
 		return
 	}
 
@@ -566,12 +527,9 @@ func PrintSummaryWithOptions(topN int, rootFunctionName string, opts PrintOption
 	fmt.Println(header)
 	fmt.Println(strings.Repeat("-", lineLength))
 
-	count := topN
-	if count > len(times) {
-		count = len(times)
-	}
+	count := min(topN, len(times))
 
-	for i := 0; i < count; i++ {
+	for i := range count {
 		percent := (float64(times[i].duration) / float64(summaryRoot.Duration)) * 100
 
 		// Build output based on display options
@@ -608,6 +566,7 @@ func GetCallHierarchy() string {
 
 	var sb strings.Builder
 	buildHierarchy(rootNode, "", true, &sb)
+
 	return sb.String()
 }
 
@@ -621,7 +580,7 @@ func buildHierarchy(node *CallNode, prefix string, isLast bool, sb *strings.Buil
 		connector = "└── "
 	}
 
-	sb.WriteString(fmt.Sprintf("%s%s%s\n", prefix, connector, node.Name))
+	fmt.Fprintf(sb, "%s%s%s\n", prefix, connector, node.Name)
 
 	childPrefix := prefix
 	if isLast {

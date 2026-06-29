@@ -1,5 +1,4 @@
 //go:build tools
-// +build tools
 
 /*
 Copyright IBM Corp. All Rights Reserved.

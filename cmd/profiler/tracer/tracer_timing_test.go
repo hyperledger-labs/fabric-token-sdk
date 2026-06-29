@@ -230,7 +230,7 @@ func TestCumulativeTimeWithMultipleCalls(t *testing.T) {
 
 	main := func() {
 		defer Enter("main")()
-		for i := 0; i < numCalls; i++ {
+		for range numCalls {
 			helper()
 		}
 	}
@@ -584,7 +584,7 @@ func TestAggregateNodeWithMultipleCalls(t *testing.T) {
 	main := func() {
 		defer Enter("main")()
 		// Call helper multiple times
-		for i := 0; i < 3; i++ {
+		for range 3 {
 			helper()
 		}
 	}
@@ -744,24 +744,6 @@ func TestCollectStatsWithDuplicateFunctions(t *testing.T) {
 	}
 }
 
-func TestPrintNode(t *testing.T) {
-	Enable()
-	defer Disable()
-
-	func1 := func() {
-		defer Enter("func1")()
-		time.Sleep(5 * time.Millisecond)
-	}
-
-	func1()
-
-	// Test the printNode wrapper function (calls printNodeWithHighlight)
-	printNode(rootNode, "", true, rootNode.Duration, PrintOptions{
-		ShowAbsolute: true,
-		ShowPercent:  true,
-	})
-}
-
 func TestPrintWithOptionsEdgeCases(t *testing.T) {
 	Enable()
 	defer Disable()
@@ -800,7 +782,7 @@ func TestGetTopFunctionsEdgeCases(t *testing.T) {
 	defer Disable()
 
 	// Create a scenario with many functions
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		func(idx int) {
 			defer Enter(fmt.Sprintf("func%d", idx))()
 			time.Sleep(time.Duration(idx+1) * time.Millisecond)
