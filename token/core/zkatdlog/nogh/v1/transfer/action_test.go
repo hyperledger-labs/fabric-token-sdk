@@ -729,24 +729,35 @@ func TestAction_Deserialize_ErrorPaths(t *testing.T) {
 }
 
 func TestAction_Deserialize_ExtraBranches(t *testing.T) {
-	// Test with nil output and nil output.Token
-	protoAction := &actions.TransferAction{
+	// A nil output element is now rejected during deserialization (security fix FA3):
+	// before the fix, nil outputs were silently left as nil in t.Outputs, creating
+	// an inconsistent struct that could cause nil-pointer panics further down the pipeline.
+	protoNilOutput := &actions.TransferAction{
 		Version: 1, // ProtocolV1
 		Outputs: []*actions.TransferActionOutput{
 			nil,
-			{
-				Token: nil,
-			},
 		},
 	}
-	raw, err := proto.Marshal(protoAction)
+	raw, err := proto.Marshal(protoNilOutput)
 	require.NoError(t, err)
 	action := &transfer.Action{}
 	err = action.Deserialize(raw)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "output at index [0] is nil")
+
+	// A non-nil output entry with a nil Token field is also rejected.
+	protoNilToken := &actions.TransferAction{
+		Version: 1, // ProtocolV1
+		Outputs: []*actions.TransferActionOutput{
+			{Token: nil},
+		},
+	}
+	raw, err = proto.Marshal(protoNilToken)
 	require.NoError(t, err)
-	assert.Len(t, action.Outputs, 2)
-	assert.Nil(t, action.Outputs[0])
-	assert.Nil(t, action.Outputs[1])
+	action = &transfer.Action{}
+	err = action.Deserialize(raw)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "output at index [0] is nil")
 }
 
 func TestAction_SerializeOutputAt(t *testing.T) {
@@ -803,7 +814,8 @@ func TestAction_GetSerializedInputs(t *testing.T) {
 	assert.Nil(t, res[1])
 	assert.NotNil(t, res[2])
 
-	// case 2: Token is nil (panic path if not handled)
+	// case 2: Token is nil — hardened: GetSerializedInputs now returns an error
+	// instead of panicking (security fix P6: nil Token dereference).
 	actionErr := &transfer.Action{
 		Inputs: []*transfer.ActionInput{
 			{
@@ -812,10 +824,14 @@ func TestAction_GetSerializedInputs(t *testing.T) {
 			},
 		},
 	}
-	// Action.GetSerializedInputs will panic if Token is nil because it calls Token.Serialize()
-	assert.Panics(t, func() {
-		_, _ = actionErr.GetSerializedInputs()
+	// GetSerializedInputs must return an error, not panic.
+	require.NotPanics(t, func() {
+		_, err = actionErr.GetSerializedInputs()
 	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "nil token in input at index [0]")
+
+	// Validate() also catches this via ErrEmptyInputToken.
 	err = actionErr.Validate()
 	require.Error(t, err)
 	require.ErrorIs(t, err, transfer.ErrEmptyInputToken)

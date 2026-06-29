@@ -216,12 +216,17 @@ func BenchmarkVerificationSenderProof(b *testing.B) {
 			}
 
 			// instantiate the verifier and verify
-			return transfer.NewVerifier(
+			verifier, err := transfer.NewVerifier(
 				inputTokens,
 				ta.GetOutputCommitments(),
 				env.SenderEnvs[0].sender.PublicParams,
 				ta.ProofType,
-			).Verify(ta.GetProof())
+			)
+			if err != nil {
+				return err
+			}
+
+			return verifier.Verify(ta.GetProof())
 		},
 	)
 }
@@ -250,12 +255,17 @@ func BenchmarkVerificationParallelSenderProof(b *testing.B) {
 			}
 
 			// instantiate the verifier and verify
-			return transfer.NewVerifier(
+			verifier, err := transfer.NewVerifier(
 				inputTokens,
 				ta.GetOutputCommitments(),
 				env.SenderEnvs[0].sender.PublicParams,
 				ta.ProofType,
-			).Verify(ta.GetProof())
+			)
+			if err != nil {
+				return err
+			}
+
+			return verifier.Verify(ta.GetProof())
 		},
 	)
 }
@@ -284,12 +294,17 @@ func TestParallelBenchmarkVerificationSenderProof(t *testing.T) {
 			}
 
 			// instantiate the verifier and verify
-			return transfer.NewVerifier(
+			verifier, err := transfer.NewVerifier(
 				inputTokens,
 				ta.GetOutputCommitments(),
 				env.SenderEnvs[0].sender.PublicParams,
 				ta.ProofType,
-			).Verify(ta.GetProof())
+			)
+			if err != nil {
+				return err
+			}
+
+			return verifier.Verify(ta.GetProof())
 		},
 	)
 }

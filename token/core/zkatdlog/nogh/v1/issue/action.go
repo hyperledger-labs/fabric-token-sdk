@@ -302,7 +302,7 @@ func (i *Action) Deserialize(raw []byte) error {
 	i.Outputs = make([]*token.Token, len(issueAction.Outputs))
 	for j, output := range issueAction.Outputs {
 		if output == nil || output.Token == nil {
-			continue
+			return errors.Errorf("invalid issue action: output at index [%d] is nil", j)
 		}
 		data, err := utils.FromG1Proto(output.Token.Data)
 		if err != nil {
