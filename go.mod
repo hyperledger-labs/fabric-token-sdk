@@ -8,6 +8,7 @@ require (
 	github.com/IBM/idemix/bccsp/types v0.0.0-20260501050258-bb91d87b1252
 	github.com/IBM/mathlib v0.1.0
 	github.com/consensys/gnark-crypto v0.20.1
+	github.com/dgraph-io/badger/v4 v4.9.2
 	github.com/dgraph-io/ristretto/v2 v2.4.0
 	github.com/go-co-op/gocron/v2 v2.21.2
 	github.com/go-viper/mapstructure/v2 v2.5.0
@@ -67,6 +68,7 @@ require (
 	github.com/goccy/go-yaml v1.19.2 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
+	github.com/google/flatbuffers v25.2.10+incompatible // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
@@ -78,6 +80,7 @@ require (
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/jonboulle/clockwork v0.5.0 // indirect
 	github.com/kilic/bls12-381 v0.1.0 // indirect
+	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/knadh/koanf/maps v0.1.2 // indirect
 	github.com/knadh/koanf/parsers/yaml v1.1.0 // indirect
 	github.com/knadh/koanf/providers/env/v2 v2.0.0 // indirect
