@@ -76,6 +76,7 @@ func New(
 		TransferUpgradeWitnessValidate,
 		TransferZKProofValidate,
 		TransferHTLCValidate,
+		TransferHashEscrowValidate,
 		common.TransferApplicationDataValidate[*v1.PublicParams, *token.Token, *transfer.Action, *issue.Action, driver.Deserializer],
 	}
 	transferValidators = append(transferValidators, extraTransferValidators...)

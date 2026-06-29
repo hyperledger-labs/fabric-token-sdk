@@ -1,0 +1,169 @@
+/*
+Copyright IBM Corp. All Rights Reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
+package hashescrow
+
+import (
+	"context"
+	"encoding/json"
+
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
+	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+)
+
+// HashInfo contains hash configuration used by hash-based escrow scripts.
+// Reuse the HTLC hash representation to keep hashing semantics identical.
+type HashInfo = htlc.HashInfo
+
+// Script contains the details of a hash-based escrow lock.
+// Either sender or recipient can claim by presenting a valid preimage and signature.
+type Script struct {
+	Sender            view.Identity
+	Recipient         view.Identity
+	RecipientHashInfo HashInfo
+	SenderHashInfo    HashInfo
+}
+
+// Validate performs the following checks:
+// - sender must be set
+// - recipient must be set
+// - both recipient and sender hash info must be valid
+func (s *Script) Validate() error {
+	if s.Sender.IsNone() {
+		return errors.New("sender not set")
+	}
+	if s.Recipient.IsNone() {
+		return errors.New("recipient not set")
+	}
+	if err := s.RecipientHashInfo.Validate(); err != nil {
+		return errors.WithMessage(err, "recipient hash info invalid")
+	}
+	if err := s.SenderHashInfo.Validate(); err != nil {
+		return errors.WithMessage(err, "sender hash info invalid")
+	}
+
+	return nil
+}
+
+// ResolveOwnerAndHashForPreimage resolves the output owner from the provided pre-image.
+// If the pre-image matches the recipient hash, recipient receives the token.
+// If the pre-image matches the sender hash, sender receives the token.
+func (s *Script) ResolveOwnerAndHashForPreimage(preimage []byte) (view.Identity, []byte, string, error) {
+	recipientHash, err := s.RecipientHashInfo.Image(preimage)
+	if err != nil {
+		return nil, nil, "", errors.WithMessage(err, "failed computing recipient hash")
+	}
+	if err := s.RecipientHashInfo.Compare(recipientHash); err == nil {
+		return s.Recipient, recipientHash, "recipient", nil
+	}
+
+	senderHash, err := s.SenderHashInfo.Image(preimage)
+	if err != nil {
+		return nil, nil, "", errors.WithMessage(err, "failed computing sender hash")
+	}
+	if err := s.SenderHashInfo.Compare(senderHash); err == nil {
+		return s.Sender, senderHash, "sender", nil
+	}
+
+	return nil, nil, "", errors.New("preimage does not match any hashescrow hash")
+}
+
+// ResolveRecipientForPreImage is kept for backward compatibility with existing call sites.
+func (s *Script) ResolveRecipientForPreImage(preImage []byte) (view.Identity, []byte, error) {
+	owner, hash, _, err := s.ResolveOwnerAndHashForPreimage(preImage)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return owner, hash, nil
+}
+
+func (s *Script) FromBytes(raw []byte) error {
+	return json.Unmarshal(raw, s)
+}
+
+// ScriptAuth implements token ownership checks for hash-based escrow scripts.
+type ScriptAuth struct {
+	WalletService driver.WalletService
+}
+
+func NewScriptAuth(walletService driver.WalletService) *ScriptAuth {
+	return &ScriptAuth{WalletService: walletService}
+}
+
+// AmIAnAuditor returns false for script ownership.
+func (s *ScriptAuth) AmIAnAuditor() bool {
+	return false
+}
+
+// IsMine returns true if either the sender or recipient belongs to one of our owner wallets.
+func (s *ScriptAuth) IsMine(ctx context.Context, tok *token3.Token) (string, []string, bool) {
+	owner, err := identity.UnmarshalTypedIdentity(tok.Owner)
+	if err != nil {
+		logger.DebugfContext(ctx, "Is Mine [%s,%s,%s]? No, failed unmarshalling [%s]", view.Identity(tok.Owner), tok.Type, tok.Quantity, err)
+
+		return "", nil, false
+	}
+	if owner.Type != HashEscrow {
+		logger.DebugfContext(ctx, "Is Mine [%s,%s,%s]? No, owner type is [%s] instead of [%s]", view.Identity(tok.Owner), tok.Type, tok.Quantity, owner.Type, HashEscrow)
+
+		return "", nil, false
+	}
+	script := &Script{}
+	if err := json.Unmarshal(owner.Identity, script); err != nil {
+		logger.DebugfContext(ctx, "Is Mine [%s,%s,%s]? No, failed unmarshalling [%s]", view.Identity(tok.Owner), tok.Type, tok.Quantity, err)
+
+		return "", nil, false
+	}
+	if script.Sender.IsNone() || script.Recipient.IsNone() {
+		logger.DebugfContext(ctx, "Is Mine [%s,%s,%s]? No, invalid content [%v]", view.Identity(tok.Owner), tok.Type, tok.Quantity, script)
+
+		return "", nil, false
+	}
+
+	var ids []string
+
+	logger.DebugfContext(ctx, "Is Mine [%s,%s,%s] as sender?", view.Identity(tok.Owner), tok.Type, tok.Quantity)
+	if wallet, err := s.WalletService.OwnerWallet(ctx, script.Sender); err == nil {
+		ids = append(ids, senderWallet(wallet))
+	}
+
+	logger.DebugfContext(ctx, "Is Mine [%s,%s,%s] as recipient?", view.Identity(tok.Owner), tok.Type, tok.Quantity)
+	if wallet, err := s.WalletService.OwnerWallet(ctx, script.Recipient); err == nil {
+		ids = append(ids, recipientWallet(wallet))
+	}
+
+	return "", ids, len(ids) != 0
+}
+
+func (s *ScriptAuth) Issued(ctx context.Context, issuer driver.Identity, tok *token3.Token) bool {
+	return false
+}
+
+func (s *ScriptAuth) OwnerType(raw []byte) (driver.IdentityType, []byte, error) {
+	owner, err := identity.UnmarshalTypedIdentity(raw)
+	if err != nil {
+		return driver.ZeroIdentityType, nil, err
+	}
+
+	return owner.Type, owner.Identity, nil
+}
+
+type ownerWallet interface {
+	ID() string
+}
+
+func senderWallet(w ownerWallet) string {
+	return "hashescrow.sender" + w.ID()
+}
+
+func recipientWallet(w ownerWallet) string {
+	return "hashescrow.recipient" + w.ID()
+}

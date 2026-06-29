@@ -18,6 +18,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/marshal"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/multisig"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/hashescrow"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -539,6 +540,11 @@ func TestStringCompatibility(t *testing.T) {
 			name:         "htlc",
 			str:          htlc.ScriptTypeString,
 			identityType: htlc.ScriptType,
+		},
+		{
+			name:         "hashescrow",
+			str:          hashescrow.ScriptTypeString,
+			identityType: hashescrow.ScriptType,
 		},
 	}
 	for _, tt := range tests {

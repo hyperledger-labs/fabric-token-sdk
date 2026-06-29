@@ -63,6 +63,7 @@ func NewValidator(
 		TransferSignatureValidate,
 		TransferBalanceValidate,
 		TransferHTLCValidate,
+		TransferHashEscrowValidate,
 		common.TransferApplicationDataValidate[*setup.PublicParams, *actions.Output, *actions.TransferAction, *actions.IssueAction, driver.Deserializer],
 	}
 	transferValidators = append(transferValidators, extraTransferValidators...)

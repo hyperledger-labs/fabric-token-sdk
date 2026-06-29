@@ -19,6 +19,7 @@ import (
 	views3 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	views2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop/views"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop/views/hashescrow"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop/views/htlc"
 )
 
@@ -245,6 +246,11 @@ func addAlice(fscTopology *fsc.Topology) *node.Node {
 		RegisterViewFactory("htlc.lock", &htlc.LockViewFactory{}).
 		RegisterViewFactory("htlc.reclaimAll", &htlc.ReclaimAllViewFactory{}).
 		RegisterViewFactory("htlc.fastExchange", &htlc.FastExchangeInitiatorViewFactory{}).
+		RegisterResponder(&hashescrow.LockAcceptView{}, &hashescrow.LockView{}).
+		RegisterResponder(&hashescrow.ClaimAcceptView{}, &hashescrow.ClaimView{}).
+		RegisterResponder(&hashescrow.ClaimAcceptView{}, &hashescrow.ClaimDistributionView{}).
+		RegisterViewFactory("hashescrow.lock", &hashescrow.LockViewFactory{}).
+		RegisterViewFactory("hashescrow.claim", &hashescrow.ClaimViewFactory{}).
 		RegisterViewFactory("TxFinality", &views3.TxFinalityViewFactory{})
 }
 
@@ -264,5 +270,10 @@ func addBob(fscTopology *fsc.Topology) *node.Node {
 		RegisterResponder(&htlc.LockAcceptView{}, &htlc.LockView{}).
 		RegisterResponder(&htlc.FastExchangeResponderView{}, &htlc.FastExchangeInitiatorView{}).
 		RegisterViewFactory("htlc.claim", &htlc.ClaimViewFactory{}).
+		RegisterResponder(&hashescrow.LockAcceptView{}, &hashescrow.LockView{}).
+		RegisterResponder(&hashescrow.ClaimAcceptView{}, &hashescrow.ClaimView{}).
+		RegisterResponder(&hashescrow.ClaimAcceptView{}, &hashescrow.ClaimDistributionView{}).
+		RegisterViewFactory("hashescrow.lock", &hashescrow.LockViewFactory{}).
+		RegisterViewFactory("hashescrow.claim", &hashescrow.ClaimViewFactory{}).
 		RegisterViewFactory("TxFinality", &views3.TxFinalityViewFactory{})
 }
