@@ -1,6 +1,6 @@
 # Token Transaction (TTX) Service
 
-The **Token Transaction (TTX) Service** is the primary orchestration component of the Fabric Token SDK. it provides a high-level API and a set of [Fabric Smart Client (FSC)](https://github.com/hyperledger-labs/fabric-smart-client) Views to help developers assemble, sign, and commit token transactions in a backend-agnostic manner.
+The **Token Transaction (TTX) Service** is the primary orchestration component of Panurus. it provides a high-level API and a set of [Fabric Smart Client (FSC)](https://github.com/hyperledger-labs/fabric-smart-client) Views to help developers assemble, sign, and commit token transactions in a backend-agnostic manner.
 
 The TTX service is designed with a **dependency injection pattern** (located in `token/services/ttx/dep`), which decouples the transaction orchestration logic from the underlying infrastructure providers like the Network Service, TMS Provider, and Storage Service.
 
@@ -17,7 +17,7 @@ sequenceDiagram
     participant Network as Network Service
     participant Ledger as DLT / Ledger
 
-    box darkgreen Token SDK Stack
+    box darkgreen Panurus Stack
         participant Initiator
         participant Recipient
         participant Auditor
@@ -188,7 +188,7 @@ recipient, err := bptx.RequestRecipientIdentity(ctx, "$0 OR $1",
 )
 ```
 
-Each co-owner's node responds with its component identity; the SDK assembles the `PolicyIdentity` envelope automatically.
+Each co-owner's node responds with its component identity; Panurus assembles the `PolicyIdentity` envelope automatically.
 
 #### Policy Expression Syntax
 
@@ -452,11 +452,11 @@ Once fully endorsed, the transaction metadata is distributed to all recipients s
 
 ## Finality and Discovery
 
-The `FinalityView` allows applications to wait for a transaction to be committed to the ledger. Internally, the SDK's **Network Service** listens for ledger events. When a transaction reaches finality, the Network Service notifies the SDK, which then updates the local `Transactions DB` and `Tokens DB` to reflect the new state.
+The `FinalityView` allows applications to wait for a transaction to be committed to the ledger. Internally, Panurus's **Network Service** listens for ledger events. When a transaction reaches finality, the Network Service notifies Panurus, which then updates the local `Transactions DB` and `Tokens DB` to reflect the new state.
 
 ### Transaction Recovery
 
-The SDK includes an automatic recovery mechanism to handle pending transactions that may have lost their finality listeners due to node restarts, network interruptions, or other failures. 
+Panurus includes an automatic recovery mechanism to handle pending transactions that may have lost their finality listeners due to node restarts, network interruptions, or other failures. 
 The recovery service is part of the **Storage Service** and is instantiated by the **Network Service** to recover transactions from either `TTXDB` (for regular transactions) or `AuditDB` (for auditor nodes).
 
 For detailed information about the recovery mechanism, see:

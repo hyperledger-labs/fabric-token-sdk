@@ -9,8 +9,8 @@ package token
 import (
 	"context"
 
+	"github.com/LFDT-Panurus/panurus/token/token"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 var (

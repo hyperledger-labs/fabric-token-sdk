@@ -25,7 +25,7 @@ func MustGetLogger(params ...string) Logger {
 }
 
 func GetLogger(params ...string) (Logger, error) {
-	return logging.GetLoggerWithReplacements(map[string]string{"github.com.hyperledger-labs.fabric-token-sdk.token": "fts"}, params)
+	return logging.GetLoggerWithReplacements(map[string]string{"github.com.hyperledger-labs.panurus.token": "fts"}, params)
 }
 
 func DriverLogger(prefix string, networkID string, channel string, namespace string) Logger {

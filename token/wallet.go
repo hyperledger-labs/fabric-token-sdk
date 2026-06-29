@@ -11,9 +11,9 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/LFDT-Panurus/panurus/token/driver"
+	"github.com/LFDT-Panurus/panurus/token/token"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 // WalletLookupID defines the type of identifiers that can be used to retrieve a given wallet.

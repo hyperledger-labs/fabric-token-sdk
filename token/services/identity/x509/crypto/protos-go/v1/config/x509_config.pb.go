@@ -11,12 +11,11 @@
 package config
 
 import (
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
-
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -276,7 +275,7 @@ const file_x509_config_proto_rawDesc = "" +
 	"\x0eprivate_signer\x18\x02 \x01(\v2*.fabric_token_sdk.identity.x509.v1.KeyInfoR\rprivateSigner\"S\n" +
 	"\aKeyInfo\x12%\n" +
 	"\x0ekey_identifier\x18\x01 \x01(\tR\rkeyIdentifier\x12!\n" +
-	"\fkey_material\x18\x02 \x01(\fR\vkeyMaterialBfZdgithub.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509/crypto/protos-go/v1/configb\x06proto3"
+	"\fkey_material\x18\x02 \x01(\fR\vkeyMaterialBYZWgithub.com/LFDT-Panurus/panurus/token/services/identity/x509/crypto/protos-go/v1/configb\x06proto3"
 
 var (
 	file_x509_config_proto_rawDescOnce sync.Once

@@ -8,7 +8,7 @@ syntax = "proto3";
 
 package fabric_token_sdk.token.driver.v1;
 
-option go_package = "github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/v1;driver";
+option go_package = "github.com/LFDT-Panurus/panurus/token/driver/protos-go/v1;driver";
 
 // Identity represents a serialized identity.
 // The raw field contains a self-describing serialized identity format,

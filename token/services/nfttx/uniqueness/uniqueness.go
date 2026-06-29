@@ -14,8 +14,8 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nfttx/marshaller"
+	"github.com/LFDT-Panurus/panurus/token"
+	"github.com/LFDT-Panurus/panurus/token/services/nfttx/marshaller"
 )
 
 // KVS is the interface for the key-value store backend used by the uniqueness service.
@@ -46,7 +46,7 @@ func (s *Service) ComputeID(ctx context.Context, state any) (string, error) {
 	}
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	k := "github.com/hyperledger-labs/fabric-token-sdk/token/services/nfttx/uniqueness/key"
+	k := "github.com/LFDT-Panurus/panurus/token/services/nfttx/uniqueness/key"
 	var key []byte
 	if s.kvs.Exists(ctx, k) {
 		if err := s.kvs.Get(ctx, k, &key); err != nil {

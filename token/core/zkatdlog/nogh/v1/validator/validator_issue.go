@@ -10,9 +10,9 @@ import (
 	"context"
 	"slices"
 
+	"github.com/LFDT-Panurus/panurus/token/core/zkatdlog/nogh/v1/issue"
+	"github.com/LFDT-Panurus/panurus/token/services/logging"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/issue"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
 
 var logger = logging.MustGetLogger()

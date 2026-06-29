@@ -12,11 +12,11 @@ import (
 	"path/filepath"
 
 	"github.com/IBM/idemix"
+	"github.com/LFDT-Panurus/panurus/token/core/common/encoding/json"
+	"github.com/LFDT-Panurus/panurus/token/services/identity/idemix/crypto/protos-go/config"
+	"github.com/LFDT-Panurus/panurus/token/services/utils"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto/protos-go/config"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 )
 
 type (

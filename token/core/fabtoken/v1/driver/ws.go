@@ -7,19 +7,19 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
+	"github.com/LFDT-Panurus/panurus/token/core"
+	v2 "github.com/LFDT-Panurus/panurus/token/core/fabtoken/v1/setup"
+	"github.com/LFDT-Panurus/panurus/token/driver"
+	"github.com/LFDT-Panurus/panurus/token/services/identity"
+	"github.com/LFDT-Panurus/panurus/token/services/identity/config"
+	"github.com/LFDT-Panurus/panurus/token/services/identity/deserializer"
+	"github.com/LFDT-Panurus/panurus/token/services/identity/membership"
+	"github.com/LFDT-Panurus/panurus/token/services/identity/role"
+	"github.com/LFDT-Panurus/panurus/token/services/identity/wallet"
+	"github.com/LFDT-Panurus/panurus/token/services/identity/x509"
+	"github.com/LFDT-Panurus/panurus/token/services/logging"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics/disabled"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
-	v2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/setup"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/config"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/membership"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/role"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/wallet"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
 
 type BaseWalletServiceFactory struct {

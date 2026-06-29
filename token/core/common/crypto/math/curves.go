@@ -13,7 +13,7 @@ import (
 	math "github.com/IBM/mathlib"
 	mathdriver "github.com/IBM/mathlib/driver"
 	"github.com/IBM/mathlib/driver/gurvy/bls12381"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/crypto/rng"
+	"github.com/LFDT-Panurus/panurus/token/core/common/crypto/rng"
 )
 
 var BLS12_381_BBS_GURVY_FAST_RNG math.CurveID

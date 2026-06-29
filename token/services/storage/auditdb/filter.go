@@ -10,8 +10,8 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/LFDT-Panurus/panurus/token/services/storage/db/driver"
+	"github.com/LFDT-Panurus/panurus/token/token"
 )
 
 // PaymentsFilter is a filter for payments.

@@ -5,7 +5,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/services/recovery"
+	"github.com/LFDT-Panurus/panurus/token/services/storage/services/recovery"
 )
 
 type Handler struct {

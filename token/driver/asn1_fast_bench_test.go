@@ -10,7 +10,7 @@ import (
 	"encoding/asn1"
 	"testing"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/v1/request"
+	"github.com/LFDT-Panurus/panurus/token/driver/protos-go/v1/request"
 )
 
 // BenchmarkFastMarshalTokenRequestForSigning_Small benchmarks fast marshaller with small data

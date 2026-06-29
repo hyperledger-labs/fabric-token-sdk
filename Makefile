@@ -6,7 +6,7 @@ FABRIC_TWO_DIGIT_VERSION = $(shell echo $(FABRIC_VERSION) | cut -d '.' -f 1,2)
 FABRIC_X_TOOLS_VERSION ?= v0.0.17
 FABRIC_X_COMMITTER_VERSION ?= 1.0.0
 
-# need to install fabric binaries outside of fts tree for now (due to chaincode packaging issues)
+# need to install fabric binaries outside of panuru's  tree for now (due to chaincode packaging issues)
 FABRIC_BINARY_BASE=$(PWD)/../fabric
 FAB_BINS ?= $(FABRIC_BINARY_BASE)/bin
 
@@ -166,12 +166,12 @@ clean-fabric-peer-images:
 .PHONY: tokengen
 # install tokengen tool (must build without cgo; see #1445)
 tokengen:
-	@cd ./cmd/tokengen/; CGO_ENABLED=0 go install github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen
+	@cd ./cmd/tokengen/; CGO_ENABLED=0 go install github.com/LFDT-Panurus/panurus/cmd/tokengen
 
 .PHONY: artifactgen
 # install artifactgen tool (must build without cgo; see #1445)
 artifactgen:
-	@cd ./cmd/artifactgen/; CGO_ENABLED=0 go install github.com/hyperledger-labs/fabric-token-sdk/cmd/artifactgen
+	@cd ./cmd/artifactgen/; CGO_ENABLED=0 go install github.com/LFDT-Panurus/panurus/cmd/artifactgen
 
 .PHONY: traceinspector
 # install traceinspector tool

@@ -8,17 +8,17 @@ package issue
 
 import (
 	math "github.com/IBM/mathlib"
+	"github.com/LFDT-Panurus/panurus/token/core/zkatdlog/nogh/protos-go/utils"
+	"github.com/LFDT-Panurus/panurus/token/core/zkatdlog/nogh/protos-go/v1/actions"
+	"github.com/LFDT-Panurus/panurus/token/core/zkatdlog/nogh/v1/crypto/rp"
+	"github.com/LFDT-Panurus/panurus/token/core/zkatdlog/nogh/v1/token"
+	"github.com/LFDT-Panurus/panurus/token/driver"
+	protosv1 "github.com/LFDT-Panurus/panurus/token/driver/protos-go/v1"
+	"github.com/LFDT-Panurus/panurus/token/services/utils/protos"
+	"github.com/LFDT-Panurus/panurus/token/services/utils/slices"
+	token2 "github.com/LFDT-Panurus/panurus/token/token"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/utils"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/v1/actions"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	protosv1 "github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/v1"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/protos"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/slices"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 const ProtocolV1 = 1

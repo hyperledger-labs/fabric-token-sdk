@@ -7,11 +7,11 @@ SPDX-License-Identifier: Apache-2.0
 package validator
 
 import (
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/actions"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/setup"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	"github.com/LFDT-Panurus/panurus/token/core/common"
+	"github.com/LFDT-Panurus/panurus/token/core/fabtoken/v1/actions"
+	"github.com/LFDT-Panurus/panurus/token/core/fabtoken/v1/setup"
+	"github.com/LFDT-Panurus/panurus/token/driver"
+	"github.com/LFDT-Panurus/panurus/token/services/logging"
 )
 
 type ValidateTransferFunc = common.ValidateTransferFunc[*setup.PublicParams, *actions.Output, *actions.TransferAction, *actions.IssueAction, driver.Deserializer]

@@ -152,13 +152,13 @@ cd "$TEMP_TEST_DIR"
 # Create a temporary go.mod for the tracer package (needed for replace directive)
 TEMP_TRACER_DIR="$WORK_DIR/tools/profiler/tracer"
 cat > "$TEMP_TRACER_DIR/go.mod" << EOF
-module github.com/hyperledger-labs/fabric-token-sdk/tools/profiler/tracer
+module github.com/LFDT-Panurus/panurus/tools/profiler/tracer
 
 go 1.24
 EOF
 
 # Add replace directive to point to the tracer in the temp workspace
-go mod edit -replace github.com/hyperledger-labs/fabric-token-sdk/tools/profiler/tracer="$TEMP_TRACER_DIR"
+go mod edit -replace github.com/LFDT-Panurus/panurus/tools/profiler/tracer="$TEMP_TRACER_DIR"
 if ! go mod tidy 2>&1; then
     echo -e "${RED}Error: go mod tidy failed${NC}"
     exit 1

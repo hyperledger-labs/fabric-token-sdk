@@ -6,9 +6,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/services/recovery"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/ttxdb"
+	"github.com/LFDT-Panurus/panurus/token/services/storage"
+	"github.com/LFDT-Panurus/panurus/token/services/storage/services/recovery"
+	"github.com/LFDT-Panurus/panurus/token/services/storage/ttxdb"
 )
 
 type Storage struct {

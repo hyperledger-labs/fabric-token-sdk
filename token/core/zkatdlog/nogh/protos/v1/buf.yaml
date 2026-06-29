@@ -1,5 +1,5 @@
 version: v2
-name: buf.build/hyperledger-labs/fabric-token-sdk-zkatdlog
+name: buf.build/LFDT-Panurus/panurus-zkatdlog
 deps:
   - token/driver/protos/v1
   - token/core/fabtoken/protos/v1

@@ -9,7 +9,7 @@ package recovery
 import (
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/config"
+	"github.com/LFDT-Panurus/panurus/token/services/config"
 )
 
 const (

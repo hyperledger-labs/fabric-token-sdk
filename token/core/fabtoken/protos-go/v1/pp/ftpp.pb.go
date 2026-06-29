@@ -12,13 +12,12 @@
 package pp
 
 import (
+	v1 "github.com/LFDT-Panurus/panurus/token/driver/protos-go/v1"
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
-
-	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/v1"
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -147,7 +146,7 @@ const file_ftpp_proto_rawDesc = "" +
 	"\bmetadata\x18\a \x03(\v2B.fabric_token_sdk.token.fabtoken.v1.PublicParameters.MetadataEntryR\bmetadata\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\fR\x05value:\x028\x01BRZPgithub.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/v1/ppb\x06proto3"
+	"\x05value\x18\x02 \x01(\fR\x05value:\x028\x01BEZCgithub.com/LFDT-Panurus/panurus/token/core/fabtoken/protos-go/v1/ppb\x06proto3"
 
 var (
 	file_ftpp_proto_rawDescOnce sync.Once

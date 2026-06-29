@@ -11,10 +11,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 
+	idemixcrypto "github.com/LFDT-Panurus/panurus/token/services/identity/idemix/crypto"
+	"github.com/LFDT-Panurus/panurus/token/services/identity/idemixnym/nym"
+	"github.com/LFDT-Panurus/panurus/token/services/logging"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	idemixcrypto "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemixnym/nym"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 )
 
 var logger = logging.MustGetLogger()

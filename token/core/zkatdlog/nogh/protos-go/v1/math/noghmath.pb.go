@@ -12,12 +12,11 @@
 package math
 
 import (
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
-
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -178,7 +177,7 @@ const file_noghmath_proto_rawDesc = "" +
 	"\x02Zr\x12\x10\n" +
 	"\x03raw\x18\x01 \x01(\fR\x03raw\"\x19\n" +
 	"\aCurveID\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x04R\x02idBYZWgithub.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/v1/mathb\x06proto3"
+	"\x02id\x18\x01 \x01(\x04R\x02idBLZJgithub.com/LFDT-Panurus/panurus/token/core/zkatdlog/nogh/protos-go/v1/mathb\x06proto3"
 
 var (
 	file_noghmath_proto_rawDescOnce sync.Once

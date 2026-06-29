@@ -1,14 +1,14 @@
 # Token-SDK Configuration Example
 
-The following example provides descriptions for the various keys required by the Token SDK.
+The following example provides descriptions for the various keys required by Panurus.
 
 ```yaml
-# ------------------- Token SDK Configuration -------------------------
+# ------------------- Panurus Configuration -------------------------
 token:
   # version is the version of this configuration structure. 
   # If not specified, the latest version is used.
   version: v1
-  # enabled determines if the Token SDK is enabled.
+  # enabled determines if Panurus is enabled.
   enabled: true
 
   # selector configuration allows the use of different implementations of the token selector.
@@ -103,7 +103,7 @@ token:
       namespace: tns # the name of the channel's namespace this TMS refers to, if applicable
 
       # sections dedicated to the definition of the storage.
-      # The Token SDK uses multiple databases to keep track of transactions, tokens, identities, and audit records where applicable.
+      # Panurus uses multiple databases to keep track of transactions, tokens, identities, and audit records where applicable.
       # These are the available databases:
       # ttxdb: stores records of transactions.
       # tokendb: stores information about the available tokens.
@@ -372,7 +372,7 @@ token:
 
 ## Minimal Token-SDK Configuration
 
-The Token SDK can start with the following minimal configuration:
+Panurus can start with the following minimal configuration:
 
 ```yaml
 token:

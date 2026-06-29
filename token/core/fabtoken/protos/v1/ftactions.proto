@@ -10,7 +10,7 @@ package fabric_token_sdk.token.fabtoken.v1;
 
 import "common.proto";
 
-option go_package = "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/v1/actions";
+option go_package = "github.com/LFDT-Panurus/panurus/token/core/fabtoken/protos-go/v1/actions";
 
 // Token represents a cleartext fungible token in the fabtoken driver.
 // It contains the owner identity, token type, and quantity in plaintext.

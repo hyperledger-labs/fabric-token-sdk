@@ -1,4 +1,4 @@
-module github.com/hyperledger-labs/fabric-token-sdk
+module github.com/LFDT-Panurus/panurus
 
 go 1.26.3
 

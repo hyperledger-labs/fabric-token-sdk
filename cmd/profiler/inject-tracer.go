@@ -77,7 +77,7 @@ func injectTracer(filename, benchName string) error {
 }
 
 func addTracerImport(file *ast.File) {
-	tracerPath := "github.com/hyperledger-labs/fabric-token-sdk/tools/profiler/tracer"
+	tracerPath := "github.com/LFDT-Panurus/panurus/tools/profiler/tracer"
 	flagPath := "flag"
 
 	// Check if imports already exist

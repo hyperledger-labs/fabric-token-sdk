@@ -11,11 +11,11 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/cc"
-	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/crypto/fabtokenv1"
-	setupv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/v1/setup"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/LFDT-Panurus/panurus/cmd/tokengen/cobra/pp/cc"
+	"github.com/LFDT-Panurus/panurus/cmd/tokengen/cobra/pp/common"
+	"github.com/LFDT-Panurus/panurus/integration/nwo/token/generators/crypto/fabtokenv1"
+	setupv1 "github.com/LFDT-Panurus/panurus/token/core/fabtoken/v1/setup"
+	"github.com/LFDT-Panurus/panurus/token/driver"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/spf13/cobra"

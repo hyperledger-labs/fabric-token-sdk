@@ -7,7 +7,7 @@ Runtime call tracing library for hierarchical performance profiling.
 ### Basic Example
 
 ```go
-import "github.com/hyperledger-labs/fabric-token-sdk/tools/profiler/tracer"
+import "github.com/LFDT-Panurus/panurus/tools/profiler/tracer"
 
 func main() {
     tracer.Enable()

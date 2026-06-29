@@ -10,7 +10,7 @@ package fabric_token_sdk.token.fabtoken.v1;
 
 import "common.proto";
 
-option go_package = "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/v1/pp";
+option go_package = "github.com/LFDT-Panurus/panurus/token/core/fabtoken/protos-go/v1/pp";
 
 // PublicParameters contains the public configuration for the fabtoken driver.
 // These parameters define the token system's capabilities, authorized entities,

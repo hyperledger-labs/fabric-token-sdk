@@ -9,9 +9,9 @@ package driver
 import (
 	"testing"
 
-	driver "github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/v1"
+	driver "github.com/LFDT-Panurus/panurus/token/driver/protos-go/v1"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/LFDT-Panurus/panurus/token/token"
 	"github.com/stretchr/testify/assert"
 )
 

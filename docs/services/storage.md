@@ -1,6 +1,6 @@
 # Storage Service
 
-The **Storage Service** (`token/services/storage`) encapsulates all data persistence mechanisms required by the Fabric Token SDK. It provides a robust, SQL-based management system to ensure that token states, transaction history, and cryptographic identities are securely tracked and retrievable.
+The **Storage Service** (`token/services/storage`) encapsulates all data persistence mechanisms required by Panurus. It provides a robust, SQL-based management system to ensure that token states, transaction history, and cryptographic identities are securely tracked and retrievable.
 
 ## Architecture
 
@@ -10,7 +10,7 @@ The storage layer is built on a provider-based architecture that supports multip
 
 ## Schema Description
 
-The Fabric Token SDK storage is organized into logical databases, each serving a specific role in the transaction lifecycle and identity management.
+Panurus storage is organized into logical databases, each serving a specific role in the transaction lifecycle and identity management.
 
 ### Amount Storage Strategy
 
@@ -19,7 +19,7 @@ The Fabric Token SDK storage is organized into logical databases, each serving a
 - Support for tokens with high precision or extremely large supply
 - Consistent handling of amounts across all tables (Tokens, Transactions, Movements)
 
-The SDK uses Go's `*big.Int` type throughout the codebase to handle these large values, with automatic conversion between database NUMERIC values and in-memory big.Int representations via the `BigInt` scanner type.
+Panurus uses Go's `*big.Int` type throughout the codebase to handle these large values, with automatic conversion between database NUMERIC values and in-memory big.Int representations via the `BigInt` scanner type.
 
 ### Transaction & Audit Store (TTXDB / AuditDB)
 
@@ -43,7 +43,7 @@ The [`endorserdb`](./storage/endorserdb.md) manages validation records created d
 This store serves as the authoritative registry for all tokens (UTXOs) known to the node.
 
 *   **Tokens**: The core UTXO registry. Stores token identifiers, amounts, types, ownership info, and ledger-specific state.
-    *   **Amount Storage**: Token amounts are stored as `NUMERIC(78, 0)` in the database, supporting arbitrary precision integers up to 78 digits. This enables representation of token amounts that exceed the uint64 maximum value (2^64-1 ≈ 1.8×10^19). The SDK uses Go's `*big.Int` type throughout the codebase to handle these large values, with automatic conversion between database NUMERIC values and in-memory big.Int representations.
+    *   **Amount Storage**: Token amounts are stored as `NUMERIC(78, 0)` in the database, supporting arbitrary precision integers up to 78 digits. This enables representation of token amounts that exceed the uint64 maximum value (2^64-1 ≈ 1.8×10^19). Panurus uses Go's `*big.Int` type throughout the codebase to handle these large values, with automatic conversion between database NUMERIC values and in-memory big.Int representations.
 *   **TokenOwners**: A mapping table linking specific tokens to wallet identifiers for fast lookups.
 *   **PublicParameters**: A cache for the network's cryptographic public parameters and their hashes.
 *   **TokenCertifications**: Stores third-party certifications for tokens, often required by privacy-preserving drivers.
@@ -63,7 +63,7 @@ Manages the cryptographic identities and logical wallet groupings used by the no
 
 ## Internal Databases
 
-The SDK partitions its data into several specialized databases to maintain a clean separation of concerns.
+Panurus partitions its data into several specialized databases to maintain a clean separation of concerns.
 
 ### Transaction Store (TTXDB)
 The `ttxdb` serves as the central repository for the lifecycle of token requests. It is used by the **TTX Service** to track:

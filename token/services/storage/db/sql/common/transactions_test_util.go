@@ -14,11 +14,11 @@ import (
 	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
+	token2 "github.com/LFDT-Panurus/panurus/token"
+	"github.com/LFDT-Panurus/panurus/token/services/storage/db/driver"
+	"github.com/LFDT-Panurus/panurus/token/services/storage/db/sql/query/pagination"
+	"github.com/LFDT-Panurus/panurus/token/token"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query/pagination"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/onsi/gomega"
 )
 

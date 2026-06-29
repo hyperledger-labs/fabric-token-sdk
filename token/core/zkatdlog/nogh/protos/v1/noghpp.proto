@@ -11,7 +11,7 @@ package fabric_token_sdk.token.zkatdlog.v1;
 import "common.proto";
 import "noghmath.proto";
 
-option go_package = "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/v1/pp";
+option go_package = "github.com/LFDT-Panurus/panurus/token/core/zkatdlog/nogh/protos-go/v1/pp";
 
 // IdemixIssuerPublicKey contains the public key of an Idemix issuer.
 // Idemix is used for anonymous credential-based authentication.

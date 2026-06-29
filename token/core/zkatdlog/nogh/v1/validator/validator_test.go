@@ -11,15 +11,15 @@ import (
 	"testing"
 
 	math "github.com/IBM/mathlib"
+	"github.com/LFDT-Panurus/panurus/token/core/zkatdlog/nogh/v1/benchmark"
+	"github.com/LFDT-Panurus/panurus/token/core/zkatdlog/nogh/v1/crypto/rp"
+	testing2 "github.com/LFDT-Panurus/panurus/token/core/zkatdlog/nogh/v1/testutils"
+	"github.com/LFDT-Panurus/panurus/token/driver"
+	benchmark2 "github.com/LFDT-Panurus/panurus/token/services/benchmark"
+	"github.com/LFDT-Panurus/panurus/token/services/identity"
+	"github.com/LFDT-Panurus/panurus/token/services/identity/idemix"
+	"github.com/LFDT-Panurus/panurus/token/services/identity/idemixnym"
 	"github.com/hyperledger-labs/fabric-smart-client/node/start/profile"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/benchmark"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/crypto/rp"
-	testing2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/testutils"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	benchmark2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/benchmark"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemixnym"
 	"github.com/stretchr/testify/require"
 )
 

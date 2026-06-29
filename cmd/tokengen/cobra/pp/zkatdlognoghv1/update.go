@@ -12,11 +12,11 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/LFDT-Panurus/panurus/cmd/tokengen/cobra/pp/common"
+	"github.com/LFDT-Panurus/panurus/integration/nwo/token/generators/crypto/zkatdlognoghv1"
+	v1 "github.com/LFDT-Panurus/panurus/token/core/zkatdlog/nogh/v1/setup"
+	"github.com/LFDT-Panurus/panurus/token/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen/cobra/pp/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/crypto/zkatdlognoghv1"
-	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/spf13/cobra"
 )
 

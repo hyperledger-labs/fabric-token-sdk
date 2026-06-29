@@ -1,5 +1,5 @@
 version: v2
-name: buf.build/hyperledger-labs/fabric-token-sdk-x509
+name: buf.build/LFDT-Panurus/panurus-x509
 lint:
   use:
     - STANDARD

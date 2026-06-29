@@ -1,19 +1,19 @@
-module github.com/hyperledger-labs/fabric-token-sdk/cmd/artifactgen
+module github.com/LFDT-Panurus/panurus/cmd/artifactgen
 
 go 1.26.3
 
 replace (
+	github.com/LFDT-Panurus/panurus => ./../../
+	github.com/LFDT-Panurus/panurus/integration => ./../../integration
 	github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/state/cc/query => github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/state/cc/query v0.0.0-20260618115140-04366ada95c8
 	github.com/hyperledger-labs/fabric-smart-client/platform/view/services/comm/host/libp2p => github.com/hyperledger-labs/fabric-smart-client/platform/view/services/comm/host/libp2p v0.0.0-20260618115140-04366ada95c8
-	github.com/hyperledger-labs/fabric-token-sdk => ./../../
-	github.com/hyperledger-labs/fabric-token-sdk/integration => ./../../integration
 )
 
 require (
+	github.com/LFDT-Panurus/panurus v0.10.1
+	github.com/LFDT-Panurus/panurus/integration v0.0.0
 	github.com/hyperledger-labs/fabric-smart-client v0.13.0
 	github.com/hyperledger-labs/fabric-smart-client/integration v0.0.0-20260618115140-04366ada95c8
-	github.com/hyperledger-labs/fabric-token-sdk v0.10.1
-	github.com/hyperledger-labs/fabric-token-sdk/integration v0.0.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.11.1

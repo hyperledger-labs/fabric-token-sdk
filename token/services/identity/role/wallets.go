@@ -10,15 +10,15 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/LFDT-Panurus/panurus/token/core/common/metrics"
+	"github.com/LFDT-Panurus/panurus/token/driver"
+	idriver "github.com/LFDT-Panurus/panurus/token/services/identity/driver"
+	"github.com/LFDT-Panurus/panurus/token/services/identity/wallet"
+	"github.com/LFDT-Panurus/panurus/token/services/logging"
+	"github.com/LFDT-Panurus/panurus/token/services/utils"
+	"github.com/LFDT-Panurus/panurus/token/token"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/metrics"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	idriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/wallet"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 // UnspentTokensIterator defines an iterator over unspent tokens

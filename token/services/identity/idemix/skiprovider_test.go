@@ -12,8 +12,8 @@ import (
 	"encoding/hex"
 	"testing"
 
+	"github.com/LFDT-Panurus/panurus/token/services/identity/idemix/crypto"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

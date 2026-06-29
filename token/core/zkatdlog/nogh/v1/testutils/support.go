@@ -10,12 +10,12 @@ import (
 	"context"
 	"math/big"
 
+	v1 "github.com/LFDT-Panurus/panurus/token/core/zkatdlog/nogh/v1"
+	"github.com/LFDT-Panurus/panurus/token/core/zkatdlog/nogh/v1/benchmark"
+	v1setup "github.com/LFDT-Panurus/panurus/token/core/zkatdlog/nogh/v1/setup"
+	"github.com/LFDT-Panurus/panurus/token/driver"
+	token2 "github.com/LFDT-Panurus/panurus/token/token"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/benchmark"
-	v1setup "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 // testPublicParamsManager is a simple implementation of PublicParametersManager for testing

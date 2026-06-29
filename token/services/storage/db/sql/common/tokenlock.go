@@ -12,15 +12,15 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/LFDT-Panurus/panurus/token/services/logging"
+	"github.com/LFDT-Panurus/panurus/token/services/storage/db/driver"
+	q "github.com/LFDT-Panurus/panurus/token/services/storage/db/sql/query"
+	common3 "github.com/LFDT-Panurus/panurus/token/services/storage/db/sql/query/common"
+	"github.com/LFDT-Panurus/panurus/token/services/storage/db/sql/query/cond"
+	"github.com/LFDT-Panurus/panurus/token/services/utils/types/transaction"
+	"github.com/LFDT-Panurus/panurus/token/token"
 	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
-	q "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query"
-	common3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query/cond"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/types/transaction"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 type tokenLockTables struct {

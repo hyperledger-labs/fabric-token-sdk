@@ -10,8 +10,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/LFDT-Panurus/panurus/token/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
 // EndorserStore defines the interface for an endorser database.

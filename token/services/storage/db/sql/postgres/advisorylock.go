@@ -10,10 +10,10 @@ import (
 	"context"
 	"database/sql"
 
+	"github.com/LFDT-Panurus/panurus/token/services/logging"
+	tokensdriver "github.com/LFDT-Panurus/panurus/token/services/storage/db/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
-	tokensdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 )
 
 var advisoryLockLogger = logging.MustGetLogger()

@@ -12,13 +12,12 @@
 package request
 
 import (
+	v1 "github.com/LFDT-Panurus/panurus/token/driver/protos-go/v1"
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
-
-	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/v1"
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -58,7 +57,6 @@ var (
 func (x ActionType) Enum() *ActionType {
 	p := new(ActionType)
 	*p = x
-
 	return p
 }
 
@@ -89,9 +87,9 @@ func (ActionType) EnumDescriptor() ([]byte, []int) {
 type AuditableIdentity struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// identity is the serialized identity of the entity
-	Identity *v1.Identity `json:"identity,omitempty" protobuf:"bytes,1,opt,name=identity,proto3"`
+	Identity *v1.Identity `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
 	// audit_info contains encrypted or encoded information for auditors
-	AuditInfo     []byte `json:"audit_info,omitempty" protobuf:"bytes,2,opt,name=audit_info,json=auditInfo,proto3"`
+	AuditInfo     []byte `protobuf:"bytes,2,opt,name=audit_info,json=auditInfo,proto3" json:"audit_info,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -116,10 +114,8 @@ func (x *AuditableIdentity) ProtoReflect() protoreflect.Message {
 		if ms.LoadMessageInfo() == nil {
 			ms.StoreMessageInfo(mi)
 		}
-
 		return ms
 	}
-
 	return mi.MessageOf(x)
 }
 
@@ -132,7 +128,6 @@ func (x *AuditableIdentity) GetIdentity() *v1.Identity {
 	if x != nil {
 		return x.Identity
 	}
-
 	return nil
 }
 
@@ -140,7 +135,6 @@ func (x *AuditableIdentity) GetAuditInfo() []byte {
 	if x != nil {
 		return x.AuditInfo
 	}
-
 	return nil
 }
 
@@ -148,9 +142,9 @@ func (x *AuditableIdentity) GetAuditInfo() []byte {
 type TransferInputMetadata struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// token_id uniquely identifies the token being transferred
-	TokenId *v1.TokenID `json:"token_id,omitempty" protobuf:"bytes,1,opt,name=token_id,json=tokenId,proto3"`
+	TokenId *v1.TokenID `protobuf:"bytes,1,opt,name=token_id,json=tokenId,proto3" json:"token_id,omitempty"`
 	// senders are the identities spending this token, with their audit information
-	Senders       []*AuditableIdentity `json:"senders,omitempty" protobuf:"bytes,2,rep,name=senders,proto3"`
+	Senders       []*AuditableIdentity `protobuf:"bytes,2,rep,name=senders,proto3" json:"senders,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -175,10 +169,8 @@ func (x *TransferInputMetadata) ProtoReflect() protoreflect.Message {
 		if ms.LoadMessageInfo() == nil {
 			ms.StoreMessageInfo(mi)
 		}
-
 		return ms
 	}
-
 	return mi.MessageOf(x)
 }
 
@@ -191,7 +183,6 @@ func (x *TransferInputMetadata) GetTokenId() *v1.TokenID {
 	if x != nil {
 		return x.TokenId
 	}
-
 	return nil
 }
 
@@ -199,7 +190,6 @@ func (x *TransferInputMetadata) GetSenders() []*AuditableIdentity {
 	if x != nil {
 		return x.Senders
 	}
-
 	return nil
 }
 
@@ -207,11 +197,11 @@ func (x *TransferInputMetadata) GetSenders() []*AuditableIdentity {
 type OutputMetadata struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// metadata contains driver-specific output metadata
-	Metadata []byte `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata,proto3"`
+	Metadata []byte `protobuf:"bytes,1,opt,name=metadata,proto3" json:"metadata,omitempty"`
 	// audit_info contains encrypted information about the output owner for auditors
-	AuditInfo []byte `json:"audit_info,omitempty" protobuf:"bytes,2,opt,name=audit_info,json=auditInfo,proto3"`
+	AuditInfo []byte `protobuf:"bytes,2,opt,name=audit_info,json=auditInfo,proto3" json:"audit_info,omitempty"`
 	// receivers are the identities receiving this token, with their audit information
-	Receivers     []*AuditableIdentity `json:"receivers,omitempty" protobuf:"bytes,3,rep,name=receivers,proto3"`
+	Receivers     []*AuditableIdentity `protobuf:"bytes,3,rep,name=receivers,proto3" json:"receivers,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -236,10 +226,8 @@ func (x *OutputMetadata) ProtoReflect() protoreflect.Message {
 		if ms.LoadMessageInfo() == nil {
 			ms.StoreMessageInfo(mi)
 		}
-
 		return ms
 	}
-
 	return mi.MessageOf(x)
 }
 
@@ -252,7 +240,6 @@ func (x *OutputMetadata) GetMetadata() []byte {
 	if x != nil {
 		return x.Metadata
 	}
-
 	return nil
 }
 
@@ -260,7 +247,6 @@ func (x *OutputMetadata) GetAuditInfo() []byte {
 	if x != nil {
 		return x.AuditInfo
 	}
-
 	return nil
 }
 
@@ -268,7 +254,6 @@ func (x *OutputMetadata) GetReceivers() []*AuditableIdentity {
 	if x != nil {
 		return x.Receivers
 	}
-
 	return nil
 }
 
@@ -277,13 +262,13 @@ func (x *OutputMetadata) GetReceivers() []*AuditableIdentity {
 type TransferMetadata struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// inputs describe the tokens being spent
-	Inputs []*TransferInputMetadata `json:"inputs,omitempty" protobuf:"bytes,1,rep,name=inputs,proto3"`
+	Inputs []*TransferInputMetadata `protobuf:"bytes,1,rep,name=inputs,proto3" json:"inputs,omitempty"`
 	// outputs describe the newly created tokens
-	Outputs []*OutputMetadata `json:"outputs,omitempty" protobuf:"bytes,2,rep,name=outputs,proto3"`
+	Outputs []*OutputMetadata `protobuf:"bytes,2,rep,name=outputs,proto3" json:"outputs,omitempty"`
 	// issuer is the identity that signs the transfer in redeem scenarios, with audit information
-	Issuer *AuditableIdentity `json:"issuer,omitempty" protobuf:"bytes,3,opt,name=issuer,proto3"`
+	Issuer *AuditableIdentity `protobuf:"bytes,3,opt,name=issuer,proto3" json:"issuer,omitempty"`
 	// extra_signers are additional identities that must sign this transfer, with their audit information
-	ExtraSigners  []*AuditableIdentity `json:"extra_signers,omitempty" protobuf:"bytes,4,rep,name=extra_signers,json=extraSigners,proto3"`
+	ExtraSigners  []*AuditableIdentity `protobuf:"bytes,4,rep,name=extra_signers,json=extraSigners,proto3" json:"extra_signers,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -308,10 +293,8 @@ func (x *TransferMetadata) ProtoReflect() protoreflect.Message {
 		if ms.LoadMessageInfo() == nil {
 			ms.StoreMessageInfo(mi)
 		}
-
 		return ms
 	}
-
 	return mi.MessageOf(x)
 }
 
@@ -324,7 +307,6 @@ func (x *TransferMetadata) GetInputs() []*TransferInputMetadata {
 	if x != nil {
 		return x.Inputs
 	}
-
 	return nil
 }
 
@@ -332,7 +314,6 @@ func (x *TransferMetadata) GetOutputs() []*OutputMetadata {
 	if x != nil {
 		return x.Outputs
 	}
-
 	return nil
 }
 
@@ -340,7 +321,6 @@ func (x *TransferMetadata) GetIssuer() *AuditableIdentity {
 	if x != nil {
 		return x.Issuer
 	}
-
 	return nil
 }
 
@@ -348,7 +328,6 @@ func (x *TransferMetadata) GetExtraSigners() []*AuditableIdentity {
 	if x != nil {
 		return x.ExtraSigners
 	}
-
 	return nil
 }
 
@@ -356,7 +335,7 @@ func (x *TransferMetadata) GetExtraSigners() []*AuditableIdentity {
 type IssueInputMetadata struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// token_id uniquely identifies the token being consumed by the issuance
-	TokenId       *v1.TokenID `json:"token_id,omitempty" protobuf:"bytes,1,opt,name=token_id,json=tokenId,proto3"`
+	TokenId       *v1.TokenID `protobuf:"bytes,1,opt,name=token_id,json=tokenId,proto3" json:"token_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -381,10 +360,8 @@ func (x *IssueInputMetadata) ProtoReflect() protoreflect.Message {
 		if ms.LoadMessageInfo() == nil {
 			ms.StoreMessageInfo(mi)
 		}
-
 		return ms
 	}
-
 	return mi.MessageOf(x)
 }
 
@@ -397,7 +374,6 @@ func (x *IssueInputMetadata) GetTokenId() *v1.TokenID {
 	if x != nil {
 		return x.TokenId
 	}
-
 	return nil
 }
 
@@ -405,13 +381,13 @@ func (x *IssueInputMetadata) GetTokenId() *v1.TokenID {
 type IssueMetadata struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// issuer is the identity creating the tokens, with audit information
-	Issuer *AuditableIdentity `json:"issuer,omitempty" protobuf:"bytes,1,opt,name=issuer,proto3"`
+	Issuer *AuditableIdentity `protobuf:"bytes,1,opt,name=issuer,proto3" json:"issuer,omitempty"`
 	// inputs describe tokens being redeemed (if any) during issuance
-	Inputs []*IssueInputMetadata `json:"inputs,omitempty" protobuf:"bytes,2,rep,name=inputs,proto3"`
+	Inputs []*IssueInputMetadata `protobuf:"bytes,2,rep,name=inputs,proto3" json:"inputs,omitempty"`
 	// outputs describe the newly issued tokens
-	Outputs []*OutputMetadata `json:"outputs,omitempty" protobuf:"bytes,3,rep,name=outputs,proto3"`
+	Outputs []*OutputMetadata `protobuf:"bytes,3,rep,name=outputs,proto3" json:"outputs,omitempty"`
 	// extra_signers are additional identities that must sign this issuance, with their audit information
-	ExtraSigners  []*AuditableIdentity `json:"extra_signers,omitempty" protobuf:"bytes,4,rep,name=extra_signers,json=extraSigners,proto3"`
+	ExtraSigners  []*AuditableIdentity `protobuf:"bytes,4,rep,name=extra_signers,json=extraSigners,proto3" json:"extra_signers,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -436,10 +412,8 @@ func (x *IssueMetadata) ProtoReflect() protoreflect.Message {
 		if ms.LoadMessageInfo() == nil {
 			ms.StoreMessageInfo(mi)
 		}
-
 		return ms
 	}
-
 	return mi.MessageOf(x)
 }
 
@@ -452,7 +426,6 @@ func (x *IssueMetadata) GetIssuer() *AuditableIdentity {
 	if x != nil {
 		return x.Issuer
 	}
-
 	return nil
 }
 
@@ -460,7 +433,6 @@ func (x *IssueMetadata) GetInputs() []*IssueInputMetadata {
 	if x != nil {
 		return x.Inputs
 	}
-
 	return nil
 }
 
@@ -468,7 +440,6 @@ func (x *IssueMetadata) GetOutputs() []*OutputMetadata {
 	if x != nil {
 		return x.Outputs
 	}
-
 	return nil
 }
 
@@ -476,7 +447,6 @@ func (x *IssueMetadata) GetExtraSigners() []*AuditableIdentity {
 	if x != nil {
 		return x.ExtraSigners
 	}
-
 	return nil
 }
 
@@ -485,7 +455,7 @@ func (x *IssueMetadata) GetExtraSigners() []*AuditableIdentity {
 type HashedMetadata struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// hash is the cryptographic hash of the hidden metadata
-	Hash          []byte `json:"hash,omitempty" protobuf:"bytes,1,opt,name=hash,proto3"`
+	Hash          []byte `protobuf:"bytes,1,opt,name=hash,proto3" json:"hash,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -510,10 +480,8 @@ func (x *HashedMetadata) ProtoReflect() protoreflect.Message {
 		if ms.LoadMessageInfo() == nil {
 			ms.StoreMessageInfo(mi)
 		}
-
 		return ms
 	}
-
 	return mi.MessageOf(x)
 }
 
@@ -526,7 +494,6 @@ func (x *HashedMetadata) GetHash() []byte {
 	if x != nil {
 		return x.Hash
 	}
-
 	return nil
 }
 
@@ -534,7 +501,7 @@ func (x *HashedMetadata) GetHash() []byte {
 type ActionMetadata struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// action_id is the index of the corresponding action in the token request action list
-	ActionId uint32 `json:"action_id,omitempty" protobuf:"varint,1,opt,name=action_id,json=actionId,proto3"`
+	ActionId uint32 `protobuf:"varint,1,opt,name=action_id,json=actionId,proto3" json:"action_id,omitempty"`
 	// metadata contains either issue, transfer, or hashed metadata
 	//
 	// Types that are valid to be assigned to Metadata:
@@ -567,10 +534,8 @@ func (x *ActionMetadata) ProtoReflect() protoreflect.Message {
 		if ms.LoadMessageInfo() == nil {
 			ms.StoreMessageInfo(mi)
 		}
-
 		return ms
 	}
-
 	return mi.MessageOf(x)
 }
 
@@ -583,7 +548,6 @@ func (x *ActionMetadata) GetActionId() uint32 {
 	if x != nil {
 		return x.ActionId
 	}
-
 	return 0
 }
 
@@ -591,7 +555,6 @@ func (x *ActionMetadata) GetMetadata() isActionMetadata_Metadata {
 	if x != nil {
 		return x.Metadata
 	}
-
 	return nil
 }
 
@@ -601,7 +564,6 @@ func (x *ActionMetadata) GetIssueMetadata() *IssueMetadata {
 			return x.IssueMetadata
 		}
 	}
-
 	return nil
 }
 
@@ -611,7 +573,6 @@ func (x *ActionMetadata) GetTransferMetadata() *TransferMetadata {
 			return x.TransferMetadata
 		}
 	}
-
 	return nil
 }
 
@@ -621,7 +582,6 @@ func (x *ActionMetadata) GetHashedMetadata() *HashedMetadata {
 			return x.HashedMetadata
 		}
 	}
-
 	return nil
 }
 
@@ -654,12 +614,12 @@ func (*ActionMetadata_HashedMetadata) isActionMetadata_Metadata() {}
 type TokenRequestMetadata struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// version is the protocol version of this metadata format
-	Version uint32 `json:"version,omitempty" protobuf:"varint,1,opt,name=version,proto3"`
+	Version uint32 `protobuf:"varint,1,opt,name=version,proto3" json:"version,omitempty"`
 	// metadata is the list of action metadata (issue/transfer) in this request
-	Metadata []*ActionMetadata `json:"metadata,omitempty" protobuf:"bytes,2,rep,name=metadata,proto3"`
+	Metadata []*ActionMetadata `protobuf:"bytes,2,rep,name=metadata,proto3" json:"metadata,omitempty"`
 	// application_metadata stores arbitrary application-specific data.
 	// Keys should follow reverse-DNS naming (e.g., "com.example.myapp.field") to avoid collisions.
-	ApplicationMetadata map[string][]byte `json:"application_metadata,omitempty" protobuf:"bytes,3,rep,name=application_metadata,json=applicationMetadata,proto3" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	ApplicationMetadata map[string][]byte `protobuf:"bytes,3,rep,name=application_metadata,json=applicationMetadata,proto3" json:"application_metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -684,10 +644,8 @@ func (x *TokenRequestMetadata) ProtoReflect() protoreflect.Message {
 		if ms.LoadMessageInfo() == nil {
 			ms.StoreMessageInfo(mi)
 		}
-
 		return ms
 	}
-
 	return mi.MessageOf(x)
 }
 
@@ -700,7 +658,6 @@ func (x *TokenRequestMetadata) GetVersion() uint32 {
 	if x != nil {
 		return x.Version
 	}
-
 	return 0
 }
 
@@ -708,7 +665,6 @@ func (x *TokenRequestMetadata) GetMetadata() []*ActionMetadata {
 	if x != nil {
 		return x.Metadata
 	}
-
 	return nil
 }
 
@@ -716,7 +672,6 @@ func (x *TokenRequestMetadata) GetApplicationMetadata() map[string][]byte {
 	if x != nil {
 		return x.ApplicationMetadata
 	}
-
 	return nil
 }
 
@@ -724,9 +679,9 @@ func (x *TokenRequestMetadata) GetApplicationMetadata() map[string][]byte {
 type TypedAction struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// type specifies whether this is an issue or transfer action
-	Type ActionType `json:"type,omitempty" protobuf:"varint,1,opt,name=type,proto3,enum=fabric_token_sdk.token.driver.v1.ActionType"`
+	Type ActionType `protobuf:"varint,1,opt,name=type,proto3,enum=fabric_token_sdk.token.driver.v1.ActionType" json:"type,omitempty"`
 	// raw contains the serialized action data (driver-specific format)
-	Raw           []byte `json:"raw,omitempty" protobuf:"bytes,2,opt,name=raw,proto3"`
+	Raw           []byte `protobuf:"bytes,2,opt,name=raw,proto3" json:"raw,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -751,10 +706,8 @@ func (x *TypedAction) ProtoReflect() protoreflect.Message {
 		if ms.LoadMessageInfo() == nil {
 			ms.StoreMessageInfo(mi)
 		}
-
 		return ms
 	}
-
 	return mi.MessageOf(x)
 }
 
@@ -767,7 +720,6 @@ func (x *TypedAction) GetType() ActionType {
 	if x != nil {
 		return x.Type
 	}
-
 	return ActionType_ACTION_TYPE_UNSPECIFIED
 }
 
@@ -775,7 +727,6 @@ func (x *TypedAction) GetRaw() []byte {
 	if x != nil {
 		return x.Raw
 	}
-
 	return nil
 }
 
@@ -784,7 +735,7 @@ func (x *TypedAction) GetRaw() []byte {
 type HashedAction struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// hash is the cryptographic hash of the hidden action
-	Hash          []byte `json:"hash,omitempty" protobuf:"bytes,1,opt,name=hash,proto3"`
+	Hash          []byte `protobuf:"bytes,1,opt,name=hash,proto3" json:"hash,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -809,10 +760,8 @@ func (x *HashedAction) ProtoReflect() protoreflect.Message {
 		if ms.LoadMessageInfo() == nil {
 			ms.StoreMessageInfo(mi)
 		}
-
 		return ms
 	}
-
 	return mi.MessageOf(x)
 }
 
@@ -825,7 +774,6 @@ func (x *HashedAction) GetHash() []byte {
 	if x != nil {
 		return x.Hash
 	}
-
 	return nil
 }
 
@@ -863,10 +811,8 @@ func (x *Action) ProtoReflect() protoreflect.Message {
 		if ms.LoadMessageInfo() == nil {
 			ms.StoreMessageInfo(mi)
 		}
-
 		return ms
 	}
-
 	return mi.MessageOf(x)
 }
 
@@ -879,7 +825,6 @@ func (x *Action) GetAction() isAction_Action {
 	if x != nil {
 		return x.Action
 	}
-
 	return nil
 }
 
@@ -889,7 +834,6 @@ func (x *Action) GetTypedAction() *TypedAction {
 			return x.TypedAction
 		}
 	}
-
 	return nil
 }
 
@@ -899,7 +843,6 @@ func (x *Action) GetHashedAction() *HashedAction {
 			return x.HashedAction
 		}
 	}
-
 	return nil
 }
 
@@ -925,7 +868,7 @@ func (*Action_HashedAction) isAction_Action() {}
 type Signature struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// raw contains the serialized signature bytes
-	Raw           []byte `json:"raw,omitempty" protobuf:"bytes,1,opt,name=raw,proto3"`
+	Raw           []byte `protobuf:"bytes,1,opt,name=raw,proto3" json:"raw,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -950,10 +893,8 @@ func (x *Signature) ProtoReflect() protoreflect.Message {
 		if ms.LoadMessageInfo() == nil {
 			ms.StoreMessageInfo(mi)
 		}
-
 		return ms
 	}
-
 	return mi.MessageOf(x)
 }
 
@@ -966,7 +907,6 @@ func (x *Signature) GetRaw() []byte {
 	if x != nil {
 		return x.Raw
 	}
-
 	return nil
 }
 
@@ -974,9 +914,9 @@ func (x *Signature) GetRaw() []byte {
 type ActionSignature struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// action_id is the index of the action in the token request action list
-	ActionId uint32 `json:"action_id,omitempty" protobuf:"varint,1,opt,name=action_id,json=actionId,proto3"`
+	ActionId uint32 `protobuf:"varint,1,opt,name=action_id,json=actionId,proto3" json:"action_id,omitempty"`
 	// signature is the cryptographic signature authorizing the referenced action
-	Signature     *Signature `json:"signature,omitempty" protobuf:"bytes,2,opt,name=signature,proto3"`
+	Signature     *Signature `protobuf:"bytes,2,opt,name=signature,proto3" json:"signature,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1001,10 +941,8 @@ func (x *ActionSignature) ProtoReflect() protoreflect.Message {
 		if ms.LoadMessageInfo() == nil {
 			ms.StoreMessageInfo(mi)
 		}
-
 		return ms
 	}
-
 	return mi.MessageOf(x)
 }
 
@@ -1017,7 +955,6 @@ func (x *ActionSignature) GetActionId() uint32 {
 	if x != nil {
 		return x.ActionId
 	}
-
 	return 0
 }
 
@@ -1025,7 +962,6 @@ func (x *ActionSignature) GetSignature() *Signature {
 	if x != nil {
 		return x.Signature
 	}
-
 	return nil
 }
 
@@ -1033,9 +969,9 @@ func (x *ActionSignature) GetSignature() *Signature {
 type AuditorSignature struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// identity is the serialized identity of the auditor who signed
-	Identity *v1.Identity `json:"identity,omitempty" protobuf:"bytes,1,opt,name=identity,proto3"`
+	Identity *v1.Identity `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
 	// signature is the auditor's cryptographic signature
-	Signature     *Signature `json:"signature,omitempty" protobuf:"bytes,2,opt,name=signature,proto3"`
+	Signature     *Signature `protobuf:"bytes,2,opt,name=signature,proto3" json:"signature,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1060,10 +996,8 @@ func (x *AuditorSignature) ProtoReflect() protoreflect.Message {
 		if ms.LoadMessageInfo() == nil {
 			ms.StoreMessageInfo(mi)
 		}
-
 		return ms
 	}
-
 	return mi.MessageOf(x)
 }
 
@@ -1076,7 +1010,6 @@ func (x *AuditorSignature) GetIdentity() *v1.Identity {
 	if x != nil {
 		return x.Identity
 	}
-
 	return nil
 }
 
@@ -1084,7 +1017,6 @@ func (x *AuditorSignature) GetSignature() *Signature {
 	if x != nil {
 		return x.Signature
 	}
-
 	return nil
 }
 
@@ -1122,10 +1054,8 @@ func (x *RequestSignature) ProtoReflect() protoreflect.Message {
 		if ms.LoadMessageInfo() == nil {
 			ms.StoreMessageInfo(mi)
 		}
-
 		return ms
 	}
-
 	return mi.MessageOf(x)
 }
 
@@ -1138,7 +1068,6 @@ func (x *RequestSignature) GetSignature() isRequestSignature_Signature {
 	if x != nil {
 		return x.Signature
 	}
-
 	return nil
 }
 
@@ -1148,7 +1077,6 @@ func (x *RequestSignature) GetActionSignature() *ActionSignature {
 			return x.ActionSignature
 		}
 	}
-
 	return nil
 }
 
@@ -1158,7 +1086,6 @@ func (x *RequestSignature) GetAuditorSignature() *AuditorSignature {
 			return x.AuditorSignature
 		}
 	}
-
 	return nil
 }
 
@@ -1184,11 +1111,11 @@ func (*RequestSignature_AuditorSignature) isRequestSignature_Signature() {}
 type TokenRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// version is the protocol version of this request format
-	Version uint32 `json:"version,omitempty" protobuf:"varint,1,opt,name=version,proto3"`
+	Version uint32 `protobuf:"varint,1,opt,name=version,proto3" json:"version,omitempty"`
 	// actions are the token operations (issue/transfer) to perform
-	Actions []*Action `json:"actions,omitempty" protobuf:"bytes,2,rep,name=actions,proto3"`
+	Actions []*Action `protobuf:"bytes,2,rep,name=actions,proto3" json:"actions,omitempty"`
 	// signatures are the cryptographic signatures attached to this request
-	Signatures    []*RequestSignature `json:"signatures,omitempty" protobuf:"bytes,3,rep,name=signatures,proto3"`
+	Signatures    []*RequestSignature `protobuf:"bytes,3,rep,name=signatures,proto3" json:"signatures,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1213,10 +1140,8 @@ func (x *TokenRequest) ProtoReflect() protoreflect.Message {
 		if ms.LoadMessageInfo() == nil {
 			ms.StoreMessageInfo(mi)
 		}
-
 		return ms
 	}
-
 	return mi.MessageOf(x)
 }
 
@@ -1229,7 +1154,6 @@ func (x *TokenRequest) GetVersion() uint32 {
 	if x != nil {
 		return x.Version
 	}
-
 	return 0
 }
 
@@ -1237,7 +1161,6 @@ func (x *TokenRequest) GetActions() []*Action {
 	if x != nil {
 		return x.Actions
 	}
-
 	return nil
 }
 
@@ -1245,7 +1168,6 @@ func (x *TokenRequest) GetSignatures() []*RequestSignature {
 	if x != nil {
 		return x.Signatures
 	}
-
 	return nil
 }
 
@@ -1254,13 +1176,13 @@ func (x *TokenRequest) GetSignatures() []*RequestSignature {
 type TokenRequestWithMetadata struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// version is the protocol version of this structure
-	Version uint32 `json:"version,omitempty" protobuf:"varint,1,opt,name=version,proto3"`
+	Version uint32 `protobuf:"varint,1,opt,name=version,proto3" json:"version,omitempty"`
 	// anchor is a unique identifier linking this request to a specific context
-	Anchor string `json:"anchor,omitempty" protobuf:"bytes,2,opt,name=anchor,proto3"`
+	Anchor string `protobuf:"bytes,2,opt,name=anchor,proto3" json:"anchor,omitempty"`
 	// request contains the actual token operations and signatures
-	Request *TokenRequest `json:"request,omitempty" protobuf:"bytes,3,opt,name=request,proto3"`
+	Request *TokenRequest `protobuf:"bytes,3,opt,name=request,proto3" json:"request,omitempty"`
 	// metadata contains additional information about the request
-	Metadata      *TokenRequestMetadata `json:"metadata,omitempty" protobuf:"bytes,4,opt,name=metadata,proto3"`
+	Metadata      *TokenRequestMetadata `protobuf:"bytes,4,opt,name=metadata,proto3" json:"metadata,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1285,10 +1207,8 @@ func (x *TokenRequestWithMetadata) ProtoReflect() protoreflect.Message {
 		if ms.LoadMessageInfo() == nil {
 			ms.StoreMessageInfo(mi)
 		}
-
 		return ms
 	}
-
 	return mi.MessageOf(x)
 }
 
@@ -1301,7 +1221,6 @@ func (x *TokenRequestWithMetadata) GetVersion() uint32 {
 	if x != nil {
 		return x.Version
 	}
-
 	return 0
 }
 
@@ -1309,7 +1228,6 @@ func (x *TokenRequestWithMetadata) GetAnchor() string {
 	if x != nil {
 		return x.Anchor
 	}
-
 	return ""
 }
 
@@ -1317,7 +1235,6 @@ func (x *TokenRequestWithMetadata) GetRequest() *TokenRequest {
 	if x != nil {
 		return x.Request
 	}
-
 	return nil
 }
 
@@ -1325,7 +1242,6 @@ func (x *TokenRequestWithMetadata) GetMetadata() *TokenRequestMetadata {
 	if x != nil {
 		return x.Metadata
 	}
-
 	return nil
 }
 
@@ -1410,7 +1326,7 @@ const file_request_proto_rawDesc = "" +
 	"ActionType\x12\x1b\n" +
 	"\x17ACTION_TYPE_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11ACTION_TYPE_ISSUE\x10\x01\x12\x18\n" +
-	"\x14ACTION_TYPE_TRANSFER\x10\x02BPZNgithub.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/v1/requestb\x06proto3"
+	"\x14ACTION_TYPE_TRANSFER\x10\x02BCZAgithub.com/LFDT-Panurus/panurus/token/driver/protos-go/v1/requestb\x06proto3"
 
 var (
 	file_request_proto_rawDescOnce sync.Once
@@ -1421,7 +1337,6 @@ func file_request_proto_rawDescGZIP() []byte {
 	file_request_proto_rawDescOnce.Do(func() {
 		file_request_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_request_proto_rawDesc), len(file_request_proto_rawDesc)))
 	})
-
 	return file_request_proto_rawDescData
 }
 

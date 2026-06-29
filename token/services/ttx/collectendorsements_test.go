@@ -9,9 +9,9 @@ package ttx_test
 import (
 	"testing"
 
+	"github.com/LFDT-Panurus/panurus/token/services/ttx"
+	"github.com/LFDT-Panurus/panurus/token/services/ttx/dep/mock"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/dep/mock"
 	"github.com/stretchr/testify/assert"
 )
 

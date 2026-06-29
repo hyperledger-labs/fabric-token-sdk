@@ -1,4 +1,4 @@
-# Fabric Token SDK
+# Panurus
 
 > **Performance Tip**: Use `Ctrl+F` to jump to sections using anchor links (e.g., `#building-and-running`)
 

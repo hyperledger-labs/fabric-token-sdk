@@ -11,11 +11,11 @@ import (
 	"testing"
 	"time"
 
+	q "github.com/LFDT-Panurus/panurus/token/services/storage/db/sql/query"
 	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
-	q "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
-	common3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/common"
+	"github.com/LFDT-Panurus/panurus/token/services/storage/db/driver"
+	common3 "github.com/LFDT-Panurus/panurus/token/services/storage/db/sql/common"
 	. "github.com/onsi/gomega"
 )
 

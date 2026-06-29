@@ -10,8 +10,8 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/LFDT-Panurus/panurus/token/token"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 type QueryCallbackFunc func(*token.ID, []byte) error

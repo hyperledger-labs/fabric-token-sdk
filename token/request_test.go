@@ -11,12 +11,12 @@ import (
 	"context"
 	"testing"
 
+	"github.com/LFDT-Panurus/panurus/token/driver"
+	driver2 "github.com/LFDT-Panurus/panurus/token/driver/mock"
+	"github.com/LFDT-Panurus/panurus/token/driver/protos-go/v1/request"
+	"github.com/LFDT-Panurus/panurus/token/services/logging"
+	"github.com/LFDT-Panurus/panurus/token/token"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/v1/request"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

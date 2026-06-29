@@ -12,12 +12,11 @@
 package driver
 
 import (
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
-
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -144,7 +143,7 @@ const file_common_proto_rawDesc = "" +
 	"\x03raw\x18\x01 \x01(\fR\x03raw\"4\n" +
 	"\aTokenID\x12\x13\n" +
 	"\x05tx_id\x18\x01 \x01(\tR\x04txId\x12\x14\n" +
-	"\x05index\x18\x02 \x01(\x04R\x05indexBOZMgithub.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/v1;driverb\x06proto3"
+	"\x05index\x18\x02 \x01(\x04R\x05indexBBZ@github.com/LFDT-Panurus/panurus/token/driver/protos-go/v1;driverb\x06proto3"
 
 var (
 	file_common_proto_rawDescOnce sync.Once

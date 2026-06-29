@@ -15,10 +15,10 @@ import (
 	"runtime"
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/benchmark"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/testutils"
-	sbenchmark "github.com/hyperledger-labs/fabric-token-sdk/token/services/benchmark"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemixnym"
+	"github.com/LFDT-Panurus/panurus/token/core/zkatdlog/nogh/v1/benchmark"
+	"github.com/LFDT-Panurus/panurus/token/core/zkatdlog/nogh/v1/testutils"
+	sbenchmark "github.com/LFDT-Panurus/panurus/token/services/benchmark"
+	"github.com/LFDT-Panurus/panurus/token/services/identity/idemixnym"
 )
 
 //go:generate go run . -bits=32,64 -curves=BN254,BLS12_381_BBS_GURVY -num_inputs=1,2 -num_outputs=1,2

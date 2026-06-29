@@ -7,9 +7,9 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
-	protosv1 "github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/v1"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/v1/request"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	protosv1 "github.com/LFDT-Panurus/panurus/token/driver/protos-go/v1"
+	"github.com/LFDT-Panurus/panurus/token/driver/protos-go/v1/request"
+	"github.com/LFDT-Panurus/panurus/token/token"
 )
 
 // ToTokenID converts *driver.TokenID to *token.ID

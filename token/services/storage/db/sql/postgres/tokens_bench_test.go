@@ -11,7 +11,7 @@ import (
 	fscpostgres "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/postgres"
 	_ "github.com/jackc/pgx/v5/stdlib"
 
-	sqlcommon "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/common"
+	sqlcommon "github.com/LFDT-Panurus/panurus/token/services/storage/db/sql/common"
 )
 
 func openBenchTokenStore(b *testing.B) (*sqlcommon.TokenStore, func()) {

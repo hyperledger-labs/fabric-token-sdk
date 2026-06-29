@@ -7,14 +7,14 @@ SPDX-License-Identifier: Apache-2.0
 package actions
 
 import (
+	"github.com/LFDT-Panurus/panurus/token/core/fabtoken/protos-go/v1/actions"
+	"github.com/LFDT-Panurus/panurus/token/driver"
+	driverv1 "github.com/LFDT-Panurus/panurus/token/driver/protos-go/v1"
+	"github.com/LFDT-Panurus/panurus/token/services/utils/protos"
+	"github.com/LFDT-Panurus/panurus/token/services/utils/slices"
+	"github.com/LFDT-Panurus/panurus/token/token"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/protos-go/v1/actions"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	driverv1 "github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/v1"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/protos"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils/slices"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 const ProtocolV1 = 1

@@ -10,11 +10,11 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/LFDT-Panurus/panurus/integration/nwo/token"
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	postgres2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/postgres"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	"github.com/onsi/gomega"
 )
 

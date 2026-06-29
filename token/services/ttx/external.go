@@ -10,10 +10,10 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/LFDT-Panurus/panurus/token"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token"
 )
 
 type StreamExternalWalletMsgType = int

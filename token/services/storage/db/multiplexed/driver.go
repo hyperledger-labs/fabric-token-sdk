@@ -7,11 +7,11 @@ SPDX-License-Identifier: Apache-2.0
 package multiplexed
 
 import (
+	driver4 "github.com/LFDT-Panurus/panurus/token/services/storage/db/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	driver3 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
-	driver4 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 )
 
 var _ driver4.Driver = &Driver{}

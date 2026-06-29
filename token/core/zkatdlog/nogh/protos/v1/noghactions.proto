@@ -12,7 +12,7 @@ import "common.proto";
 import "ftactions.proto";
 import "noghmath.proto";
 
-option go_package = "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/v1/actions";
+option go_package = "github.com/LFDT-Panurus/panurus/token/core/zkatdlog/nogh/protos-go/v1/actions";
 
 // Token represents a privacy-preserving token using zero-knowledge proofs.
 // The token data is a Pedersen commitment hiding the type and value.
