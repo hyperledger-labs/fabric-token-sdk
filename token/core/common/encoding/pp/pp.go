@@ -9,7 +9,7 @@ package pp
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/encoding/json"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/pp"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/v1/pp"
 )
 
 // Marshal marshals the passed public parameters

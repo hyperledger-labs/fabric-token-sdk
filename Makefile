@@ -258,3 +258,14 @@ docs-serve:
 # Build the static documentation site for production
 docs-build:
 	mkdocs build --strict
+
+.PHONY: protos-format
+protos-format: ## Run buf format to fix protobuf files
+	@echo "Fixing protobuf formatting..."
+	@buf format -w
+
+.PHONY: protos
+# generate protobuf files
+protos:
+	@echo "Generating protobuf files..."
+	@buf generate

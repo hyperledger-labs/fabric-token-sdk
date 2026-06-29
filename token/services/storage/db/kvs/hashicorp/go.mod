@@ -54,7 +54,7 @@ require (
 	github.com/hashicorp/go-sockaddr v1.0.7 // indirect
 	github.com/hashicorp/hcl v1.0.1-vault-7 // indirect
 	github.com/hyperledger/fabric-amcl v0.0.0-20230602173724-9e02669dceb2 // indirect
-	github.com/hyperledger/fabric-lib-go v1.1.3 // indirect
+	github.com/hyperledger/fabric-lib-go v1.1.4 // indirect
 	github.com/kilic/bls12-381 v0.1.0 // indirect
 	github.com/knadh/koanf/maps v0.1.2 // indirect
 	github.com/knadh/koanf/parsers/yaml v1.1.0 // indirect

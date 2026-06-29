@@ -824,14 +824,25 @@ func TestAll(network *integration.Infrastructure, auditorId string, onRestart On
 	// use the same token for both actions, this must fail
 	txIssuedPineapples1 := IssueCash(network, "", "Pineapples", 3, alice, auditor, true, issuer)
 	IssueCash(network, "", "Pineapples", 3, alice, auditor, true, issuer)
-	failedTransferTxID := TransferCashMultiActions(network, alice, "", "Pineapples", []uint64{2, 3}, []*token3.NodeReference{bob, charlie}, auditor, &token2.ID{TxId: txIssuedPineapples1}, "failed to append spent id", txIssuedPineapples1)
+	failedTransferTxID := TransferCashMultiActions(
+		network,
+		alice,
+		"",
+		"Pineapples",
+		[]uint64{2, 3},
+		[]*token3.NodeReference{bob, charlie},
+		auditor,
+		&token2.ID{TxId: txIssuedPineapples1},
+		fmt.Sprintf("duplicate token ID [[%s:0]] found in metadata at action index [1] for tx", txIssuedPineapples1),
+		txIssuedPineapples1,
+	)
 	// the above transfer must fail at execution phase, therefore the auditor should be explicitly informed about this transaction
 	CheckBalance(network, alice, "", "Pineapples", 6)
-	CheckHolding(network, alice, "", "Pineapples", 1, auditor)
+	CheckHolding(network, alice, "", "Pineapples", 6, auditor)
 	CheckBalance(network, bob, "", "Pineapples", 0)
-	CheckHolding(network, bob, "", "Pineapples", 2, auditor)
+	CheckHolding(network, bob, "", "Pineapples", 0, auditor)
 	CheckBalance(network, charlie, "", "Pineapples", 0)
-	CheckHolding(network, charlie, "", "Pineapples", 3, auditor)
+	CheckHolding(network, charlie, "", "Pineapples", 0, auditor)
 	fmt.Printf("failed transaction [%s]\n", failedTransferTxID)
 	SetTransactionAuditStatus(network, auditor, failedTransferTxID, ttx.Deleted)
 	CheckBalanceAndHolding(network, alice, "", "Pineapples", 6, auditor)

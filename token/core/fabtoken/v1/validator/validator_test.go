@@ -19,6 +19,7 @@ import (
 	validator2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/validator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/v1/request"
 	benchmark2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/benchmark"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/x509"
@@ -47,7 +48,9 @@ func TestActionDeserializer_DeserializeActions(t *testing.T) {
 		require.NoError(t, err)
 
 		tr := &driver.TokenRequest{
-			Issues: [][]byte{ia1Bytes},
+			Actions: []*driver.TypedAction{
+				{Type: request.ActionType_ACTION_TYPE_ISSUE, Raw: ia1Bytes},
+			},
 		}
 		ia, ta, err := ad.DeserializeActions(tr)
 		require.NoError(t, err)
@@ -62,7 +65,9 @@ func TestActionDeserializer_DeserializeActions(t *testing.T) {
 		require.NoError(t, err)
 
 		tr := &driver.TokenRequest{
-			Transfers: [][]byte{ta1Bytes},
+			Actions: []*driver.TypedAction{
+				{Type: request.ActionType_ACTION_TYPE_TRANSFER, Raw: ta1Bytes},
+			},
 		}
 		ia, ta, err := ad.DeserializeActions(tr)
 		require.NoError(t, err)
@@ -73,7 +78,9 @@ func TestActionDeserializer_DeserializeActions(t *testing.T) {
 
 	t.Run("IssueDeserializeError", func(t *testing.T) {
 		tr := &driver.TokenRequest{
-			Issues: [][]byte{[]byte("invalid")},
+			Actions: []*driver.TypedAction{
+				{Type: request.ActionType_ACTION_TYPE_ISSUE, Raw: []byte("invalid")},
+			},
 		}
 		_, _, err := ad.DeserializeActions(tr)
 		require.Error(t, err)
@@ -81,7 +88,9 @@ func TestActionDeserializer_DeserializeActions(t *testing.T) {
 
 	t.Run("TransferDeserializeError", func(t *testing.T) {
 		tr := &driver.TokenRequest{
-			Transfers: [][]byte{[]byte("invalid")},
+			Actions: []*driver.TypedAction{
+				{Type: request.ActionType_ACTION_TYPE_TRANSFER, Raw: []byte("invalid")},
+			},
 		}
 		_, _, err := ad.DeserializeActions(tr)
 		require.Error(t, err)
@@ -1148,8 +1157,12 @@ func newValidatorEnv(benchmarkCase *benchmark2.Case, isIssue bool) (*validatorEn
 		if err != nil {
 			return nil, err
 		}
-		tr.Issues = [][]byte{rawIA}
-		tr.Signatures = [][]byte{[]byte("signature")}
+		tr.Actions = []*driver.TypedAction{
+			{Type: request.ActionType_ACTION_TYPE_ISSUE, Raw: rawIA},
+		}
+		tr.Signatures = []*driver.RequestSignature{
+			{Action: &driver.ActionSignature{Signature: []byte("signature")}},
+		}
 	} else {
 		ta := &actions.TransferAction{
 			Issuer: issuer,
@@ -1175,9 +1188,13 @@ func newValidatorEnv(benchmarkCase *benchmark2.Case, isIssue bool) (*validatorEn
 		if err != nil {
 			return nil, err
 		}
-		tr.Transfers = [][]byte{rawTA}
+		tr.Actions = []*driver.TypedAction{
+			{Type: request.ActionType_ACTION_TYPE_TRANSFER, Raw: rawTA},
+		}
 		for range benchmarkCase.NumInputs {
-			tr.Signatures = append(tr.Signatures, []byte("signature"))
+			tr.Signatures = append(tr.Signatures, &driver.RequestSignature{
+				Action: &driver.ActionSignature{Signature: []byte("signature")},
+			})
 		}
 	}
 

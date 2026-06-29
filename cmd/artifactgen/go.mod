@@ -69,7 +69,7 @@ require (
 	github.com/hyperledger/aries-bbs-go v0.0.0-20240528091251-e950615f2e45 // indirect
 	github.com/hyperledger/fabric-amcl v0.0.0-20230602173724-9e02669dceb2 // indirect
 	github.com/hyperledger/fabric-chaincode-go/v2 v2.3.0 // indirect
-	github.com/hyperledger/fabric-lib-go v1.1.3 // indirect
+	github.com/hyperledger/fabric-lib-go v1.1.4 // indirect
 	github.com/hyperledger/fabric-protos-go-apiv2 v0.3.7 // indirect
 	github.com/hyperledger/fabric-x-common v0.2.4 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
@@ -115,7 +115,7 @@ require (
 	github.com/libp2p/go-yamux/v5 v5.0.1 // indirect
 	github.com/marten-seemann/tcp v0.0.0-20210406111302-dfbc87cc63fd // indirect
 	github.com/mattn/go-isatty v0.0.22 // indirect
-	github.com/miekg/pkcs11 v1.1.1 // indirect
+	github.com/miekg/pkcs11 v1.1.2 // indirect
 	github.com/mikioh/tcpinfo v0.0.0-20190314235526-30a79bb1804b // indirect
 	github.com/mikioh/tcpopt v0.0.0-20190314235656-172688c1accc // indirect
 	github.com/minio/sha256-simd v1.0.1 // indirect
