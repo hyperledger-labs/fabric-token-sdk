@@ -10,8 +10,8 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/LFDT-Panurus/panurus/token/token"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 // Identity represents a generic identity
@@ -176,7 +176,7 @@ type CertifierWallet interface {
 }
 
 // IdentityConfiguration contains configuration-related information of an identity.
-// It is used to describe how an identity should be loaded and managed by the SDK.
+// It is used to describe how an identity should be loaded and managed by Panurus.
 type IdentityConfiguration struct {
 	// ID is the unique identifier for this identity configuration.
 	ID string

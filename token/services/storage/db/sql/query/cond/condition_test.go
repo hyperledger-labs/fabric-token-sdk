@@ -12,10 +12,10 @@ import (
 
 	. "github.com/onsi/gomega"
 
+	localPostgres "github.com/LFDT-Panurus/panurus/token/services/storage/db/sql/postgres"
+	common3 "github.com/LFDT-Panurus/panurus/token/services/storage/db/sql/query/common"
+	cond2 "github.com/LFDT-Panurus/panurus/token/services/storage/db/sql/query/cond"
 	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
-	localPostgres "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/postgres"
-	common3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query/common"
-	cond2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query/cond"
 )
 
 type testCase struct {

@@ -15,24 +15,24 @@ import (
 	"strings"
 	"time"
 
+	"github.com/LFDT-Panurus/panurus/integration/nwo/runner/nwo"
+	"github.com/LFDT-Panurus/panurus/integration/nwo/token"
+	"github.com/LFDT-Panurus/panurus/integration/nwo/txgen/model"
+	token3 "github.com/LFDT-Panurus/panurus/integration/token"
+	common2 "github.com/LFDT-Panurus/panurus/integration/token/common"
+	dlog "github.com/LFDT-Panurus/panurus/integration/token/fungible/dlogstress/support"
+	"github.com/LFDT-Panurus/panurus/integration/token/fungible/views"
+	token4 "github.com/LFDT-Panurus/panurus/token"
+	dlognoghv1 "github.com/LFDT-Panurus/panurus/token/core/zkatdlog/nogh/v1/setup"
+	"github.com/LFDT-Panurus/panurus/token/core/zkatdlog/nogh/v1/validator"
+	"github.com/LFDT-Panurus/panurus/token/services/storage/ttxdb"
+	"github.com/LFDT-Panurus/panurus/token/services/ttx"
+	token2 "github.com/LFDT-Panurus/panurus/token/token"
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/services/logging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/assert"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/runner/nwo"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/txgen/model"
-	token3 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
-	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
-	dlog "github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/dlogstress/support"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
-	token4 "github.com/hyperledger-labs/fabric-token-sdk/token"
-	dlognoghv1 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/setup"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/validator"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/ttxdb"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/onsi/gomega"
 )
 
@@ -1158,8 +1158,8 @@ func TestStressSuite(network *integration.Infrastructure, auditorId string, sele
 		UseExistingFunds: false,
 	}}))
 
-	CheckLocalMetrics(network, "alice", "github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views/BalanceView")
-	CheckPrometheusMetrics(network, "github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views/BalanceView")
+	CheckLocalMetrics(network, "alice", "github.com/LFDT-Panurus/panurus/integration/token/fungible/views/BalanceView")
+	CheckPrometheusMetrics(network, "github.com/LFDT-Panurus/panurus/integration/token/fungible/views/BalanceView")
 }
 
 func TestStress(network *integration.Infrastructure, auditorId string, selector *token3.ReplicaSelector) {

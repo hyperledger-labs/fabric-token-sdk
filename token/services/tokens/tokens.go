@@ -10,15 +10,15 @@ import (
 	"context"
 	"runtime/debug"
 
+	"github.com/LFDT-Panurus/panurus/token"
+	"github.com/LFDT-Panurus/panurus/token/driver"
+	"github.com/LFDT-Panurus/panurus/token/services/identity"
+	"github.com/LFDT-Panurus/panurus/token/services/logging"
+	"github.com/LFDT-Panurus/panurus/token/services/network"
+	dbdriver "github.com/LFDT-Panurus/panurus/token/services/storage/db/driver"
+	"github.com/LFDT-Panurus/panurus/token/services/utils"
+	token2 "github.com/LFDT-Panurus/panurus/token/token"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
-	dbdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -36,7 +36,7 @@ type GetTMSProviderFunc = func() *token.ManagementServiceProvider
 // UnspendableTokensIterator is an alias for the driver's UnsupportedTokensIterator.
 type UnspendableTokensIterator = driver.UnsupportedTokensIterator
 
-// Transaction models a token transaction within the SDK, providing access to its identifiers and request content.
+// Transaction models a token transaction within Panurus, providing access to its identifiers and request content.
 type Transaction interface {
 	// ID returns the transaction identifier.
 	ID() string

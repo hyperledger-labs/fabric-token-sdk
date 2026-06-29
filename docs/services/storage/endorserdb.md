@@ -1,6 +1,6 @@
 # Endorser Database (endorserdb)
 
-The `endorserdb` package provides storage services for validation records in the Fabric Token SDK. It manages the persistence and querying of token transaction validation records that are created during the endorsement process.
+The `endorserdb` package provides storage services for validation records in Panurus. It manages the persistence and querying of token transaction validation records that are created during the endorsement process.
 
 ## Overview
 
@@ -13,7 +13,7 @@ The endorser database stores validation records that track token requests valida
 
 ## Architecture
 
-The endorserdb follows the same architectural pattern as other storage services in the Token SDK:
+The endorserdb follows the same architectural pattern as other storage services in Panurus:
 
 ```
 endorserdb (Service Layer)
@@ -52,7 +52,7 @@ db/sql/{postgres,sqlite} (Database-Specific)
 ### Getting a Store Service
 
 ```go
-import "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/endorserdb"
+import "github.com/LFDT-Panurus/panurus/token/services/storage/endorserdb"
 
 // Get store service manager
 manager := endorserdb.NewStoreServiceManager(configService, drivers)
@@ -184,10 +184,10 @@ If you're migrating code that previously used ttxdb for validation records:
 1. **Replace imports**:
    ```go
    // Old
-   import "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/ttxdb"
+   import "github.com/LFDT-Panurus/panurus/token/services/storage/ttxdb"
    
    // New
-   import "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/endorserdb"
+   import "github.com/LFDT-Panurus/panurus/token/services/storage/endorserdb"
    ```
 
 2. **Update method calls**:

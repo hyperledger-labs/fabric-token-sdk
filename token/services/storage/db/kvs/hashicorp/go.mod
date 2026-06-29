@@ -1,18 +1,18 @@
-module github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs/hashicorp
+module github.com/LFDT-Panurus/panurus/token/services/identity/storage/kvs/hashicorp
 
 go 1.26.3
 
 replace (
+	github.com/LFDT-Panurus/panurus => ./../../../../../../
 	github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/state/cc/query => github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/state/cc/query v0.0.0-20260618115140-04366ada95c8
 	github.com/hyperledger-labs/fabric-smart-client/platform/view/services/comm/host/libp2p => github.com/hyperledger-labs/fabric-smart-client/platform/view/services/comm/host/libp2p v0.0.0-20260618115140-04366ada95c8
-	github.com/hyperledger-labs/fabric-token-sdk => ./../../../../../../
 )
 
 require (
+	github.com/LFDT-Panurus/panurus v0.4.1-0.20250528165839-032fb9265504
 	github.com/hashicorp/vault/api v1.23.0
 	github.com/hyperledger-labs/fabric-smart-client v0.13.0
 	github.com/hyperledger-labs/fabric-smart-client/integration v0.0.0-20260618115140-04366ada95c8
-	github.com/hyperledger-labs/fabric-token-sdk v0.4.1-0.20250528165839-032fb9265504
 	github.com/moby/moby/api v1.55.0
 	github.com/moby/moby/client v0.5.0
 	github.com/stretchr/testify v1.11.1

@@ -18,7 +18,7 @@ use the following:
 
 A Token Request describes a set of token operations in a backend agnostic language.
 A Token Request can be assembled directly using the Token API or by using service packages like 
-[`ttx`](https://github.com/hyperledger-labs/fabric-token-sdk/tree/main/token/services/ttx).
+[`ttx`](https://github.com/LFDT-Panurus/panurus/tree/main/token/services/ttx).
 
 Once a Token Request is assembled, it can be appended to the Token Transactions DB as follows:
 

@@ -9,12 +9,12 @@ package gen
 import (
 	"os"
 
+	"github.com/LFDT-Panurus/panurus/integration/nwo/token"
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	"github.com/spf13/cobra"
 	"go.yaml.in/yaml/v3"
 )

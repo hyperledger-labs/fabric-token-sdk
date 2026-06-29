@@ -81,7 +81,7 @@ graph TD
 *   **Deserializer**: Responsible for converting serialized identity data into cryptographic verifiers and extract recipient identities. It also provides matchers for audit information.
 *   **Configuration**: Provides access to TMS-specific configuration settings (e.g., paths, identifiers), allowing the services to adapt their behavior based on the environment.
 
-Currently, the Fabric Token SDK offers two reference driver implementations: `FabToken` and `ZKAT-DLog` (Zero-Knowledge Authenticated Token based on Discrete Logarithm).
+Currently, Panurus offers two reference driver implementations: `FabToken` and `ZKAT-DLog` (Zero-Knowledge Authenticated Token based on Discrete Logarithm).
 
 ## Serialization
 
@@ -243,13 +243,13 @@ The anchor parameter must satisfy these constraints:
 
 ### Implementation Notes
 
-The SDK uses an optimized fast marshaller (`fastMarshalTokenRequestForSigning`) that avoids reflection overhead while maintaining full ASN.1 compatibility.
+Panurus uses an optimized fast marshaller (`fastMarshalTokenRequestForSigning`) that avoids reflection overhead while maintaining full ASN.1 compatibility.
 
 The version field in `TokenRequest` is included in the signature message, binding the signature to a specific protocol version and ensuring that signatures cannot be replayed across different protocol versions.
 
 ## Drivers
 
-The Token SDK comes equipped with two reference drivers:
+Panurus comes equipped with two reference drivers:
 
 - [**FabToken**](./drivers/fabtoken.md): A straightforward implementation prioritizing simplicity. It stores token transaction details (type, value, owner) in cleartext on the ledger, using X.509 certificates for identities.
 - [**DLOG w/o Graph Hiding (NOGH)**](./drivers/dlogwogh.md): A privacy-preserving driver using Zero-Knowledge Proofs (ZKP) to hide token types and values via Pedersen commitments. It leverages Idemix for owner anonymity while revealing the spending graph.

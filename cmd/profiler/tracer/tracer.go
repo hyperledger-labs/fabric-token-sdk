@@ -170,8 +170,8 @@ func captureCallStack() {
 	for {
 		frame, more := frames.Next()
 
-		// Only capture fabric-token-sdk functions
-		if strings.Contains(frame.Function, "github.com/hyperledger-labs/fabric-token-sdk/") {
+		// Only capture panurus functions
+		if strings.Contains(frame.Function, "github.com/LFDT-Panurus/panurus/") {
 			mu.Lock()
 			capturedStacks[frame.Function] = true
 			mu.Unlock()
@@ -192,11 +192,11 @@ func GetDiscoveredPackages() []string {
 
 	for funcName := range capturedStacks {
 		// Extract package path from function name
-		// Format: github.com/hyperledger-labs/fabric-token-sdk/package/path.(*Type).Method
-		// or: github.com/hyperledger-labs/fabric-token-sdk/package/path.Function
+		// Format: github.com/LFDT-Panurus/panurus/package/path.(*Type).Method
+		// or: github.com/LFDT-Panurus/panurus/package/path.Function
 
-		// Remove github.com/hyperledger-labs/fabric-token-sdk/ prefix
-		path := strings.TrimPrefix(funcName, "github.com/hyperledger-labs/fabric-token-sdk/")
+		// Remove github.com/LFDT-Panurus/panurus/ prefix
+		path := strings.TrimPrefix(funcName, "github.com/LFDT-Panurus/panurus/")
 
 		// Find the last slash before the function/type name
 		lastSlash := strings.LastIndex(path, "/")

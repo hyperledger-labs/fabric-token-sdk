@@ -13,9 +13,9 @@ import (
 
 func init() {
 	tracing.RegisterReplacer(
-		"github.com_hyperledger-labs_fabric-token-sdk_token", "fts",
+		"github.com_hyperledger-labs_panurus_token", "fts",
 	)
 	prometheus.RegisterReplacer(
-		"github.com_hyperledger-labs_fabric-token-sdk_token", "fts",
+		"github.com_hyperledger-labs_panurus_token", "fts",
 	)
 }

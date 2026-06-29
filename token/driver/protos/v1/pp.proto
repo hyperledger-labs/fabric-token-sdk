@@ -8,7 +8,7 @@ syntax = "proto3";
 
 package fabric_token_sdk.token.driver.v1;
 
-option go_package = "github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/v1/pp";
+option go_package = "github.com/LFDT-Panurus/panurus/token/driver/protos-go/v1/pp";
 
 // PublicParameters is a generic container for driver-specific public parameters.
 // Different token drivers (fabtoken, zkatdlog, etc.) serialize their specific

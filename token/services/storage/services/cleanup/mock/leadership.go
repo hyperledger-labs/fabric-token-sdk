@@ -4,7 +4,7 @@ package mock
 import (
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/services/cleanup"
+	"github.com/LFDT-Panurus/panurus/token/services/storage/services/cleanup"
 )
 
 type Leadership struct {

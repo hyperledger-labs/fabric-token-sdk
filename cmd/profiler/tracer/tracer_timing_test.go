@@ -676,16 +676,16 @@ func TestGetDiscoveredPackagesWithVariousFormats(t *testing.T) {
 		fn   func()
 	}{
 		{
-			name: "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog.(*Validator).VerifyTransfer",
+			name: "github.com/LFDT-Panurus/panurus/token/core/zkatdlog.(*Validator).VerifyTransfer",
 			fn: func() {
-				defer Enter("github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog.(*Validator).VerifyTransfer")()
+				defer Enter("github.com/LFDT-Panurus/panurus/token/core/zkatdlog.(*Validator).VerifyTransfer")()
 				time.Sleep(1 * time.Millisecond)
 			},
 		},
 		{
-			name: "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx.NewTransaction",
+			name: "github.com/LFDT-Panurus/panurus/token/services/ttx.NewTransaction",
 			fn: func() {
-				defer Enter("github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx.NewTransaction")()
+				defer Enter("github.com/LFDT-Panurus/panurus/token/services/ttx.NewTransaction")()
 				time.Sleep(1 * time.Millisecond)
 			},
 		},

@@ -2,7 +2,7 @@
 !theme plain
 skinparam componentStyle rectangle
 
-title Fabric Token SDK - Unified Storage Database Schema
+title Panurus - Unified Storage Database Schema
 
 package "Transaction & Audit Store (TTXDB / AuditDB)" {
     entity "Requests" as requests {

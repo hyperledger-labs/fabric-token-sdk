@@ -10,10 +10,10 @@ import (
 	"testing"
 	"time"
 
+	driver2 "github.com/LFDT-Panurus/panurus/token/driver"
+	driver3 "github.com/LFDT-Panurus/panurus/token/services/storage/db/driver"
+	"github.com/LFDT-Panurus/panurus/token/services/utils"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
-	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

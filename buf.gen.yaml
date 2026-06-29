@@ -3,4 +3,4 @@ plugins:
   - local: protoc-gen-go
     out: .
     opt:
-      - module=github.com/hyperledger-labs/fabric-token-sdk
+      - module=github.com/LFDT-Panurus/panurus

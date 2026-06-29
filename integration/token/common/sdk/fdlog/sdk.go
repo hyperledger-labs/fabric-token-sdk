@@ -9,13 +9,13 @@ package fdlog
 import (
 	"errors"
 
+	dlog "github.com/LFDT-Panurus/panurus/token/core/zkatdlog/nogh/v1/driver"
+	"github.com/LFDT-Panurus/panurus/token/sdk"
+	tokensdk "github.com/LFDT-Panurus/panurus/token/sdk/dig"
+	"github.com/LFDT-Panurus/panurus/token/services/network/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/support/libp2p"
 	dig2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/sdk/dig"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services"
-	dlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/v1/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
-	tokensdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/dig"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	"go.uber.org/dig"
 )
 

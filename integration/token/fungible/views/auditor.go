@@ -11,14 +11,14 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/LFDT-Panurus/panurus/token"
+	"github.com/LFDT-Panurus/panurus/token/services/ttx"
+	"github.com/LFDT-Panurus/panurus/token/services/utils"
+	token2 "github.com/LFDT-Panurus/panurus/token/token"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/utils"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 type AuditView struct {
@@ -44,10 +44,10 @@ func (a *AuditView) Call(context view.Context) (any, error) {
 
 	// Check ValidationRecords
 	logger.Debugf("AuditView: check metadata [%s]", tx.ID())
-	opRaw := tx.ApplicationMetadata("github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/issue")
+	opRaw := tx.ApplicationMetadata("github.com/LFDT-Panurus/panurus/integration/token/fungible/issue")
 	if len(opRaw) != 0 {
 		assert.Equal([]byte("issue"), opRaw, "expected 'issue' application metadata")
-		metaRaw := tx.ApplicationMetadata("github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/meta")
+		metaRaw := tx.ApplicationMetadata("github.com/LFDT-Panurus/panurus/integration/token/fungible/meta")
 		assert.Equal([]byte("meta"), metaRaw, "expected 'meta' application metadata")
 	}
 	logger.Debugf("AuditView: check metadata done [%s]", tx.ID())

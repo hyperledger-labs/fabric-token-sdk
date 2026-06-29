@@ -14,9 +14,9 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/LFDT-Panurus/panurus/token/services/identity/storage/kvs/hashicorp"
 	vault "github.com/hashicorp/vault/api"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/kvs"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/storage/kvs/hashicorp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

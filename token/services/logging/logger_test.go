@@ -9,7 +9,7 @@ package logging_test
 import (
 	"testing"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+	"github.com/LFDT-Panurus/panurus/token/services/logging"
 	"github.com/stretchr/testify/assert"
 )
 

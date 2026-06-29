@@ -7,10 +7,10 @@ SPDX-License-Identifier: Apache-2.0
 package sqlite
 
 import (
+	driver2 "github.com/LFDT-Panurus/panurus/token/services/storage/db/driver"
+	"github.com/LFDT-Panurus/panurus/token/services/storage/db/sql/common"
+	"github.com/LFDT-Panurus/panurus/token/services/storage/db/sql/query/pagination"
 	common2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
-	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query/pagination"
 )
 
 type EndorserStore = common.EndorserStore

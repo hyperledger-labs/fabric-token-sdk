@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 
 package ttx
 
-import "github.com/hyperledger-labs/fabric-token-sdk/token"
+import "github.com/LFDT-Panurus/panurus/token"
 
 // EndorsementsOpts is used to configure the CollectEndorsementsView
 type EndorsementsOpts struct {

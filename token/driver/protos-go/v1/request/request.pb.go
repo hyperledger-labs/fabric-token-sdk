@@ -16,7 +16,7 @@ import (
 	sync "sync"
 	unsafe "unsafe"
 
-	v1 "github.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/v1"
+	v1 "github.com/LFDT-Panurus/panurus/token/driver/protos-go/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
@@ -1410,7 +1410,7 @@ const file_request_proto_rawDesc = "" +
 	"ActionType\x12\x1b\n" +
 	"\x17ACTION_TYPE_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11ACTION_TYPE_ISSUE\x10\x01\x12\x18\n" +
-	"\x14ACTION_TYPE_TRANSFER\x10\x02BPZNgithub.com/hyperledger-labs/fabric-token-sdk/token/driver/protos-go/v1/requestb\x06proto3"
+	"\x14ACTION_TYPE_TRANSFER\x10\x02BPZNgithub.com/LFDT-Panurus/panurus/token/driver/protos-go/v1/requestb\x06proto3"
 
 var (
 	file_request_proto_rawDescOnce sync.Once

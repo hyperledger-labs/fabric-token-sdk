@@ -8,7 +8,7 @@ syntax = "proto3";
 
 package fabric_token_sdk.token.zkatdlog.v1;
 
-option go_package = "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/protos-go/v1/math";
+option go_package = "github.com/LFDT-Panurus/panurus/token/core/zkatdlog/nogh/protos-go/v1/math";
 
 // G1 represents a point on the G1 group of a pairing-friendly elliptic curve.
 // This is used for commitments and public keys in zero-knowledge proofs.

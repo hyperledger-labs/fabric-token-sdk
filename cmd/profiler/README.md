@@ -1,6 +1,6 @@
 # Test & Benchmark Profiler
 
-Automatic hierarchical call tracing and performance profiling for Go tests and benchmarks in the Token SDK.
+Automatic hierarchical call tracing and performance profiling for Go tests and benchmarks in Panurus.
 
 ## Quick Start
 
@@ -92,7 +92,7 @@ The `profile.sh` script automatically instruments your code. However, you can al
 ### In Benchmarks
 
 ```go
-import "github.com/hyperledger-labs/fabric-token-sdk/tools/profiler/tracer"
+import "github.com/LFDT-Panurus/panurus/tools/profiler/tracer"
 
 func BenchmarkValidatorTransfer(b *testing.B) {
     // Enable tracer

@@ -16,8 +16,8 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/common"
 	fscSqlite "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/sqlite"
 
-	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
-	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/common"
+	driver3 "github.com/LFDT-Panurus/panurus/token/services/storage/db/driver"
+	common2 "github.com/LFDT-Panurus/panurus/token/services/storage/db/sql/common"
 )
 
 type configProvider interface {

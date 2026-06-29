@@ -352,7 +352,7 @@ const file_idemix_config_proto_rawDesc = "" +
 	"!credential_revocation_information\x18\x06 \x01(\fR\x1fcredentialRevocationInformation\x12+\n" +
 	"\x11revocation_handle\x18\a \x01(\tR\x10revocationHandle\x12\x10\n" +
 	"\x03ski\x18\b \x01(\fR\x03ski\x12\x16\n" +
-	"\x06schema\x18\t \x01(\tR\x06schemaBeZcgithub.com/hyperledger-labs/fabric-token-sdk/token/services/identity/idemix/crypto/protos-go/configb\x06proto3"
+	"\x06schema\x18\t \x01(\tR\x06schemaBeZcgithub.com/LFDT-Panurus/panurus/token/services/identity/idemix/crypto/protos-go/configb\x06proto3"
 
 var (
 	file_idemix_config_proto_rawDescOnce sync.Once

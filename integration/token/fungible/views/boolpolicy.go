@@ -10,14 +10,14 @@ import (
 	"encoding/json"
 	"fmt"
 
+	token2 "github.com/LFDT-Panurus/panurus/token"
+	"github.com/LFDT-Panurus/panurus/token/services/ttx"
+	bptx "github.com/LFDT-Panurus/panurus/token/services/ttx/boolpolicy"
+	"github.com/LFDT-Panurus/panurus/token/token"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/id"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
-	bptx "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx/boolpolicy"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 // PolicyLock contains the input parameters for locking tokens under a policy identity.

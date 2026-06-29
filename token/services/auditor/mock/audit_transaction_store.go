@@ -5,8 +5,8 @@ import (
 	"context"
 	"sync"
 
+	"github.com/LFDT-Panurus/panurus/token/services/storage/db/driver"
 	drivera "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
 )
 
 type AuditTransactionStore struct {

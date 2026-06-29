@@ -9,17 +9,17 @@ package endorsement
 import (
 	"context"
 
+	token2 "github.com/LFDT-Panurus/panurus/token"
+	"github.com/LFDT-Panurus/panurus/token/services/network/common"
+	"github.com/LFDT-Panurus/panurus/token/services/network/common/rws/translator"
+	"github.com/LFDT-Panurus/panurus/token/services/network/fabric/endorsement"
+	"github.com/LFDT-Panurus/panurus/token/services/network/fabric/endorsement/fsc"
+	"github.com/LFDT-Panurus/panurus/token/services/network/fabricx/pp"
+	"github.com/LFDT-Panurus/panurus/token/services/storage/endorserdb"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/lazy"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/endorsement"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/endorsement/fsc"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx/pp"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/endorserdb"
 )
 
 // IdentityProvider models an identity provider.

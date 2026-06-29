@@ -25,7 +25,7 @@
 
 ## 1. Introduction
 
-The **Zero-Knowledge Authenticated Token based on Discrete Logarithm (ZKAT-DLOG)** driver, specifically the **No Graph Hiding (NOGH)** variant, is a privacy-preserving token implementation for the Fabric Token SDK. It leverages Zero-Knowledge Proofs (ZKP) to hide token types and values while revealing the spending graph.
+The **Zero-Knowledge Authenticated Token based on Discrete Logarithm (ZKAT-DLOG)** driver, specifically the **No Graph Hiding (NOGH)** variant, is a privacy-preserving token implementation for Panurus. It leverages Zero-Knowledge Proofs (ZKP) to hide token types and values while revealing the spending graph.
 
 **Implementation Path**: [`token/core/zkatdlog/nogh/v1`](../../token/core/zkatdlog/nogh/v1)
 
@@ -1682,9 +1682,9 @@ type Metrics struct {
 ### 14.4 Related Documentation
 
 - [**Driver API**](../driverapi.md) - Token driver interface specification
-- [**Token SDK Overview**](../tokensdk.md) - High-level SDK architecture and concepts
+- [**Panurus Overview**](../tokensdk.md) - High-level SDK architecture and concepts
 - [**Token API**](../tokenapi.md) - Public API for token operations
-- [**Token SDK Usage**](../token_sdk_usage.md) - Practical usage examples
+- [**Panurus Usage**](../token_sdk_usage.md) - Practical usage examples
 - [**Upgradability Guide**](../upgradability.md) - Token and driver upgrade procedures
 - [**Public Parameters Lifecycle**](../public_parameters.md) - PP generation and management
 - [**Services Overview**](../services.md) - SDK service architecture
@@ -1773,4 +1773,4 @@ type Metrics struct {
 
 ---
 
-*This specification document is maintained by the Fabric Token SDK team. For questions or contributions, please refer to the [CONTRIBUTING.md](../../CONTRIBUTING.md) guidelines.*
+*This specification document is maintained by Panurus team. For questions or contributions, please refer to the [CONTRIBUTING.md](../../CONTRIBUTING.md) guidelines.*

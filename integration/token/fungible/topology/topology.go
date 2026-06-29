@@ -7,6 +7,16 @@ SPDX-License-Identifier: Apache-2.0
 package topology
 
 import (
+	"github.com/LFDT-Panurus/panurus/integration/nwo/token"
+	fabric2 "github.com/LFDT-Panurus/panurus/integration/nwo/token/fabric"
+	"github.com/LFDT-Panurus/panurus/integration/nwo/token/generators/crypto/zkatdlognoghv1"
+	token2 "github.com/LFDT-Panurus/panurus/integration/token"
+	"github.com/LFDT-Panurus/panurus/integration/token/common"
+	auditor2 "github.com/LFDT-Panurus/panurus/integration/token/fungible/sdk/auditor"
+	"github.com/LFDT-Panurus/panurus/integration/token/fungible/sdk/endorser"
+	issuer2 "github.com/LFDT-Panurus/panurus/integration/token/fungible/sdk/issuer"
+	"github.com/LFDT-Panurus/panurus/integration/token/fungible/sdk/party"
+	"github.com/LFDT-Panurus/panurus/integration/token/fungible/views/fabricx/tmsdeploy"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabricx"
@@ -15,16 +25,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/support/libp2p"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/monitoring"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
-	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/crypto/zkatdlognoghv1"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
-	auditor2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/sdk/auditor"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/sdk/endorser"
-	issuer2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/sdk/issuer"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/sdk/party"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views/fabricx/tmsdeploy"
 )
 
 func Topology(opts common.Opts) []api.Topology {
@@ -212,7 +212,7 @@ func Topology(opts common.Opts) []api.Topology {
 
 		fscTopology.ListNodes("lib-p2p-bootstrap-node")[0].AddSDK(&libp2p.SDK{})
 
-		// add the rest of the SDKs
+		// add the rest of Panuruss
 		for i := 1; i < len(opts.SDKs); i++ {
 			fscTopology.AddSDK(opts.SDKs[i])
 		}

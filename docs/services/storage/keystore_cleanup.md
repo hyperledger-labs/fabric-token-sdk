@@ -166,8 +166,8 @@ The configuration is loaded from the TMS configuration using the key `services.s
 
 ```go
 import (
-    "github.com/hyperledger-labs/fabric-token-sdk/token"
-    "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/services/cleanup"
+    "github.com/LFDT-Panurus/panurus/token"
+    "github.com/LFDT-Panurus/panurus/token/services/storage/services/cleanup"
 )
 
 // Create configuration
@@ -234,7 +234,7 @@ The cleanup service is typically integrated automatically through the service ma
 
 ```go
 import (
-    "github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/services/cleanup"
+    "github.com/LFDT-Panurus/panurus/token/services/storage/services/cleanup"
 )
 
 // Create service manager (manages cleanup instances per TMS)
