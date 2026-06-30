@@ -325,10 +325,7 @@ func (c *chainedIterator) Next() (*token2.UnspentToken, error) {
 	for c.currentIndex < len(c.iterators) {
 		token, err := c.iterators[c.currentIndex].Next()
 		if err != nil {
-			// Move to next iterator on error
-			c.currentIndex++
-
-			continue
+			return nil, err
 		}
 		if token != nil {
 			return token, nil
