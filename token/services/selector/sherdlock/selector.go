@@ -157,7 +157,7 @@ func (m *StubbornSelector) Select(ctx context.Context, ownerFilter token.OwnerFi
 			// to get here), so surface as SelectorSufficientButLockedFunds so callers can retry.
 			if errors.Is(timeoutCtx.Err(), context.DeadlineExceeded) && ctx.Err() == nil {
 				m.metrics.SelectionOutcome.With(outcomeLabel, "locked_funds").Add(1)
-			
+
 				return nil, nil, errors.Wrapf(
 					token.SelectorSufficientButLockedFunds,
 					"token selection aborted: exceeded timeout (%v) after examining %d tokens and %d lock attempts",
@@ -166,7 +166,7 @@ func (m *StubbornSelector) Select(ctx context.Context, ownerFilter token.OwnerFi
 			}
 
 			m.metrics.SelectionOutcome.With(outcomeLabel, "error").Add(1)
-			
+
 			return nil, nil, timeoutCtx.Err()
 		}
 		m.logger.DebugfContext(ctx, "Now it is our turn to retry...")
