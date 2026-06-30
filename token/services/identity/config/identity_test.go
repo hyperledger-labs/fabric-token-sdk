@@ -8,6 +8,7 @@ package config_test
 
 import (
 	"fmt"
+	"path/filepath"
 	"testing"
 
 	"github.com/LFDT-Panurus/panurus/token/driver"
@@ -45,7 +46,8 @@ func TestTranslatePath(t *testing.T) {
 	tms := config2.NewConfiguration(cp, "n1c1ns1", driver.TMSID{})
 	identityConfig, err := config.NewIdentityConfig(tms)
 	require.NoError(t, err, "failed creating identity config")
-	assert.Contains(t, identityConfig.TranslatePath("./testdata/token0"), "panurus", "translate path should contain panurus")
+	translated := identityConfig.TranslatePath("./testdata/token0")
+	assert.True(t, filepath.IsAbs(translated), "translate path should return an absolute path, got: %s", translated)
 }
 
 func TestIdentitiesForRole(t *testing.T) {
