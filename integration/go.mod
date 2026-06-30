@@ -8,14 +8,16 @@ replace (
 	github.com/hyperledger-labs/fabric-smart-client/platform/view/services/comm/host/libp2p => github.com/hyperledger-labs/fabric-smart-client/platform/view/services/comm/host/libp2p v0.0.0-20260618115140-04366ada95c8
 )
 
+replace github.com/hyperledger/fabric-x-common => github.com/adecaro/fabric-x-common v0.0.0-20260630082112-2edc33881189
+
 require (
-	github.com/IBM/idemix v0.0.2
-	github.com/IBM/mathlib v0.1.0
+	github.com/IBM/idemix v0.1.0
+	github.com/IBM/mathlib v0.2.0
 	github.com/LFDT-Panurus/panurus v0.0.0
 	github.com/gin-gonic/gin v1.12.0
-	github.com/hyperledger-labs/fabric-smart-client v0.13.0
-	github.com/hyperledger-labs/fabric-smart-client/integration v0.0.0-20260618115140-04366ada95c8
-	github.com/hyperledger/fabric-lib-go v1.1.4
+	github.com/hyperledger-labs/fabric-smart-client v0.13.1-0.20260630083752-d97d0c5b6232
+	github.com/hyperledger-labs/fabric-smart-client/integration v0.13.1-0.20260630083752-d97d0c5b6232
+	github.com/hyperledger/fabric-lib-go v1.1.5-0.20260607181445-fc4b05c5d38f
 	github.com/onsi/ginkgo/v2 v2.32.0
 	github.com/onsi/gomega v1.42.1
 	github.com/prometheus/common v0.68.0
@@ -32,9 +34,6 @@ require (
 	filippo.io/bigmod v0.1.1-0.20260103110540-f8a47775ebe5 // indirect
 	filippo.io/keygen v0.0.0-20260114151900-8e2790ea4c5b // indirect
 	github.com/DATA-DOG/go-sqlmock v1.5.2 // indirect
-	github.com/IBM/idemix/bccsp/schemes/aries v0.0.0-20260501050258-bb91d87b1252 // indirect
-	github.com/IBM/idemix/bccsp/schemes/weak-bb v0.0.0-20260501050258-bb91d87b1252 // indirect
-	github.com/IBM/idemix/bccsp/types v0.0.0-20260501050258-bb91d87b1252 // indirect
 	github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible // indirect
 	github.com/Masterminds/semver/v3 v3.5.0 // indirect
 	github.com/Masterminds/squirrel v1.5.4 // indirect
@@ -59,6 +58,7 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/davidlazar/go-crypto v0.0.0-20200604182044-b73af7476f6c // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.1 // indirect
+	github.com/dgraph-io/badger/v4 v4.9.2 // indirect
 	github.com/dgraph-io/ristretto/v2 v2.4.0 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
 	github.com/docker/go-connections v0.6.0 // indirect
@@ -84,7 +84,7 @@ require (
 	github.com/goccy/go-yaml v1.19.2 // indirect
 	github.com/gogo/googleapis v1.4.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/golang/protobuf v1.5.4 // indirect
+	github.com/google/flatbuffers v25.2.10+incompatible // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/gopacket v1.1.19 // indirect
 	github.com/google/pprof v0.0.0-20260604005048-7023385849c0 // indirect
@@ -96,11 +96,10 @@ require (
 	github.com/huin/goupnp v1.3.0 // indirect
 	github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/state/cc/query v0.0.0-00010101000000-000000000000 // indirect
 	github.com/hyperledger-labs/fabric-smart-client/platform/view/services/comm/host/libp2p v0.0.0-00010101000000-000000000000 // indirect
-	github.com/hyperledger/aries-bbs-go v0.0.0-20240528091251-e950615f2e45 // indirect
 	github.com/hyperledger/fabric-amcl v0.0.0-20230602173724-9e02669dceb2 // indirect
 	github.com/hyperledger/fabric-chaincode-go/v2 v2.3.1-0.20260319210430-56968fdc7833 // indirect
 	github.com/hyperledger/fabric-protos-go-apiv2 v0.3.7 // indirect
-	github.com/hyperledger/fabric-x-common v0.2.4 // indirect
+	github.com/hyperledger/fabric-x-common v0.2.6 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/ipfs/boxo v0.37.0 // indirect
 	github.com/ipfs/go-cid v0.6.1 // indirect
@@ -118,6 +117,7 @@ require (
 	github.com/jonboulle/clockwork v0.5.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kilic/bls12-381 v0.1.0 // indirect
+	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/knadh/koanf/maps v0.1.2 // indirect
 	github.com/knadh/koanf/parsers/yaml v1.1.0 // indirect
@@ -151,7 +151,6 @@ require (
 	github.com/mikioh/tcpopt v0.0.0-20190314235656-172688c1accc // indirect
 	github.com/minio/sha256-simd v1.0.1 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
-	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/moby/moby/api v1.54.2 // indirect
