@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/simple"
+	"github.com/LFDT-Panurus/panurus/token/services/selector/simple"
 )
 
 // tokenBucket implements a token bucket rate limiter for a single identity

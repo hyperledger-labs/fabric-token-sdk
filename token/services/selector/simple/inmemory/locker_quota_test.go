@@ -10,8 +10,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/simple"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/LFDT-Panurus/panurus/token/services/selector/simple"
+	token2 "github.com/LFDT-Panurus/panurus/token/token"
 	"github.com/stretchr/testify/require"
 )
 
