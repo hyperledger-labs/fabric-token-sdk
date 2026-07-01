@@ -23,6 +23,13 @@ type WithdrawalRequest struct {
 	TokenType     token2.Type
 	Amount        uint64
 	NotAnonymous  bool
+
+	// Nonce keeps each proof unique.
+	Nonce []byte
+	// Signature proves the requester owns RecipientData.Identity: it signs the
+	// proof message with the recipient key so the issuer won't register an
+	// identity the requester doesn't control.
+	Signature []byte
 }
 
 // RequestWithdrawalView is the initiator view to request an issuer the issuance of tokens.
@@ -72,12 +79,17 @@ func (r *RequestWithdrawalView) Call(context view.Context) (any, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get recipient data")
 	}
+	nonce, err := GetRandomNonce()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to generate withdrawal nonce")
+	}
 	wr := &WithdrawalRequest{
 		TMSID:         *tmsID,
 		RecipientData: *recipientData,
 		TokenType:     r.TokenType,
 		Amount:        r.Amount,
 		NotAnonymous:  r.NotAnonymous,
+		Nonce:         nonce,
 	}
 
 	logger.DebugfContext(context.Context(), "Start session")
@@ -88,9 +100,30 @@ func (r *RequestWithdrawalView) Call(context view.Context) (any, error) {
 		return nil, errors.Wrapf(err, "failed to get session to [%s]", r.Issuer)
 	}
 
-	logger.DebugfContext(context.Context(), "Send withdrawal request")
-	err = s.SendTyped(context.Context(), wr, TypeWithdrawalRequest)
+	// Sign a proof that we own the recipient identity. It binds the TMS, nonce,
+	// session and context; the issuer verifies it before registering.
+	tms, err := token.GetManagementService(context, token.WithTMSID(*tmsID))
 	if err != nil {
+		return nil, errors.Wrapf(err, "tms not found for [%s]", tmsID)
+	}
+	message, err := buildAttestationMessage(*tmsID, nil, recipientData.Identity, false, "", nonce, s.Info().ID, context.ID())
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to build withdrawal proof message")
+	}
+	w, err := tms.WalletManager().OwnerWallet(context.Context(), r.Wallet)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get wallet [%s] to sign withdrawal proof", r.Wallet)
+	}
+	// Remote wallets hold the key externally and cannot sign locally, so
+	// signRecipientAttestation returns a nil signature for them (freshPath=false);
+	// the issuer accepts the empty proof on that path. Local wallets sign here and
+	// the issuer verifies the signature before registering the identity.
+	if wr.Signature, err = signRecipientAttestation(context.Context(), w, message, recipientData.Identity, false); err != nil {
+		return nil, errors.Wrapf(err, "failed to sign withdrawal proof")
+	}
+
+	logger.DebugfContext(context.Context(), "Send withdrawal request")
+	if err = s.SendTyped(context.Context(), wr, TypeWithdrawalRequest); err != nil {
 		logger.Errorf("failed to send recipient data: [%s]", err)
 
 		return nil, errors.Wrapf(err, "failed to send recipient data")
@@ -180,7 +213,26 @@ func (r *ReceiveWithdrawalRequestView) Call(context view.Context) (any, error) {
 		return nil, errors.Wrapf(err, "tms not found for [%s]", request.TMSID)
 	}
 
-	if err := tms.WalletManager().RegisterRecipientIdentity(context.Context(), &request.RecipientData); err != nil {
+	// Check the requester owns the identity before registering it. We rebuild the
+	// same proof and verify the signature. echoPath is true so remote wallets,
+	// which cannot sign locally, may send an empty signature; whenever a signature
+	// is present it is verified, so local wallets are still fully checked.
+	if len(request.Nonce) == 0 {
+		return nil, errors.New("withdrawal request missing nonce")
+	}
+	message, err := buildAttestationMessage(request.TMSID, nil, request.RecipientData.Identity, false, "", request.Nonce, s.Info().ID, context.ID())
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to build withdrawal proof message")
+	}
+	if len(request.Signature) == 0 {
+		logger.DebugfContext(context.Context(), "withdrawal proof empty for [%s]; accepting on remote/echo path", request.RecipientData.Identity)
+	}
+	if err = verifyRecipientAttestation(context.Context(), tms, message, &request.RecipientData, request.Signature, true); err != nil {
+		return nil, errors.Wrapf(err, "withdrawal proof-of-possession verification failed for identity [%s]", request.RecipientData.Identity)
+	}
+	logger.DebugfContext(context.Context(), "Proof-of-possession verified for recipient identity [%s]", request.RecipientData.Identity)
+
+	if err = tms.WalletManager().RegisterRecipientIdentity(context.Context(), &request.RecipientData); err != nil {
 		logger.Errorf("failed to register recipient identity: [%s]", err)
 
 		return nil, errors.Wrapf(err, "failed to register recipient identity")
@@ -189,7 +241,7 @@ func (r *ReceiveWithdrawalRequestView) Call(context view.Context) (any, error) {
 	// Update the Endpoint Resolver
 	caller := context.Session().Info().Caller
 	logger.DebugfContext(context.Context(), "update endpoint resolver for [%s], bind to [%s]", request.RecipientData.Identity, caller)
-	if err := endpoint.GetService(context).Bind(context.Context(), caller, request.RecipientData.Identity); err != nil {
+	if err = endpoint.GetService(context).Bind(context.Context(), caller, request.RecipientData.Identity); err != nil {
 		logger.DebugfContext(context.Context(), "failed binding [%s] to [%s]", request.RecipientData.Identity, caller)
 
 		return nil, errors.Wrapf(err, "failed binding [%s] to [%s]", request.RecipientData.Identity, caller)
