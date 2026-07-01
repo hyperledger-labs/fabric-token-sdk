@@ -14,6 +14,8 @@ import (
 )
 
 // exampleConfig is a fully-annotated YAML configuration that users can adapt.
+//
+//nolint:gosec
 const exampleConfig = `# skicleanup configuration file
 #
 # driver selects the database backend.
@@ -59,6 +61,7 @@ Redirect the output to a file to create a starting configuration:
   skicleanup config example > config.yaml`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			_, err := fmt.Fprint(cmd.OutOrStdout(), exampleConfig)
+
 			return err
 		},
 	}
