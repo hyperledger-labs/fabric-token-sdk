@@ -31,6 +31,27 @@ type Metrics struct {
 	// ReleasesTotal counts all calls to Release(), whether invoked explicitly
 	// or via the defer inside Append().
 	ReleasesTotal metrics.Counter
+
+	// SetStatusDuration is a histogram of the wall-clock time for each
+	// SetStatus() invocation, in seconds.
+	SetStatusDuration metrics.Histogram
+
+	// SetStatusErrors counts calls to SetStatus() that returned an error.
+	SetStatusErrors metrics.Counter
+
+	// GetStatusDuration is a histogram of the wall-clock time for each
+	// GetStatus() invocation, in seconds.
+	GetStatusDuration metrics.Histogram
+
+	// GetStatusErrors counts calls to GetStatus() that returned an error.
+	GetStatusErrors metrics.Counter
+
+	// GetTokenRequestDuration is a histogram of the wall-clock time for each
+	// GetTokenRequest() invocation, in seconds.
+	GetTokenRequestDuration metrics.Histogram
+
+	// GetTokenRequestErrors counts calls to GetTokenRequest() that returned an error.
+	GetTokenRequestErrors metrics.Counter
 }
 
 // newMetrics creates a new Metrics instance with the provided metrics provider.
@@ -66,6 +87,33 @@ func newMetrics(p metrics.Provider) *Metrics {
 		ReleasesTotal: p.NewCounter(metrics.CounterOpts{
 			Name: "auditor_releases_total",
 			Help: "Total number of Release() calls (explicit and deferred)",
+		}),
+		SetStatusDuration: p.NewHistogram(metrics.HistogramOpts{
+			Name:    "auditor_set_status_duration_seconds",
+			Help:    "Histogram of SetStatus() processing time per call, in seconds",
+			Buckets: []float64{.001, .005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10},
+		}),
+		SetStatusErrors: p.NewCounter(metrics.CounterOpts{
+			Name: "auditor_set_status_errors_total",
+			Help: "Total number of SetStatus() calls that returned an error",
+		}),
+		GetStatusDuration: p.NewHistogram(metrics.HistogramOpts{
+			Name:    "auditor_get_status_duration_seconds",
+			Help:    "Histogram of GetStatus() processing time per call, in seconds",
+			Buckets: []float64{.001, .005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10},
+		}),
+		GetStatusErrors: p.NewCounter(metrics.CounterOpts{
+			Name: "auditor_get_status_errors_total",
+			Help: "Total number of GetStatus() calls that returned an error",
+		}),
+		GetTokenRequestDuration: p.NewHistogram(metrics.HistogramOpts{
+			Name:    "auditor_get_token_request_duration_seconds",
+			Help:    "Histogram of GetTokenRequest() processing time per call, in seconds",
+			Buckets: []float64{.001, .005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10},
+		}),
+		GetTokenRequestErrors: p.NewCounter(metrics.CounterOpts{
+			Name: "auditor_get_token_request_errors_total",
+			Help: "Total number of GetTokenRequest() calls that returned an error",
 		}),
 	}
 }

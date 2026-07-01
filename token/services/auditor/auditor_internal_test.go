@@ -50,6 +50,12 @@ func TestNewMetrics_NilProvider(t *testing.T) {
 	assert.NotNil(t, m.AppendDuration)
 	assert.NotNil(t, m.AppendErrors)
 	assert.NotNil(t, m.ReleasesTotal)
+	assert.NotNil(t, m.SetStatusDuration)
+	assert.NotNil(t, m.SetStatusErrors)
+	assert.NotNil(t, m.GetStatusDuration)
+	assert.NotNil(t, m.GetStatusErrors)
+	assert.NotNil(t, m.GetTokenRequestDuration)
+	assert.NotNil(t, m.GetTokenRequestErrors)
 }
 
 func TestNewMetrics_WithProvider(t *testing.T) {
@@ -60,10 +66,12 @@ func TestNewMetrics_WithProvider(t *testing.T) {
 
 	m := newMetrics(mp)
 	require.NotNil(t, m)
-	// AuditLockConflicts, AppendErrors, ReleasesTotal = 3 counters
-	assert.Equal(t, 3, mp.NewCounterCallCount())
-	// AuditDuration, AppendDuration = 2 histograms
-	assert.Equal(t, 2, mp.NewHistogramCallCount())
+	// AuditLockConflicts, AppendErrors, ReleasesTotal,
+	// SetStatusErrors, GetStatusErrors, GetTokenRequestErrors = 6 counters
+	assert.Equal(t, 6, mp.NewCounterCallCount())
+	// AuditDuration, AppendDuration,
+	// SetStatusDuration, GetStatusDuration, GetTokenRequestDuration = 5 histograms
+	assert.Equal(t, 5, mp.NewHistogramCallCount())
 }
 
 func TestNoopCounter_With_ReturnsSelf(t *testing.T) {
@@ -182,9 +190,15 @@ func TestMetricsProviderCall(t *testing.T) {
 		m.AuditLockConflicts.Add(1)
 		m.AppendErrors.Add(1)
 		m.ReleasesTotal.Add(1)
+		m.SetStatusErrors.Add(1)
+		m.GetStatusErrors.Add(1)
+		m.GetTokenRequestErrors.Add(1)
 
 		m.AuditDuration.Observe(1.0)
 		m.AppendDuration.Observe(1.0)
+		m.SetStatusDuration.Observe(1.0)
+		m.GetStatusDuration.Observe(1.0)
+		m.GetTokenRequestDuration.Observe(1.0)
 	})
 
 	nc := &noopCounter{}
