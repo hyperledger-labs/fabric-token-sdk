@@ -84,7 +84,7 @@ func (d *MyValidatorDriver) NewValidator(pp driver.PublicParameters) (driver.Val
 		return nil, err
 	}
     
-	logger := logging.DriverLoggerFromPP("token-sdk.driver.myextension", string(pp.TokenDriverName()))
+	logger := logging.DriverLoggerFromPP("panurus.driver.myextension", string(pp.TokenDriverName()))
 
 	// Instantiate the validator with your custom function
 	return validator.New(

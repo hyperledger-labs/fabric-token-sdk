@@ -88,7 +88,7 @@ func newTokenDriver(
 
 // NewTokenService returns a new zkatdlog token manager service for the passed TMS ID and public parameters.
 func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (driver.TokenManagerService, error) {
-	logger := logging.DriverLogger("token-sdk.driver.zkatdlog", tmsID.Network, tmsID.Channel, tmsID.Namespace)
+	logger := logging.DriverLogger("panurus.driver.zkatdlog", tmsID.Network, tmsID.Channel, tmsID.Namespace)
 
 	logger.Debugf("creating new token service with public parameters [%s]", utils.Hashable(publicParams))
 

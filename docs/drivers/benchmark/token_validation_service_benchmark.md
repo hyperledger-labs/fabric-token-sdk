@@ -35,7 +35,7 @@ The Token Validation Service benchmarks serve several critical purposes:
 
 ## Prerequisites
 
-The token-sdk comes pre-equipped with test data containing cryptographic parameters and sample token transfers located at:
+Panurus comes pre-equipped with test data containing cryptographic parameters and sample token transfers located at:
 
 ```
 token/core/zkatdlog/nogh/v1/validator/regression/testdata/

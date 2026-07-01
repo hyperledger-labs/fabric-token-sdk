@@ -10,7 +10,7 @@ import (
 	"github.com/LFDT-Panurus/panurus/token/driver"
 )
 
-// Configuration manages the configuration of the token-sdk
+// Configuration manages the configuration of Panurus
 type Configuration struct {
 	cm driver.Configuration
 }

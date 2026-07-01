@@ -46,7 +46,7 @@ func testRound(t *testing.T, client *vault.Client) {
 	t.Helper()
 	// Test with slash at the end of the vault path
 	ctx := context.Background()
-	kvstore, err := hashicorp.NewWithClient(client, "kv1/data/token-sdk/")
+	kvstore, err := hashicorp.NewWithClient(client, "kv1/data/panurus/")
 	require.NoError(t, err)
 
 	k1, err := kvs.CreateCompositeKey("k", []string{"1"})
@@ -214,7 +214,7 @@ func testRound(t *testing.T, client *vault.Client) {
 
 func testParallelWrites(t *testing.T, client *vault.Client) {
 	t.Helper()
-	kvstore, err := hashicorp.NewWithClient(client, "kv1/data/token-sdk")
+	kvstore, err := hashicorp.NewWithClient(client, "kv1/data/panurus")
 	require.NoError(t, err)
 	ctx := context.Background()
 
@@ -266,7 +266,7 @@ func testParallelWrites(t *testing.T, client *vault.Client) {
 
 func testParallelWritesReadDelete(t *testing.T, client *vault.Client) {
 	t.Helper()
-	kvstore, err := hashicorp.NewWithClient(client, "kv1/data/token-sdk")
+	kvstore, err := hashicorp.NewWithClient(client, "kv1/data/panurus")
 	require.NoError(t, err)
 	ctx := context.Background()
 
@@ -301,7 +301,7 @@ func testClient(t *testing.T, wg *sync.WaitGroup, prefix string, num int, client
 	ctx := t.Context()
 
 	// Test without slah at the end of the vault path
-	kvstore, err := hashicorp.NewWithClient(client, "kv1/data/token-sdk")
+	kvstore, err := hashicorp.NewWithClient(client, "kv1/data/panurus")
 	assert.NoError(t, err)
 
 	for i := 1; i <= num; i++ {
@@ -338,7 +338,7 @@ func testWithVaultDown(t *testing.T, client *vault.Client) {
 	// Test with slash at the end of the vault path
 	ctx := context.Background()
 
-	kvstore, err := hashicorp.NewWithClient(client, "kv1/data/token-sdk/")
+	kvstore, err := hashicorp.NewWithClient(client, "kv1/data/panurus/")
 	assert.NoError(t, err)
 
 	k1, err := kvs.CreateCompositeKey("k", []string{"1"})

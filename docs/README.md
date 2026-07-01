@@ -8,7 +8,7 @@ Welcome to Panurus documentation.
 *   [**Token API**](tokenapi.md): The high-level API for interacting with tokens.
 *   [**Token API Usage**](token_sdk_usage.md): API Usage Guide.
 *   [**Driver API**](driverapi.md): The interface for building token drivers.
-*   [**Configuration**](configuration.md): Token-SDK configuration.
+*   [**Configuration**](configuration.md): Panurus configuration.
 *   [**Services**](services.md): Additional services like transaction assembly.
 *   [**Upgradability**](upgradability.md): How to upgrade tokens, drivers, and storage.
 *   [**Public Parameters Lifecycle**](public_parameters.md): How public parameters are generated, published, and updated across the network.
@@ -24,7 +24,7 @@ If you are developing *using* Panurus or contributing *to* Panurus, check out th
 
 ## Evolution
 
-*   [**Evolution Summary (v0.4.0 -> Present)**](evolution_summary.md): A summary of how the functionalities provided by the token-sdk have evolved since tag v0.4.0.
+*   [**Evolution Summary (v0.4.0 -> Present)**](evolution_summary.md): A summary of how the functionalities provided by Panurus have evolved since tag v0.4.0 when it was still called `token-sdk`.
 
 ## Guides & Tutorials
 

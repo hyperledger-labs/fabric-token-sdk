@@ -34,7 +34,7 @@ func newTestSuite(commType fsc.P2PCommunicationType, factor int, names ...string
 	ts := token2.NewTestSuite(StartPort, dvp2.Topology(dvp2.Opts{
 		CommType:       commType,
 		DefaultTMSOpts: common.TMSOpts{TokenSDKDriver: fabtokenv1.DriverIdentifier},
-		// FSCLogSpec:     "token-sdk=debug:fabric-sdk=debug:info",
+		// FSCLogSpec:     "panurus=debug:fabric-sdk=debug:info",
 		SDKs:        []nodepkg.SDK{&ffabtoken.SDK{}},
 		Replication: opts,
 	}))

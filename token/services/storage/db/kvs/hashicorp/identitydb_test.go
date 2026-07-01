@@ -24,7 +24,7 @@ func TestIdentityDBWithHashicorpVault(t *testing.T) {
 	require.NoError(t, err)
 
 	for i, c := range dbtest.IdentityCases {
-		backend, err := hashicorp.NewWithClient(client, fmt.Sprintf("kv1/data/token-sdk/%d/", i))
+		backend, err := hashicorp.NewWithClient(client, fmt.Sprintf("kv1/data/panurus/%d/", i))
 		require.NoError(t, err)
 		db := kvs.NewIdentityStore(backend, token2.TMSID{
 			Network:   "apple",
