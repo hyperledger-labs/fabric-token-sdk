@@ -8,12 +8,15 @@ SPDX-License-Identifier: Apache-2.0
 package htlc
 
 import (
+	"context"
 	"crypto"
 	"encoding/json"
+	"errors"
 	"testing"
 	"time"
 
 	"github.com/LFDT-Panurus/panurus/token/driver"
+	drivermock "github.com/LFDT-Panurus/panurus/token/driver/mock"
 	"github.com/LFDT-Panurus/panurus/token/services/identity/marshal"
 	"github.com/LFDT-Panurus/panurus/token/services/interop/encoding"
 	token2 "github.com/LFDT-Panurus/panurus/token/token"
@@ -185,6 +188,77 @@ func TestIsScriptInvalidOwnerBytes(t *testing.T) {
 	tok := &token2.UnspentToken{Owner: []byte("garbage")}
 	predicate := IsScript(SelectNonExpired)
 	require.False(t, predicate(tok))
+}
+
+func TestOwnerWalletFilterIteratorFallsBackToBaseWalletID(t *testing.T) {
+	qe := &drivermock.QueryEngine{}
+	expectedToken := makeFilterToken(t, &Script{
+		Sender:    []byte("s"),
+		Recipient: []byte("r"),
+		Deadline:  time.Now().Add(time.Hour),
+	})
+	qe.UnspentTokensIteratorByStub = func(_ context.Context, walletID string, tokenType token2.Type) (driver.UnspentTokensIterator, error) {
+		require.Equal(t, token2.Type("USD"), tokenType)
+		switch walletID {
+		case "wallet1":
+			iter := &drivermock.UnspentTokensIterator{}
+			iter.NextReturnsOnCall(0, expectedToken, nil)
+			iter.NextReturnsOnCall(1, nil, nil) // End of iteration
+
+			return iter, nil
+		case "htlc.recipientwallet1":
+			return nil, errors.New("wallet id not found")
+		default:
+			t.Fatalf("unexpected wallet id lookup: %s", walletID)
+
+			return nil, nil
+		}
+	}
+
+	w := &OwnerWallet{
+		queryEngine: qe,
+		walletIDs: &stubWalletIDProvider{
+			baseID:      "wallet1",
+			recipientID: "htlc.recipientwallet1",
+		},
+	}
+
+	it, err := w.filterIterator(context.Background(), "USD", false, SelectNonExpired)
+	require.NoError(t, err)
+
+	// Read tokens from iterator
+	var tokens []*token2.UnspentToken
+	for {
+		tok, err := it.Next()
+		require.NoError(t, err)
+		if tok == nil {
+			break
+		}
+
+		tokens = append(tokens, tok)
+	}
+	it.Close()
+
+	require.Len(t, tokens, 1)
+	require.Equal(t, expectedToken, tokens[0])
+}
+
+type stubWalletIDProvider struct {
+	baseID      string
+	senderID    string
+	recipientID string
+}
+
+func (s *stubWalletIDProvider) BaseID() string {
+	return s.baseID
+}
+
+func (s *stubWalletIDProvider) SenderID(context.Context) string {
+	return s.senderID
+}
+
+func (s *stubWalletIDProvider) RecipientID(context.Context) string {
+	return s.recipientID
 }
 
 func TestIsScriptInvalidScriptJSON(t *testing.T) {

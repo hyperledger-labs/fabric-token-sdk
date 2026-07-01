@@ -219,7 +219,12 @@ func (f *RequestRecipientIdentityView) Call(context view.Context) (any, error) {
 	multiSig := len(f.Recipients) > 1
 	for i, recipient := range f.Recipients {
 		local[i] = true
-		w, err := tms.WalletManager().OwnerWallet(context.Context(), recipient.Identity)
+		// Use wallet ID if provided, otherwise fall back to recipient identity
+		walletID := recipient.WalletID
+		if walletID == "" {
+			walletID = string(recipient.Identity)
+		}
+		w, err := tms.WalletManager().OwnerWallet(context.Context(), walletID)
 		if err != nil {
 			w = nil
 		}

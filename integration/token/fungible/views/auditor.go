@@ -28,18 +28,28 @@ type AuditView struct {
 func (a *AuditView) Call(context view.Context) (any, error) {
 	logger.Debugf("AuditView: [%s]", context.ID())
 	tx, err := ttx.ReceiveTransaction(context, TxOpts(a.TMSID, ttx.WithNoTransactionVerification())...)
-
-	assert.NoError(err, "failed receiving transaction")
+	if err != nil {
+		return nil, errors.Wrap(err, "failed receiving transaction")
+	}
+	if tx == nil {
+		return nil, errors.New("received transaction is nil")
+	}
 	logger.Debugf("AuditView: [%s]", tx.ID())
 
 	w := ttx.MyAuditorWallet(context, ServiceOpts(a.TMSID)...)
-	assert.NotNil(w, "failed getting default auditor wallet")
+	if w == nil {
+		return nil, errors.Errorf("auditor wallet is nil")
+	}
 
 	// Validate
 	logger.Debugf("AuditView: get auditor [%s]", tx.ID())
 	auditor, err := ttx.NewAuditor(context, w)
-	assert.NoError(err, "failed to get auditor instance")
-	assert.NoError(auditor.Validate(tx), "failed auditing verification")
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get auditor instance")
+	}
+	if err := auditor.Validate(tx); err != nil {
+		return nil, errors.Wrap(err, "failed auditing verification")
+	}
 	logger.Debugf("AuditView: get auditor done [%s]", tx.ID())
 
 	// Check ValidationRecords
@@ -153,6 +163,9 @@ func (a *AuditView) Call(context view.Context) (any, error) {
 	}
 
 	kvsInstance := GetKVS(context)
+	if kvsInstance == nil {
+		return nil, errors.Errorf("KVS instance is nil")
+	}
 
 	for _, rID := range inputs.RevocationHandles() {
 		rh := utils.Hashable(rID).String()

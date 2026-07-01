@@ -185,7 +185,12 @@ func (d *StoreService) NewTransaction() (dbdriver.TransactionStoreTransaction, e
 }
 
 // AppendTransactionRecord appends the transaction records corresponding to the passed token request.
+// It performs lightweight structural validation before writing: the anchor must be non-empty.
 func (d *StoreService) AppendTransactionRecord(ctx context.Context, req *token.Request) error {
+	if req.Anchor == "" {
+		return errors.New("cannot append transaction record: anchor is empty")
+	}
+
 	logger.DebugfContext(ctx, "appending new transaction record... [%s]", req.Anchor)
 
 	ins, outs, attrs, err := req.InputsAndOutputs(ctx)
