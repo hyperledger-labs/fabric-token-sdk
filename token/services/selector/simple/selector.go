@@ -16,6 +16,13 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 )
 
+var (
+	// ErrQuotaExceeded is returned when an identity exceeds their lock quota
+	ErrQuotaExceeded = errors.New("lock quota exceeded for identity")
+	// ErrRateLimitExceeded is returned when a caller exceeds their rate limit
+	ErrRateLimitExceeded = errors.New("rate limit exceeded")
+)
+
 type QueryService interface {
 	UnspentTokensIterator(ctx context.Context) (*token.UnspentTokensIterator, error)
 	UnspentTokensIteratorBy(ctx context.Context, id string, tokenType token2.Type) (driver.UnspentTokensIterator, error)
@@ -24,6 +31,8 @@ type QueryService interface {
 
 type Locker interface {
 	Lock(ctx context.Context, id *token2.ID, txID string, reclaim bool) (string, error)
+	// LockWithIdentity locks a token with identity tracking for quota and rate limiting
+	LockWithIdentity(ctx context.Context, id *token2.ID, txID string, identity string, reclaim bool) (string, error)
 	// UnlockIDs unlocks the passed IDS. It returns the list of tokens that were not locked in the first place among
 	// those passed.
 	UnlockIDs(ctx context.Context, ids ...*token2.ID) []*token2.ID
@@ -113,8 +122,16 @@ func (s *selector) selectByID(ctx context.Context, ownerFilter token.OwnerFilter
 				return nil, nil, errors.Wrap(err, "failed to convert quantity")
 			}
 
-			// lock the token
-			if _, lockErr := s.locker.Lock(ctx, &t.Id, s.txID, reclaim); lockErr != nil {
+			// lock the token with identity tracking
+			if _, lockErr := s.locker.LockWithIdentity(ctx, &t.Id, s.txID, id, reclaim); lockErr != nil {
+				// Check if this is a quota or rate limit error - these should not be retried
+				if errors.HasType(lockErr, ErrQuotaExceeded) || errors.HasType(lockErr, ErrRateLimitExceeded) {
+					s.locker.UnlockIDs(ctx, toBeSpent...)
+					s.locker.UnlockIDs(ctx, toBeCertified...)
+
+					return nil, nil, lockErr
+				}
+
 				var addErr error
 				potentialSumWithLocked, addErr = potentialSumWithLocked.Add(q)
 				if addErr != nil {
