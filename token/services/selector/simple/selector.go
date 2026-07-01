@@ -18,7 +18,7 @@ import (
 
 type QueryService interface {
 	UnspentTokensIterator(ctx context.Context) (*token.UnspentTokensIterator, error)
-	UnspentTokensIteratorBy(ctx context.Context, id string, tokenType token2.Type) (driver.UnspentTokensIterator, error)
+	UnspentTokensIteratorBy(ctx context.Context, id string, tokenType token2.Type, limit int) (driver.UnspentTokensIterator, error)
 	GetTokens(ctx context.Context, inputs ...*token2.ID) ([]*token2.Token, error)
 }
 
@@ -37,9 +37,18 @@ type selector struct {
 	queryService QueryService
 	precision    uint64
 
-	numRetry             int
+	maxRetries           int
 	timeout              time.Duration
 	requestCertification bool
+
+	// Resource limits to prevent algorithmic attacks
+	maxTokensPerSelection int
+	maxLockAttempts       int
+	selectionTimeout      time.Duration
+
+	// Resource tracking counters (reset per selection)
+	tokensIteratedCount int
+	lockAttemptsCount   int
 }
 
 // Select selects tokens to be spent based on ownership, quantity, and type
@@ -48,7 +57,29 @@ func (s *selector) Select(ctx context.Context, ownerFilter token.OwnerFilter, q 
 		return nil, nil, errors.Errorf("no owner filter specified")
 	}
 
-	return s.selectByID(ctx, ownerFilter, q, tokenType)
+	// Reset resource tracking counters for this selection
+	s.tokensIteratedCount = 0
+	s.lockAttemptsCount = 0
+
+	// Create timeout context if configured
+	timeoutCtx, cancel := context.WithTimeout(ctx, s.selectionTimeout)
+	defer cancel()
+
+	// Use timeout context for selection
+	result, quantity, err := s.selectByID(timeoutCtx, ownerFilter, q, tokenType)
+
+	// Check if we hit the timeout
+	if errors.Is(err, context.DeadlineExceeded) {
+		// Use original context for cleanup to ensure it completes
+		s.locker.UnlockByTxID(ctx, s.txID)
+
+		return nil, nil, errors.Errorf(
+			"token selection aborted: exceeded timeout (%v) after examining %d tokens and %d lock attempts",
+			s.selectionTimeout, s.tokensIteratedCount, s.lockAttemptsCount,
+		)
+	}
+
+	return result, quantity, err
 }
 
 func (s *selector) Close() error { return nil }
@@ -69,7 +100,7 @@ func (s *selector) selectByID(ctx context.Context, ownerFilter token.OwnerFilter
 	}
 	id := ownerFilter.ID()
 
-	i := 0
+	actualRetries := 0
 	var unspentTokens driver.UnspentTokensIterator
 	defer func() {
 		if unspentTokens != nil {
@@ -77,11 +108,23 @@ func (s *selector) selectByID(ctx context.Context, ownerFilter token.OwnerFilter
 		}
 	}()
 	for {
+		// Check retry cycle limit
+		actualRetries++
+		if actualRetries > s.maxRetries {
+			s.locker.UnlockByTxID(ctx, s.txID)
+
+			return nil, nil, errors.Errorf(
+				"token selection aborted: exceeded max retries (%d) after examining %d tokens and %d lock attempts",
+				s.maxRetries, s.tokensIteratedCount, s.lockAttemptsCount,
+			)
+		}
+
 		if unspentTokens != nil {
 			unspentTokens.Close()
 		}
-		logger.DebugfContext(ctx, "start token selection, iteration [%d/%d]", i, s.numRetry)
-		unspentTokens, err = s.queryService.UnspentTokensIteratorBy(ctx, id, tokenType)
+		logger.DebugfContext(ctx, "start token selection, iteration [%d/%d] (tokens examined: %d, lock attempts: %d)",
+			actualRetries, s.maxRetries, s.tokensIteratedCount, s.lockAttemptsCount)
+		unspentTokens, err = s.queryService.UnspentTokensIteratorBy(ctx, id, tokenType, s.maxTokensPerSelection)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "token selection failed")
 		}
@@ -93,16 +136,26 @@ func (s *selector) selectByID(ctx context.Context, ownerFilter token.OwnerFilter
 		toBeSpent = nil
 		var toBeCertified []*token2.ID
 
-		reclaim := s.numRetry == 1 || i > 0
-		numNext := 0
+		reclaim := s.maxRetries == 1 || actualRetries > 1
 		for {
 			t, err := unspentTokens.Next()
-			numNext++
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "token selection failed")
 			}
 			if t == nil {
 				break
+			}
+
+			// Check token iteration limit (only count actual tokens, not nil)
+			s.tokensIteratedCount++
+			if s.tokensIteratedCount > s.maxTokensPerSelection {
+				s.locker.UnlockIDs(ctx, toBeSpent...)
+				s.locker.UnlockIDs(ctx, toBeCertified...)
+
+				return nil, nil, errors.Errorf(
+					"token selection aborted: exceeded max token iteration limit (%d tokens)",
+					s.maxTokensPerSelection,
+				)
 			}
 
 			q, err := token2.ToQuantity(t.Quantity, s.precision)
@@ -111,6 +164,18 @@ func (s *selector) selectByID(ctx context.Context, ownerFilter token.OwnerFilter
 				s.locker.UnlockIDs(ctx, toBeCertified...)
 
 				return nil, nil, errors.Wrap(err, "failed to convert quantity")
+			}
+
+			// Check lock attempt limit
+			s.lockAttemptsCount++
+			if s.lockAttemptsCount > s.maxLockAttempts {
+				s.locker.UnlockIDs(ctx, toBeSpent...)
+				s.locker.UnlockIDs(ctx, toBeCertified...)
+
+				return nil, nil, errors.Errorf(
+					"token selection aborted: exceeded max lock attempts (%d) after examining %d tokens",
+					s.maxLockAttempts, s.tokensIteratedCount,
+				)
 			}
 
 			// lock the token
@@ -169,10 +234,22 @@ func (s *selector) selectByID(ctx context.Context, ownerFilter token.OwnerFilter
 		if target.Cmp(potentialSumWithLocked) <= 0 && potentialSumWithLocked.Cmp(sum) != 0 {
 			// funds are potentially enough but they are locked
 			logger.DebugfContext(ctx, "token selection: sufficient funds but partially locked")
+		} else if target.Cmp(potentialSumWithLocked) > 0 && s.tokensIteratedCount < s.maxTokensPerSelection {
+			// Insufficient funds with no locked tokens AND we haven't hit iteration limits
+			// This means we've examined all available tokens - fail immediately without retrying
+			// This prevents unnecessary retries and timeout when funds are clearly insufficient
+			logger.DebugfContext(ctx, "token selection: insufficient funds, no tokens locked, failing immediately")
+
+			return nil, nil, errors.WithMessagef(
+				token.SelectorInsufficientFunds,
+				"insufficient funds, only [%s] tokens of type [%s] are available, but [%s] were requested and no other process has any tokens locked",
+				sum.Decimal(),
+				tokenType,
+				target.Decimal(),
+			)
 		}
 
-		i++
-		if i >= s.numRetry {
+		if actualRetries > s.maxRetries {
 			// it is time to fail but how?
 			if concurrencyIssue {
 				logger.DebugfContext(ctx, "concurrency issue, some of the tokens might not exist anymore")
@@ -198,7 +275,10 @@ func (s *selector) selectByID(ctx context.Context, ownerFilter token.OwnerFilter
 
 			return nil, nil, errors.WithMessagef(
 				token.SelectorInsufficientFunds,
-				"token selection failed: insufficient funds, only [%s] tokens of type [%s] are available", sum.Decimal(), tokenType,
+				"insufficient funds, only [%s] tokens of type [%s] are available, but [%s] were requested and no other process has any tokens locked",
+				sum.Decimal(),
+				tokenType,
+				target.Decimal(),
 			)
 		}
 
