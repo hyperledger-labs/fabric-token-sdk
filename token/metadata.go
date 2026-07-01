@@ -235,6 +235,10 @@ func (m *IssueMetadata) Match(action *IssueAction) error {
 	if action == nil {
 		return errors.New("can't match issue metadata to issue action: nil issue action")
 	}
+	if err := action.Validate(); err != nil {
+		return errors.Wrap(err, "failed validating issue action")
+	}
+
 
 	// Delegate to the driver's Match method
 	return m.IssueMetadata.Match(action.a)
@@ -258,6 +262,12 @@ type TransferMetadata struct {
 // It performs a deep check of inputs, outputs, extra signers, and the issuer identity (if present).
 func (m *TransferMetadata) Match(action *TransferAction) error {
 	if action == nil {
+		return errors.New("can't match transfer metadata to transfer action: nil issue action")
+	}
+	if err := action.Validate(); err != nil {
+		return errors.Wrap(err, "failed validating issue action")
+	}
+
 		return errors.New("can't match transfer metadata to transfer action: nil transfer action")
 	}
 
