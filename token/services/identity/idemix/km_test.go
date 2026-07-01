@@ -872,3 +872,75 @@ func TestIdentityWithDifferentAuditInfo(t *testing.T) {
 	require.NoError(t, verifier1.Verify(msg, sig1))
 	require.NoError(t, verifier2.Verify(msg, sig2))
 }
+
+// TestEphemeralIdentity verifies that EphemeralIdentity produces valid identities
+// without persisting the derived nym key in the key store.
+// This ensures that pre-generated cache pseudonyms do not accumulate on disk.
+func TestEphemeralIdentity(t *testing.T) {
+	testEphemeralIdentity(t, "./testdata/bls12_381_bbs_gurvy/idemix", math.BLS12_381_BBS_GURVY)
+	testEphemeralIdentity(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS_GURVY)
+}
+
+func testEphemeralIdentity(t *testing.T, configPath string, curveID math.CurveID) {
+	t.Helper()
+
+	// Setup: create a tracked KVS to observe key store operations
+	kvs, err := kvs2.NewInMemory()
+	require.NoError(t, err)
+	config, err := crypto.NewConfig(configPath)
+	require.NoError(t, err)
+	tracker := kvs2.NewTrackedMemoryFrom(kvs)
+	keyStore, err := crypto.NewKeyStore(curveID, tracker)
+	require.NoError(t, err)
+	cryptoProvider, err := crypto.NewBCCSP(keyStore, curveID)
+	require.NoError(t, err)
+
+	keyManager, err := NewKeyManager(config, types.EidNymRhNym, cryptoProvider)
+	require.NoError(t, err)
+
+	// Creating the key manager should store the user secret key (1 Put)
+	putCountAfterSetup := tracker.PutCounter
+
+	// Generate an ephemeral identity
+	desc, err := keyManager.EphemeralIdentity(t.Context(), nil)
+	require.NoError(t, err)
+	assert.NotNil(t, desc)
+	assert.NotNil(t, desc.Identity)
+	assert.NotNil(t, desc.AuditInfo)
+	assert.NotNil(t, desc.Signer)
+
+	// Verify that NO additional keys were persisted in the key store.
+	// The nym key should have been temporary.
+	assert.Equal(t, putCountAfterSetup, tracker.PutCounter,
+		"EphemeralIdentity should not persist nym keys in the key store")
+
+	// Generate a regular (persistent) identity for comparison
+	descPersistent, err := keyManager.Identity(t.Context(), nil)
+	require.NoError(t, err)
+	assert.NotNil(t, descPersistent)
+
+	// The persistent Identity() should have stored the nym key (additional Puts)
+	assert.Greater(t, tracker.PutCounter, putCountAfterSetup,
+		"Identity() should persist nym keys in the key store")
+
+	// Verify that the ephemeral identity can still be used for signing
+	signer := desc.Signer
+	msg := []byte("test ephemeral signing")
+	sigma, err := signer.Sign(msg)
+	require.NoError(t, err)
+
+	// Verify the ephemeral identity's signature
+	verifier, err := keyManager.DeserializeVerifier(t.Context(), desc.Identity)
+	require.NoError(t, err)
+	require.NoError(t, verifier.Verify(msg, sigma))
+
+	// Generate multiple ephemeral identities and verify none persist nym keys
+	putCountBefore := tracker.PutCounter
+	for i := 0; i < 5; i++ {
+		d, err := keyManager.EphemeralIdentity(t.Context(), nil)
+		require.NoError(t, err)
+		assert.NotNil(t, d)
+	}
+	assert.Equal(t, putCountBefore, tracker.PutCounter,
+		"Multiple EphemeralIdentity calls should not persist any nym keys")
+}

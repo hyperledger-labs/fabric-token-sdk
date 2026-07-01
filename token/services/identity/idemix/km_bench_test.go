@@ -20,16 +20,6 @@ import (
 
 // BenchmarkKmIdentity benchmarks the identity creation
 func BenchmarkKmIdentity(b *testing.B) {
-	b.Run("FP256BN_AMCL", func(b *testing.B) {
-		b.ReportAllocs()
-
-		keyManager, cleanup := setupKeyManager(b, "./testdata/fp256bn_amcl/idemix", math.FP256BN_AMCL)
-		defer cleanup()
-		for b.Loop() {
-			_, _ = keyManager.Identity(b.Context(), nil)
-		}
-	})
-
 	b.Run("BLS12_381_BBS", func(b *testing.B) {
 		b.ReportAllocs()
 

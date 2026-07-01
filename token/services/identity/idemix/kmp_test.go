@@ -9,6 +9,7 @@ package idemix
 import (
 	"context"
 	"testing"
+	"time"
 
 	math "github.com/IBM/mathlib"
 	"github.com/LFDT-Panurus/panurus/token"
@@ -340,4 +341,63 @@ func TestKeyManagerProviderGetWithRawConfig(t *testing.T) {
 	km2, err := kmp.Get(context.Background(), idConfig2)
 	require.NoError(t, err)
 	assert.NotNil(t, km2)
+}
+
+// TestCacheUsesEphemeralIdentity verifies that cache-generated identities
+// from the WrappedKeyManager do not persist nym keys in the key store.
+// This validates the fix for issue #1820: when the cache size is reduced,
+// previously cached pseudonyms should not leave orphaned keys on disk.
+func TestCacheUsesEphemeralIdentity(t *testing.T) {
+	testCacheUsesEphemeralIdentity(t, "./testdata/bls12_381_bbs_gurvy/idemix", math.BLS12_381_BBS_GURVY)
+	testCacheUsesEphemeralIdentity(t, "./testdata/bls12_381_bbs/idemix", math.BLS12_381_BBS_GURVY)
+}
+
+func testCacheUsesEphemeralIdentity(t *testing.T, configPath string, curveID math.CurveID) {
+	t.Helper()
+
+	backend, err := kvs2.NewInMemory()
+	require.NoError(t, err)
+	config, err := crypto.NewConfig(configPath)
+	require.NoError(t, err)
+	tracker := kvs2.NewTrackedMemoryFrom(backend)
+	keyStore, err := crypto.NewKeyStore(curveID, tracker)
+	require.NoError(t, err)
+
+	kmp := NewKeyManagerProvider(
+		config.Ipk,
+		curveID,
+		keyStore,
+		&mockConfig{},
+		3, // Set cache size to 3
+		false,
+		&disabled.Provider{},
+	)
+
+	idConfig := &token.IdentityConfiguration{
+		ID:  "alice",
+		URL: configPath,
+	}
+	// Get the WrappedKeyManager (km) which uses the cache internally
+	km, err := kmp.Get(context.Background(), idConfig)
+	require.NoError(t, err)
+
+	// Record the put counter after setup (key manager creation stores the user secret key)
+	putCountAfterSetup := tracker.PutCounter
+
+	// Allow some time for background cache provisioning to fill the cache (cacheSize = 3)
+	time.Sleep(500 * time.Millisecond)
+
+	// Verify that background pre-generation did NOT persist any nym keys.
+	// If the cache was not using ephemeral keys, this would have stored 3 keys.
+	assert.Equal(t, putCountAfterSetup, tracker.PutCounter,
+		"Background cache pre-generation should not persist nym keys in the key store")
+
+	// Now fetch an identity from the cache. This simulates the identity being used/given out.
+	desc, err := km.Identity(context.Background(), nil)
+	require.NoError(t, err)
+	assert.NotNil(t, desc)
+
+	// It should now be persisted in the key store so it can be reloaded/re-signed after restart.
+	assert.Equal(t, putCountAfterSetup+1, tracker.PutCounter,
+		"Fetched/used identity should be persisted in the key store")
 }
