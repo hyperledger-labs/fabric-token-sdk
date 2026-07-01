@@ -729,9 +729,10 @@ func TestAction_Deserialize_ErrorPaths(t *testing.T) {
 }
 
 func TestAction_Deserialize_ExtraBranches(t *testing.T) {
-	// A nil output element is now rejected during deserialization (security fix FA3):
-	// before the fix, nil outputs were silently left as nil in t.Outputs, creating
-	// an inconsistent struct that could cause nil-pointer panics further down the pipeline.
+	// A nil output element is now rejected during deserialization.
+	// This is the FA3 (False Acceptance #3) attack vector; see
+	// TestSecurityFalseAcceptanceTransferDeserializeNilOutput in
+	// validator/validator_security_test.go for the full threat description.
 	protoNilOutput := &actions.TransferAction{
 		Version: 1, // ProtocolV1
 		Outputs: []*actions.TransferActionOutput{
@@ -757,7 +758,7 @@ func TestAction_Deserialize_ExtraBranches(t *testing.T) {
 	action = &transfer.Action{}
 	err = action.Deserialize(raw)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "output at index [0] is nil")
+	assert.Contains(t, err.Error(), "token of output at index [0] is nil")
 }
 
 func TestAction_SerializeOutputAt(t *testing.T) {

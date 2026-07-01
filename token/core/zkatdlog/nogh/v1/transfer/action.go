@@ -266,6 +266,9 @@ func (t *Action) IsRedeemAt(index int) bool {
 	if index < 0 || index >= len(t.Outputs) {
 		return false
 	}
+	if t.Outputs[index] == nil {
+		return false
+	}
 
 	return t.Outputs[index].IsRedeem()
 }
@@ -472,8 +475,11 @@ func (t *Action) Deserialize(raw []byte) error {
 	// outputs
 	t.Outputs = make([]*token.Token, len(action.Outputs))
 	for j, output := range action.Outputs {
-		if output == nil || output.Token == nil {
+		if output == nil {
 			return errors.Errorf("invalid transfer action: output at index [%d] is nil", j)
+		}
+		if output.Token == nil {
+			return errors.Errorf("invalid transfer action: token of output at index [%d] is nil", j)
 		}
 		data, err := utils.FromG1Proto(output.Token.Data)
 		if err != nil {

@@ -301,8 +301,11 @@ func (i *Action) Deserialize(raw []byte) error {
 	// outputs
 	i.Outputs = make([]*token.Token, len(issueAction.Outputs))
 	for j, output := range issueAction.Outputs {
-		if output == nil || output.Token == nil {
+		if output == nil {
 			return errors.Errorf("invalid issue action: output at index [%d] is nil", j)
+		}
+		if output.Token == nil {
+			return errors.Errorf("invalid issue action: token of output at index [%d] is nil", j)
 		}
 		data, err := utils.FromG1Proto(output.Token.Data)
 		if err != nil {
