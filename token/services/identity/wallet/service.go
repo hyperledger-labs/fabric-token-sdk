@@ -114,6 +114,37 @@ func (s *Service) RegisterRecipientIdentity(ctx context.Context, data *tdriver.R
 
 	s.Logger.DebugfContext(ctx, "register recipient identity [%s] with audit info [%s]", data.Identity, utils.Hashable(data.AuditInfo))
 
+	// Step 1: Validate basic structure (nil checks, empty checks, length bounds)
+	if err := validateBasicStructure(data); err != nil {
+		return errors.Wrap(err, "basic structure validation failed")
+	}
+
+	// Step 2: Validate JSON structure
+	if err := validateJSONStructure(data.AuditInfo); err != nil {
+		return errors.Wrap(err, "JSON structure validation failed")
+	}
+
+	// Step 3: Decode the typed identity once and validate its structure.
+	typedID, err := identity.UnmarshalTypedIdentity(data.Identity)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal typed identity")
+	}
+	if err := validateIdentityStructure(typedID); err != nil {
+		return errors.Wrap(err, "identity structure validation failed")
+	}
+
+	// Step 4: Validate enrollment ID and revocation handle for non-composite types.
+	// Composite types (MultiSig, HTLC, Policy) have no enrollment ID or revocation handle.
+	if !isCompositeIdentityType(typedID.Type) {
+		if err := s.validateEnrollmentID(ctx, data); err != nil {
+			return errors.Wrap(err, "enrollment ID validation failed")
+		}
+		if err := s.validateRevocationHandle(ctx, data); err != nil {
+			return errors.Wrap(err, "revocation handle validation failed")
+		}
+	}
+
+	// Step 5: Match identity against audit info (cryptographic binding)
 	if err := s.Deserializer.MatchIdentity(ctx, data.Identity, data.AuditInfo); err != nil {
 		return errors.Wrapf(err, "failed to match identity to audit information for [%s]:[%s]", data.Identity, utils.Hashable(data.AuditInfo))
 	}
