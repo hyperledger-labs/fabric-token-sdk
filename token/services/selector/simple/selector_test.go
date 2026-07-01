@@ -98,7 +98,7 @@ func (r *recordingLocker) UnlockIDs(_ context.Context, ids ...*token2.ID) []*tok
 		copy(cp, ids)
 		r.unlocked = append(r.unlocked, cp)
 	}
-	
+
 	return nil
 }
 
@@ -111,7 +111,7 @@ func (r *recordingLocker) totalUnlocked() []*token2.ID {
 	for _, group := range r.unlocked {
 		out = append(out, group...)
 	}
-	
+
 	return out
 }
 
