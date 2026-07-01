@@ -553,14 +553,10 @@ func (p *PublicParams) Deserialize(raw []byte) error {
 
 func (p *PublicParams) GeneratePedersenParameters() error {
 	curve := mathlib.Curves[p.Curve]
-	rand, err := curve.Rand()
-	if err != nil {
-		return errors.Errorf("failed to get RNG")
-	}
 	p.PedersenGenerators = make([]*mathlib.G1, 3)
 
 	for i := 0; i < len(p.PedersenGenerators); i++ {
-		p.PedersenGenerators[i] = curve.GenG1.Mul(curve.NewRandomZr(rand))
+		p.PedersenGenerators[i] = curve.HashToG1([]byte("lfdt-panurus." + string(p.DriverName) + "." + strconv.Itoa(int(p.DriverVersion)) + ".PedersenGenerators." + strconv.Itoa(i)))
 	}
 
 	return nil
@@ -569,9 +565,10 @@ func (p *PublicParams) GeneratePedersenParameters() error {
 func (p *PublicParams) GenerateRangeProofParameters(bitLength uint64) error {
 	curve := mathlib.Curves[p.Curve]
 
+	domainPrefix := "lfdt-panurus." + string(p.DriverName) + "." + strconv.Itoa(int(p.DriverVersion)) + "."
 	p.RangeProofParams = &RangeProofParams{
-		P:              curve.HashToG1([]byte(strconv.Itoa(0))),
-		Q:              curve.HashToG1([]byte(strconv.Itoa(1))),
+		P:              curve.HashToG1([]byte(domainPrefix + "RangeProof.P")),
+		Q:              curve.HashToG1([]byte(domainPrefix + "RangeProof.Q")),
 		BitLength:      bitLength,
 		NumberOfRounds: log2(bitLength),
 	}
@@ -579,8 +576,8 @@ func (p *PublicParams) GenerateRangeProofParameters(bitLength uint64) error {
 	p.RangeProofParams.RightGenerators = make([]*mathlib.G1, bitLength)
 
 	for i := range bitLength {
-		p.RangeProofParams.LeftGenerators[i] = curve.HashToG1([]byte("RangeProof." + strconv.FormatUint(2*(i+1), 10)))
-		p.RangeProofParams.RightGenerators[i] = curve.HashToG1([]byte("RangeProof." + strconv.FormatUint(2*(i+1)+1, 10)))
+		p.RangeProofParams.LeftGenerators[i] = curve.HashToG1([]byte(domainPrefix + "RangeProof.L." + strconv.FormatUint(i, 10)))
+		p.RangeProofParams.RightGenerators[i] = curve.HashToG1([]byte(domainPrefix + "RangeProof.R." + strconv.FormatUint(i, 10)))
 	}
 
 	return nil
@@ -589,6 +586,7 @@ func (p *PublicParams) GenerateRangeProofParameters(bitLength uint64) error {
 func (p *PublicParams) GenerateCSPRangeProofParameters(bitLength uint64) error {
 	curve := mathlib.Curves[p.Curve]
 
+	domainPrefix := "lfdt-panurus." + string(p.DriverName) + "." + strconv.Itoa(int(p.DriverVersion)) + "."
 	p.CSPRangeProofParams = &CSPRangeProofParams{
 		BitLength: bitLength,
 	}
@@ -596,8 +594,8 @@ func (p *PublicParams) GenerateCSPRangeProofParameters(bitLength uint64) error {
 	p.CSPRangeProofParams.RightGenerators = make([]*mathlib.G1, bitLength+1)
 
 	for i := range bitLength + 1 {
-		p.CSPRangeProofParams.LeftGenerators[i] = curve.HashToG1([]byte("CSPRangeProof." + strconv.FormatUint(2*(i+1), 10)))
-		p.CSPRangeProofParams.RightGenerators[i] = curve.HashToG1([]byte("CSPRangeProof." + strconv.FormatUint(2*(i+1)+1, 10)))
+		p.CSPRangeProofParams.LeftGenerators[i] = curve.HashToG1([]byte(domainPrefix + "CSPRangeProof.L." + strconv.FormatUint(i, 10)))
+		p.CSPRangeProofParams.RightGenerators[i] = curve.HashToG1([]byte(domainPrefix + "CSPRangeProof.R." + strconv.FormatUint(i, 10)))
 	}
 
 	return nil
@@ -730,13 +728,31 @@ func (p *PublicParams) Validate() error {
 			return errors.Wrap(err, "invalid public parameters")
 		}
 		if p.QuantityPrecision != p.CSPRangeProofParams.BitLength {
-			return errors.Errorf("invalid public parameters: quantity precision should be [%d] instead it is [%d]", p.RangeProofParams.BitLength, p.QuantityPrecision)
+			return errors.Errorf("invalid public parameters: quantity precision should be [%d] instead it is [%d]", p.CSPRangeProofParams.BitLength, p.QuantityPrecision)
 		}
 	}
 
 	maxToken := p.ComputeMaxTokenValue()
 	if maxToken != p.MaxToken {
 		return errors.Errorf("invalid max token, [%d]!=[%d]", maxToken, p.MaxToken)
+	}
+
+	return nil
+}
+
+// ValidateForDeployment checks configuration choices that are technically valid
+// but may indicate a misconfiguration. It does not change the behaviour of
+// Validate(); empty IssuerIDs remain permitted (open-policy mode).
+//
+// Returns a non-nil error if the public parameters appear to be in open-policy
+// mode (IssuerIDs is empty), so that callers can surface an explicit warning at
+// deployment time instead of silently operating in a mode where any identity
+// can mint or redeem tokens.
+//
+// See FA-1 in the security analysis for the rationale.
+func (p *PublicParams) ValidateForDeployment() error {
+	if len(p.IssuerIDs) == 0 {
+		return errors.New("open-policy mode: IssuerIDs is empty — any identity can issue and redeem tokens; populate IssuerIDs to restrict minting and redemption")
 	}
 
 	return nil
@@ -752,6 +768,21 @@ func (p *PublicParams) BitLength() uint64 {
 	}
 
 	return p.CSPRangeProofParams.BitLength
+}
+
+// SupportsRangeProofType reports whether the params sub-struct required by
+// proofType is populated. Both sub-structs may be present simultaneously (e.g.
+// during a range-proof-algorithm migration), so this is a per-type availability
+// check rather than a single-value getter.
+func (p *PublicParams) SupportsRangeProofType(proofType rp.ProofType) bool {
+	switch proofType {
+	case rp.RangeProofType:
+		return p.RangeProofParams != nil
+	case rp.CSPRangeProofType:
+		return p.CSPRangeProofParams != nil
+	default:
+		return false
+	}
 }
 
 func log2(x uint64) uint64 {

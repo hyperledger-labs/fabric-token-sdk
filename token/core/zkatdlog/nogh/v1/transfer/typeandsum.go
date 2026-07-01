@@ -105,7 +105,7 @@ func (p *TypeAndSumProof) Validate(curveID math.CurveID) error {
 	if err := math2.CheckElement(p.CommitmentToType, curveID); err != nil {
 		return errors.Join(err, ErrInvalidCommitmentToType, ErrInvalidSumAndTypeProof)
 	}
-	if err := math2.CheckZrElements(p.InputBlindingFactors, curveID, uint64(len(p.InputBlindingFactors))); err != nil {
+	if err := math2.CheckZrElements(p.InputBlindingFactors, curveID, uint64(len(p.InputValues))); err != nil {
 		return errors.Join(err, ErrInvalidInputBlindingFactors, ErrInvalidSumAndTypeProof)
 	}
 	if err := math2.CheckZrElements(p.InputValues, curveID, uint64(len(p.InputValues))); err != nil {
@@ -331,6 +331,9 @@ func NewTypeAndSumVerifier(pp []*math.G1, inputs []*math.G1, outputs []*math.G1,
 // Verify checks the validity of a TypeAndSumProof.
 func (v *TypeAndSumVerifier) Verify(stp *TypeAndSumProof) error {
 	if stp.TypeBlindingFactor == nil || stp.Type == nil || stp.CommitmentToType == nil || stp.EqualityOfSum == nil {
+		return ErrMissingSumAndTypeComponents
+	}
+	if len(stp.InputBlindingFactors) != len(v.Inputs) {
 		return ErrMissingSumAndTypeComponents
 	}
 

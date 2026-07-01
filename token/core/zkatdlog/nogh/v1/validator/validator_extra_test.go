@@ -272,6 +272,16 @@ func TestTransferUpgradeWitnessValidateErrors(t *testing.T) {
 	err = validator.TransferUpgradeWitnessValidate(context.Background(), ctx)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "owners do not correspond")
+
+	// T-GAP-5: quantity that overflows uint64 boundary must be rejected cleanly (not panic).
+	// "0x10000000000000000" is 2^64, which exceeds the uint64 maximum.
+	action.Inputs[0].UpgradeWitness.FabToken.Quantity = "0x10000000000000000"
+	require.NotPanics(t, func() {
+		err = validator.TransferUpgradeWitnessValidate(context.Background(), ctx)
+	}, "T-GAP-5: overflow quantity must not panic")
+	require.Error(t, err, "T-GAP-5: overflow quantity must be rejected")
+	// token2.ToQuantity returns an error for quantities that exceed the precision;
+	// the exact message may vary so we only assert an error is returned.
 }
 
 func TestTransferZKProofValidateErrors(t *testing.T) {
@@ -431,6 +441,28 @@ func TestTransferHTLCValidateErrors(t *testing.T) {
 	ctx.TransferAction.Outputs = []*token.Token{{Owner: invalidJSONID}}
 	err = validator.TransferHTLCValidate(context.Background(), ctx)
 	require.Error(t, err)
+
+	// T-GAP-7: expired HTLC deadline — claim attempted after expiry must be rejected.
+	// Script has an expired deadline, so VerifyOwner returns Reclaim.
+	// The output owner is the recipient (not sender), so the owner check fails.
+	ctx = newCtx()
+	expiredScript := &htlc.Script{
+		Sender:    validSenderID,
+		Recipient: validRecipientID,
+		Deadline:  time.Now().Add(-100 * time.Hour), // expired
+		HashInfo: htlc.HashInfo{
+			Hash:         []byte("hash"),
+			HashFunc:     crypto.SHA256,
+			HashEncoding: encoding.Hex,
+		},
+	}
+	expiredScriptBytes, _ := json.Marshal(expiredScript)
+	expiredLockID, _ := identity.WrapWithType(htlc.ScriptType, expiredScriptBytes)
+	ctx.InputTokens[0].Owner = expiredLockID
+	// Output owner is the recipient — only valid for a claim, not a reclaim.
+	ctx.TransferAction.Outputs = []*token.Token{{Owner: validRecipientID, Data: &math.G1{}}}
+	err = validator.TransferHTLCValidate(context.Background(), ctx)
+	require.Error(t, err, "T-GAP-7: claim attempt after expiry must be rejected")
 }
 
 func TestDeserializeActionsErrors(t *testing.T) {

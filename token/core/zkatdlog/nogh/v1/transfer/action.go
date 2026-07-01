@@ -191,20 +191,29 @@ func (t *Action) NumInputs() int {
 	return len(t.Inputs)
 }
 
-// GetInputs returns the identifiers of the tokens spent in the Action
+// GetInputs returns the identifiers of the tokens spent in the Action.
+// A nil ActionInput entry produces a nil *token2.ID at the corresponding index,
+// which is consistent with the slice-length contract used by callers.
 func (t *Action) GetInputs() []*token2.ID {
 	res := make([]*token2.ID, len(t.Inputs))
 	for i, input := range t.Inputs {
+		if input == nil {
+			res[i] = nil
+
+			continue
+		}
 		res[i] = input.ID
 	}
 
 	return res
 }
 
-// GetSerializedInputs returns the serialized tokens spent in the Action
+// GetSerializedInputs returns the serialized tokens spent in the Action.
+// Returns an error instead of panicking when an input's Token field is nil
+// (which Validate() guards against, but some code paths skip Validate).
 func (t *Action) GetSerializedInputs() ([][]byte, error) {
 	var res [][]byte
-	for _, input := range t.Inputs {
+	for i, input := range t.Inputs {
 		if input == nil {
 			res = append(res, nil)
 
@@ -218,6 +227,9 @@ func (t *Action) GetSerializedInputs() ([][]byte, error) {
 			res = append(res, ser)
 
 			continue
+		}
+		if input.Token == nil {
+			return nil, errors.Errorf("nil token in input at index [%d]", i)
 		}
 		r, err := input.Token.Serialize()
 		if err != nil {
@@ -251,6 +263,13 @@ func (t *Action) GetOutputs() []driver.Output {
 
 // IsRedeemAt checks if output in the Action at the passed index is redeemed
 func (t *Action) IsRedeemAt(index int) bool {
+	if index < 0 || index >= len(t.Outputs) {
+		return false
+	}
+	if t.Outputs[index] == nil {
+		return false
+	}
+
 	return t.Outputs[index].IsRedeem()
 }
 
@@ -265,8 +284,17 @@ func (t *Action) IsRedeem() bool {
 	return false
 }
 
-// SerializeOutputAt marshals the output in the Action at the passed index
+// SerializeOutputAt marshals the output in the Action at the passed index.
+// Returns an error when index is out of bounds or the output entry is nil
+// instead of panicking.
 func (t *Action) SerializeOutputAt(index int) ([]byte, error) {
+	if index < 0 || index >= len(t.Outputs) {
+		return nil, errors.Errorf("SerializeOutputAt: index [%d] out of bounds (len=%d)", index, len(t.Outputs))
+	}
+	if t.Outputs[index] == nil {
+		return nil, errors.Errorf("SerializeOutputAt: nil output at index [%d]", index)
+	}
+
 	return t.Outputs[index].Serialize()
 }
 
@@ -275,6 +303,9 @@ func (t *Action) GetSerializedOutputs() ([][]byte, error) {
 	res := make([][]byte, len(t.Outputs))
 	var err error
 	for i, token := range t.Outputs {
+		if token == nil {
+			return nil, errors.Errorf("nil output entry at index %d", i)
+		}
 		res[i], err = token.Serialize()
 		if err != nil {
 			return nil, err
@@ -444,8 +475,11 @@ func (t *Action) Deserialize(raw []byte) error {
 	// outputs
 	t.Outputs = make([]*token.Token, len(action.Outputs))
 	for j, output := range action.Outputs {
-		if output == nil || output.Token == nil {
-			continue
+		if output == nil {
+			return errors.Errorf("invalid transfer action: output at index [%d] is nil", j)
+		}
+		if output.Token == nil {
+			return errors.Errorf("invalid transfer action: token of output at index [%d] is nil", j)
 		}
 		data, err := utils.FromG1Proto(output.Token.Data)
 		if err != nil {
@@ -485,11 +519,16 @@ func (t *Action) GetProof() []byte {
 	return t.Proof
 }
 
-// GetOutputCommitments returns the cryptographic commitments of the outputs
+// GetOutputCommitments returns the cryptographic commitments of the outputs.
+// It skips nil output entries defensively; callers (validators) ensure all outputs
+// are non-nil via Action.Validate() before this method is reached.
 func (t *Action) GetOutputCommitments() []*math.G1 {
-	com := make([]*math.G1, len(t.Outputs))
-	for i := range com {
-		com[i] = t.Outputs[i].Data
+	com := make([]*math.G1, 0, len(t.Outputs))
+	for _, out := range t.Outputs {
+		if out == nil {
+			continue
+		}
+		com = append(com, out.Data)
 	}
 
 	return com
