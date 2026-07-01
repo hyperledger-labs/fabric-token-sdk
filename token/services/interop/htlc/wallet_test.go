@@ -24,6 +24,7 @@ import (
 // newToken builds a non-expired HTLC unspent token for use in wallet tests.
 func newToken(t *testing.T) *token2.UnspentToken {
 	t.Helper()
+	
 	return makeFilterToken(t, &Script{
 		Sender:    []byte("sender"),
 		Recipient: []byte("recipient"),
@@ -36,6 +37,7 @@ func singleTokenIter(tok *token2.UnspentToken) *drivermock.UnspentTokensIterator
 	it := &drivermock.UnspentTokensIterator{}
 	it.NextReturnsOnCall(0, tok, nil)
 	it.NextReturnsOnCall(1, nil, nil)
+	
 	return it
 }
 
@@ -43,6 +45,7 @@ func singleTokenIter(tok *token2.UnspentToken) *drivermock.UnspentTokensIterator
 func emptyIter() *drivermock.UnspentTokensIterator {
 	it := &drivermock.UnspentTokensIterator{}
 	it.NextReturnsOnCall(0, nil, nil)
+	
 	return it
 }
 
@@ -62,6 +65,7 @@ func drainIter(t *testing.T, it interface {
 		result = append(result, tok)
 	}
 	it.Close()
+	
 	return result
 }
 
@@ -80,6 +84,7 @@ func TestFilterIteratorSender_UsesSenderID(t *testing.T) {
 			return singleTokenIter(tok), nil
 		default:
 			t.Fatalf("unexpected wallet ID: %s", id)
+		
 			return nil, nil
 		}
 	}
@@ -112,6 +117,7 @@ func TestFilterIteratorRecipient_UsesRecipientID(t *testing.T) {
 			return singleTokenIter(tok), nil
 		default:
 			t.Fatalf("unexpected wallet ID: %s", id)
+		
 			return nil, nil
 		}
 	}
@@ -160,6 +166,7 @@ func TestFilterIteratorFirstFails_SecondSucceeds(t *testing.T) {
 		if id == "base" {
 			return nil, errors.New("base wallet unavailable")
 		}
+
 		return singleTokenIter(tok), nil
 	}
 
@@ -190,6 +197,7 @@ func TestFilterIteratorSingleValid_ReturnsDirectly(t *testing.T) {
 		if calls == 1 {
 			return singleTokenIter(tok), nil
 		}
+
 		return nil, errors.New("second wallet unavailable")
 	}
 
@@ -220,6 +228,7 @@ func TestFilterIteratorBothValid_ChainsIterators(t *testing.T) {
 		if calls == 1 {
 			return singleTokenIter(tok1), nil
 		}
+		
 		return singleTokenIter(tok2), nil
 	}
 
@@ -257,6 +266,7 @@ func TestFilterIteratorNilProvider_FallsBackToStub(t *testing.T) {
 		if id == "base" {
 			return singleTokenIter(tok), nil
 		}
+		
 		return emptyIter(), nil
 	}
 
@@ -290,6 +300,7 @@ func TestFilterIteratorSelector_FiltersExpired(t *testing.T) {
 		if calls == 1 {
 			return singleTokenIter(expiredTok), nil
 		}
+		
 		return emptyIter(), nil
 	}
 
