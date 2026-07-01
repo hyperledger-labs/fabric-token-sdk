@@ -113,7 +113,7 @@ type SignerProvider interface {
 	GetSigner(party view.Identity) (token.Signer, error)
 }
 
-// StreamExternalWalletSignerClient is the signer client executed where the token-sdk is in execution
+// StreamExternalWalletSignerClient is the signer client executed where Panurus is in execution
 type StreamExternalWalletSignerClient struct {
 	sp      SignerProvider
 	stream  view2.Stream

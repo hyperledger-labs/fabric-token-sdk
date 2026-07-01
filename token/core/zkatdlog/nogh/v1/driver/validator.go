@@ -41,7 +41,7 @@ func (d ValidatorDriver) NewValidator(pp driver.PublicParameters) (driver.Valida
 	if err != nil {
 		return nil, errors.Errorf("failed to create token service deserializer: %v", err)
 	}
-	logger := logging.DriverLoggerFromPP("token-sdk.driver.zkatdlog", string(pp.TokenDriverName()))
+	logger := logging.DriverLoggerFromPP("panurus.driver.zkatdlog", string(pp.TokenDriverName()))
 
 	return validator.New(
 		logger,

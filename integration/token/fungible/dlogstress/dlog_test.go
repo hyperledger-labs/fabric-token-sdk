@@ -45,7 +45,7 @@ func newTestSuite(backend string) (*token.TestSuite, *token.ReplicaSelector) {
 			DefaultTMSOpts:  common.TMSOpts{TokenSDKDriver: zkatdlognoghv1.DriverIdentifier, Aries: true},
 			ReplicationOpts: opts,
 			CommType:        fsc.LibP2P,
-			// FSCLogSpec:      "token-sdk=debug:info",
+			// FSCLogSpec:      "panurus=debug:info",
 			FSCLogSpec: "info",
 			SDKs:       []nodepkg.SDK{sdks[backend]},
 			Monitoring: true,

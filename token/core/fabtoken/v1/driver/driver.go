@@ -86,7 +86,7 @@ func newTokenDriver(
 
 // NewTokenService returns a new fabtoken token manager service for the passed TMS ID and public parameters.
 func (d *Driver) NewTokenService(tmsID driver.TMSID, publicParams []byte) (driver.TokenManagerService, error) {
-	logger := logging.DriverLogger("token-sdk.driver.fabtoken", tmsID.Network, tmsID.Channel, tmsID.Namespace)
+	logger := logging.DriverLogger("panurus.driver.fabtoken", tmsID.Network, tmsID.Channel, tmsID.Namespace)
 
 	logger.Debugf("creating new token service with public parameters [%s]", utils.Hashable(publicParams))
 

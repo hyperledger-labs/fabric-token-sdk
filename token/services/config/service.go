@@ -98,10 +98,10 @@ func (m *Service) LookupNamespace(network, channel string) (string, error) {
 		return hits[0].Namespace, nil
 	}
 	if len(hits) == 0 {
-		return "", errors.Errorf("no token-sdk configuration for network [%s], channel [%s]", network, channel)
+		return "", errors.Errorf("no configuration for network [%s], channel [%s]", network, channel)
 	}
 
-	return "", errors.Errorf("multiple token-sdk configurations for network [%s], channel [%s]", network, channel)
+	return "", errors.Errorf("multiple configurations for network [%s], channel [%s]", network, channel)
 }
 
 // ConfigurationFor returns a configuration for the given network, channel, and namespace.
@@ -118,7 +118,7 @@ func (m *Service) ConfigurationFor(network, channel, namespace string) (*Configu
 		}
 	}
 
-	return nil, errors.Wrapf(ErrConfigurationNotFound, "no token-sdk configuration for network [%s], channel [%s], namespace [%s]", network, channel, namespace)
+	return nil, errors.Wrapf(ErrConfigurationNotFound, "no configuration for network [%s], channel [%s], namespace [%s]", network, channel, namespace)
 }
 
 // Configurations returns all configuration configurations.
@@ -206,11 +206,11 @@ func (m *loader) load() (map[string]*Configuration, error) {
 	// load
 	var boxedConfig map[string]any
 	if err := m.cp.UnmarshalKey(TMSPath, &boxedConfig); err != nil {
-		logger.Debugf("cannot unmarshal token-sdk configurations from [%s], try empty map: [%v]", TMSPath, err)
+		logger.Debugf("cannot unmarshal configurations from [%s], try empty map: [%v]", TMSPath, err)
 		boxedConfig = map[string]any{}
 	}
 	if boxedConfig == nil {
-		logger.Debugf("token-sdk configurations from [%s] is nil, return empty map", TMSPath)
+		logger.Debugf("configurations from [%s] is nil, return empty map", TMSPath)
 
 		return map[string]*Configuration{}, nil
 	}
@@ -219,11 +219,11 @@ func (m *loader) load() (map[string]*Configuration, error) {
 	for id := range boxedConfig {
 		tmsID := driver.TMSID{}
 		if err := m.cp.UnmarshalKey(config.Join(TMSPath, id), &tmsID); err != nil {
-			return nil, errors.WithMessagef(err, "cannot load token-sdk tms configuration for [%s]", id)
+			return nil, errors.WithMessagef(err, "cannot load tms configuration for [%s]", id)
 		}
 		tmsConfigs[id] = NewConfiguration(m.cp, id, tmsID)
 		if err := tmsConfigs[id].Validate(); err != nil {
-			return nil, errors.WithMessagef(err, "cannot load token-sdk configuration for [%s]", id)
+			return nil, errors.WithMessagef(err, "cannot load configuration for [%s]", id)
 		}
 	}
 

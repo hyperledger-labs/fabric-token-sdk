@@ -1,4 +1,4 @@
-# Token-SDK Configuration Example
+# Panurus Configuration Example
 
 The following example provides descriptions for the various keys required by Panurus.
 
@@ -370,7 +370,7 @@ token:
                   Security: 256
 ```
 
-## Minimal Token-SDK Configuration
+## Minimal Configuration
 
 Panurus can start with the following minimal configuration:
 

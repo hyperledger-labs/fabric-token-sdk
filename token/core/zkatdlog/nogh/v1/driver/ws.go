@@ -154,7 +154,7 @@ func NewWalletServiceFactory(storageProvider identity.StorageProvider) core.Name
 // NewWalletService returns a new zkatdlog wallet service for the passed configuration and public parameters.
 func (d *WalletServiceFactory) NewWalletService(tmsConfig driver.Configuration, params driver.PublicParameters) (driver.WalletService, error) {
 	tmsID := tmsConfig.ID()
-	logger := logging.DriverLogger("token-sdk.driver.zkatdlog", tmsID.Network, tmsID.Channel, tmsID.Namespace)
+	logger := logging.DriverLogger("panurus.driver.zkatdlog", tmsID.Network, tmsID.Channel, tmsID.Namespace)
 
 	pp, ok := params.(*v1.PublicParams)
 	if !ok {
