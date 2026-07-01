@@ -1,4 +1,4 @@
-# Panurs Configuration Example
+# Panurus Configuration Example
 
 The following example provides descriptions for the various keys required by Panurus.
 

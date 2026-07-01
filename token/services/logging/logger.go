@@ -20,7 +20,7 @@ const loggerNameSeparator = "."
 // Logger provides logging API
 type (
 	Logger = logging.Logger
-	Conifg = logging.Config
+	Config = logging.Config
 )
 
 func Init(config logging.Config) {

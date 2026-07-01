@@ -44,7 +44,7 @@ func TestModuleLevelLoggerWorks(t *testing.T) {
 	var buf bytes.Buffer
 
 	// Initialize logging with the buffer as the writer
-	logging.Init(logging.Conifg{
+	logging.Init(logging.Config{
 		LogSpec:      "info",
 		Writer:       &buf,
 		OtelSanitize: false,
