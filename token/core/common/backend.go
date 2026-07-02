@@ -50,6 +50,10 @@ func (b *Backend) HasBeenSignedBy(ctx context.Context, id driver.Identity, verif
 
 // GetState returns the state associated with the provided token ID from the ledger.
 func (b *Backend) GetState(id token.ID) ([]byte, error) {
+	if b.Ledger == nil {
+		return nil, errors.New("ledger not available")
+	}
+
 	return b.Ledger(id)
 }
 

@@ -231,7 +231,11 @@ func (s *IssueService) VerifyIssue(ctx context.Context, ia driver.IssueAction, o
 	}
 
 	// check the proof
-	if err := issue.NewVerifier(coms, pp).Verify(action.GetProof()); err != nil {
+	verifier, err := issue.NewVerifier(coms, pp, action.ProofType)
+	if err != nil {
+		return errors.Wrap(err, "failed to verify issue proof")
+	}
+	if err := verifier.Verify(action.GetProof()); err != nil {
 		return errors.Wrap(err, "failed to verify issue proof")
 	}
 

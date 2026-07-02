@@ -48,7 +48,7 @@ func (p *AcceptTxInDBFilterProvider) New(tmsID token3.TMSID) (*AcceptTxInDBsFilt
 }
 
 // AcceptTxInDBsFilter uses the transaction db and the audit db to decide if a given transaction needs
-// to be further processed by the token-sdk upon a network event about its finality
+// to be further processed by Panurus upon a network event about its finality
 type AcceptTxInDBsFilter struct {
 	ttxDB   *ttxdb.StoreService
 	auditDB *auditdb.StoreService

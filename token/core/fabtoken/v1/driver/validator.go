@@ -36,7 +36,7 @@ func (d ValidatorDriver) NewValidator(pp driver.PublicParameters) (driver.Valida
 	if !ok {
 		return nil, errors.Errorf("invalid public parameters type [%T]", pp)
 	}
-	logger := logging.DriverLoggerFromPP("token-sdk.driver.fabtoken", string(core.DriverIdentifierFromPP(pp)))
+	logger := logging.DriverLoggerFromPP("panurus.driver.fabtoken", string(core.DriverIdentifierFromPP(pp)))
 	deserializer := NewDeserializer()
 
 	return validator.NewValidator(logger, ppp, deserializer, nil, nil, nil), nil

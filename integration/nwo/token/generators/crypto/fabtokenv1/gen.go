@@ -213,7 +213,7 @@ func (d *CryptoMaterialGenerator) Generate(tms *topology.TMS, n *node.Node, wall
 			utils.IgnoreError(in.Close)
 			utils.IgnoreError(out.Close)
 
-			// delete keystore/priv_sk so that the token-sdk will interpreter this wallet as a remote one
+			// delete keystore/priv_sk so that panurus will interpreter this wallet as a remote one
 			gomega.Expect(os.Remove(filepath.Join(idOutput, x509.KeystoreFolder, x509.PrivateKeyFileName))).NotTo(gomega.HaveOccurred())
 		}
 

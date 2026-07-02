@@ -124,7 +124,7 @@ func NewWalletServiceFactory(storageProvider identity.StorageProvider) core.Name
 // NewWalletService returns a new fabtoken wallet service for the passed configuration and parameters.
 func (d *WalletServiceFactory) NewWalletService(tmsConfig driver.Configuration, params driver.PublicParameters) (driver.WalletService, error) {
 	tmsID := tmsConfig.ID()
-	logger := logging.DriverLogger("token-sdk.driver.fabtoken", tmsID.Network, tmsID.Channel, tmsID.Namespace)
+	logger := logging.DriverLogger("panurus.driver.fabtoken", tmsID.Network, tmsID.Channel, tmsID.Namespace)
 
 	return d.newWalletService(
 		tmsConfig,

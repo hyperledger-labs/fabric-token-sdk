@@ -102,7 +102,7 @@ graph TB
 
 The protocol is instantiated over a pairing-friendly elliptic curve $\mathcal{C}$ (default: **BLS12-381**).
 
-- **Group $G_1$**: A cyclic group of prime order $q$. Let $g, h, g_0, g_1, g_2$ be generators of $G_1$ such that their discrete logarithms relative to each other are unknown.
+- **Group $G_1$**: A cyclic group of prime order $q$. Let $g, h, g_0, g_1, g_2$ be generators of $G_1$. The Pedersen generators $g_0, g_1, g_2$ are derived via hash-to-curve from public, domain-separated strings, so their discrete logarithms relative to each other are unknown to any party (nothing-up-my-sleeve construction).
 - **Group $G_2$**: A cyclic group of prime order $q$.
 - **Bilinear Map**: $e: G_1 \times G_2 \to G_T$ is a non-degenerate, computable bilinear map.
 - **Scalar Field $\mathbb{Z}_r$**: The field of integers modulo $q$.
@@ -122,13 +122,45 @@ For production deployments, use `BLS12_381_BBS`.
 
 - **Challenge Hash ($H_{FS}$)**: $\{0,1\}^* \to \mathbb{Z}_r$ used for the Fiat-Shamir heuristic to make ZKPs non-interactive.
 - **Type Hash ($H_{Type}$)**: $\{0,1\}^* \to \mathbb{Z}_r$ used to map token type strings (e.g., "USD") to the scalar field.
-- **Domain Generators**: Default generators $g_0, g_1, g_2$ are derived using hash-to-group $H_{G1}$ on specific domain strings (e.g., `"zkat-dlog.nogh.g0"`).
+- **Domain Generators**: The Pedersen generators $g_0, g_1, g_2$ are derived using hash-to-group $H_{G1}$ on public domain-separated strings of the form `"lfdt-panurus.<DriverName>.<DriverVersion>.PedersenGenerators.<i>"`. See [Section 2.3](#23-generator-derivation) for the exact strings.
 
 ### 2.3 Generator Derivation
 
-The Pedersen generators are derived deterministically using cryptographically secure random number generation.
+The Pedersen generators are derived **deterministically via hash-to-curve** from fixed, public, domain-separated strings. No randomness or secret trapdoor is involved; any party can independently reproduce and verify each generator.
 
-**Implementation**: See [`setup.go`](../../token/core/zkatdlog/nogh/v1/setup/setup.go) for the complete generator derivation logic.
+**Derivation formula** (implemented in [`GeneratePedersenParameters`](../../token/core/zkatdlog/nogh/v1/setup/setup.go)):
+
+```
+PedersenGenerators[i] = HashToG1("lfdt-panurus.<DriverName>.<DriverVersion>.PedersenGenerators.<i>")
+```
+
+For the `zkatdlognogh` v1 driver the three input strings are therefore:
+
+| Index | Domain-separated input string |
+|-------|-------------------------------|
+| 0 | `lfdt-panurus.zkatdlognogh.1.PedersenGenerators.0` |
+| 1 | `lfdt-panurus.zkatdlognogh.1.PedersenGenerators.1` |
+| 2 | `lfdt-panurus.zkatdlognogh.1.PedersenGenerators.2` |
+
+The same nothing-up-my-sleeve technique is used for all range-proof generators, ensuring a uniform, auditable setup. The full set of domain strings for `zkatdlognogh` v1 is:
+
+**Bulletproof range-proof generators** (implemented in [`GenerateRangeProofParameters`](../../token/core/zkatdlog/nogh/v1/setup/setup.go)):
+
+| Generator | Domain-separated input string |
+|-----------|-------------------------------|
+| P | `lfdt-panurus.zkatdlognogh.1.RangeProof.P` |
+| Q | `lfdt-panurus.zkatdlognogh.1.RangeProof.Q` |
+| LeftGenerators[i] | `lfdt-panurus.zkatdlognogh.1.RangeProof.L.<i>` |
+| RightGenerators[i] | `lfdt-panurus.zkatdlognogh.1.RangeProof.R.<i>` |
+
+**CSP range-proof generators** (implemented in [`GenerateCSPRangeProofParameters`](../../token/core/zkatdlog/nogh/v1/setup/setup.go)):
+
+| Generator | Domain-separated input string |
+|-----------|-------------------------------|
+| LeftGenerators[i] | `lfdt-panurus.zkatdlognogh.1.CSPRangeProof.L.<i>` |
+| RightGenerators[i] | `lfdt-panurus.zkatdlognogh.1.CSPRangeProof.R.<i>` |
+
+**Security note**: Because the generators are derived from a public hash, no single party—including the operator who ran `tokengen`—knows the discrete-log relation between $g_0$, $g_1$, and $g_2$ with respect to each other. This is a necessary pre-condition for the binding property of Pedersen commitments (see [Section 12.1](#121-soundness)).
 
 The public parameters include three Pedersen generators `[g_0, g_1, g_2]` used for commitment schemes:
 - `g_0`: Used for token type commitments
@@ -137,25 +169,31 @@ The public parameters include three Pedersen generators `[g_0, g_1, g_2]` used f
 
 ### 2.4 Range Proof Systems
 
-**As of commit 586d4f58**, the driver supports **two range proof systems**:
+The driver supports **two range proof systems**:
 
-1. **Bulletproofs** (Original implementation)
+1. **Bulletproofs** (`rp.RangeProofType`)
    - Based on Inner Product Arguments (IPA)
    - Proof size: O(log n) where n is the bit length
    - Verification time: O(n) group operations
    - Implementation: [`crypto/rp/bulletproof/`](../../token/core/zkatdlog/nogh/v1/crypto/rp/bulletproof)
 
-2. **Compressed Sigma Protocols (CSP)** (New implementation)
+2. **Compressed Sigma Protocols (CSP)** (`rp.CSPRangeProofType`)
    - Based on recursive folding with Fiat-Shamir
    - Proof size: O(log n) where n is the bit length
    - Faster verification through Lagrange interpolation optimizations
    - Implementation: [`crypto/rp/csp/`](../../token/core/zkatdlog/nogh/v1/crypto/rp/csp)
 
-The proof system is selected via the `ProofType` parameter in `SetupParams`:
-- `rp.Bulletproof` - Uses Bulletproof range proofs (default)
-- `rp.CSP` - Uses Compressed Sigma Protocol range proofs
+**Availability**: At least one proof system must be configured in `PublicParams`; both may be configured simultaneously (e.g. during a range-proof migration window). Each system has its own independent params sub-struct (`RangeProofParams` and `CSPRangeProofParams`).
 
-**Performance Comparison**: CSP proofs offer improved verification performance through optimized Lagrange interpolation, particularly beneficial for high-throughput scenarios. 
+**Prover selection**: When generating a proof, the driver uses CSP if `CSPRangeProofParams` is non-nil, and falls back to BulletProof otherwise.
+
+**Verifier selection**: The proof type is fixed by the `ProofType` field recorded in the action by the prover. The verifier checks that the corresponding params sub-struct is populated before constructing the verifier — an action claiming a proof system whose params are absent is rejected with an explicit error rather than a nil-pointer dereference.
+
+The proof system(s) are configured via the `ProofType` parameter in `SetupParams` (see [Section 4.2](#42-range-proof-parameters)):
+- `rp.RangeProofType` — configures BulletProof range proof parameters
+- `rp.CSPRangeProofType` — configures CSP range proof parameters
+
+**Performance Comparison**: CSP proofs offer improved verification performance through optimized Lagrange interpolation, particularly beneficial for high-throughput scenarios.
 See [benchmark documentation](./benchmark/core/dlognogh/dlognogh.md) for detailed performance metrics.
 
 ---
@@ -298,7 +336,7 @@ type CSPRangeProofParams struct {
 - CSP generators have length `BitLength + 1` (one extra generator for the protocol)
 - CSP does not use NumberOfRounds (computed internally as needed)
 
-**Selection**: The appropriate parameter structure is populated based on the `ProofType` specified during setup. Only one set of parameters is included in the serialized `PublicParams`.
+**Availability and selection**: Each params sub-struct is populated independently. At least one must be non-nil (enforced by `PublicParams.Validate()`); both may be non-nil simultaneously, for example when migrating between range-proof algorithms. During serialization, whichever sub-structs are populated are included — operators can deploy a `PublicParams` that supports both systems in parallel.
 
 **Supported Precisions**: Any number between 1 and 64 is accepted. 
 For the CSP-based range proof, since CSP inner product argument is over 2n+4 sized vector, 
@@ -506,7 +544,7 @@ sequenceDiagram
 
 ### 7.2 Range Proofs
 
-The driver supports two range proof systems. The choice is made during public parameter setup and affects proof generation and verification.
+The driver supports two range proof systems. Both may be active at the same time (see [Section 2.4](#24-range-proof-systems)). The prover records its choice as `ProofType` in the action; the verifier uses `PublicParams.SupportsRangeProofType(proofType)` to confirm the corresponding params sub-struct is present before dispatching.
 
 #### 7.2.1 Bulletproof Range Proofs
 
@@ -1256,13 +1294,18 @@ The ZKAT-DLOG (NOGH) driver uses Protocol Buffers for all serialized data struct
 - `quantity_precision` (uint64): Bit-precision for token quantities (16, 32, or 64)
 - `extra_data` (map<string, bytes>): Extensibility map for custom parameters
 
-**RangeProofParams**: Bulletproof configuration for proving values are in valid range.
-- `left_generators` (repeated G1): Left-side generators for inner product argument
-- `right_generators` (repeated G1): Right-side generators for inner product argument
-- `P` (G1): Generator P for the inner product
-- `Q` (G1): Generator Q for the inner product
+**RangeProofParams**: Bulletproof configuration for proving values are in valid range. All generators are derived via hash-to-curve from domain-separated strings of the form `"lfdt-panurus.<DriverName>.<DriverVersion>.RangeProof.{P,Q,L.<i>,R.<i>}"` (see [Section 2.3](#23-generator-derivation)).
+- `left_generators` (repeated G1): Left-side generators for inner product argument; `LeftGenerators[i]` = `HashToG1("lfdt-panurus.zkatdlognogh.1.RangeProof.L.<i>")`
+- `right_generators` (repeated G1): Right-side generators for inner product argument; `RightGenerators[i]` = `HashToG1("lfdt-panurus.zkatdlognogh.1.RangeProof.R.<i>")`
+- `P` (G1): Base point for IPA; `HashToG1("lfdt-panurus.zkatdlognogh.1.RangeProof.P")`
+- `Q` (G1): Base point for IPA; `HashToG1("lfdt-panurus.zkatdlognogh.1.RangeProof.Q")`
 - `bit_length` (uint64): Number of bits in the range (e.g., 64)
 - `number_of_rounds` (uint64): Number of rounds in the protocol (log₂ of bit_length)
+
+**CSPRangeProofParams**: CSP configuration for proving values are in valid range. All generators are derived via hash-to-curve from domain-separated strings of the form `"lfdt-panurus.<DriverName>.<DriverVersion>.CSPRangeProof.{L.<i>,R.<i>}"` (see [Section 2.3](#23-generator-derivation)).
+- `left_generators` (repeated G1): Left-side generators; `LeftGenerators[i]` = `HashToG1("lfdt-panurus.zkatdlognogh.1.CSPRangeProof.L.<i>")`
+- `right_generators` (repeated G1): Right-side generators; `RightGenerators[i]` = `HashToG1("lfdt-panurus.zkatdlognogh.1.CSPRangeProof.R.<i>")`
+- `bit_length` (uint64): Number of bits in the range (e.g., 64)
 
 #### 10.7.3 Mathematical Elements ([`noghmath.proto`](../../token/core/zkatdlog/nogh/protos/v1/noghmath.proto))
 
@@ -1491,7 +1534,7 @@ For a typical deployment with 1M tokens:
 
 $$\sum_{i=1}^m V_{in,i} = \sum_{j=1}^k V_{out,j}$$
 
-No party can create value out of thin air.
+No party can create value out of thin air. This binding property holds unconditionally only when no party knows the discrete-log relation between the Pedersen generators. The generators $g_0, g_1, g_2$ are therefore derived via hash-to-curve from public domain-separated strings (see [Section 2.3](#23-generator-derivation)), guaranteeing that even the operator who ran `tokengen` does not possess a trapdoor that could allow equivocating commitments.
 
 **Range Validity**: Bulletproofs ensure that all output values are in the valid range $[0, 2^{64}-1]$, preventing:
 - Negative values
@@ -1500,7 +1543,7 @@ No party can create value out of thin air.
 
 ### 12.2 Zero-Knowledge
 
-**Value Privacy**: Observers learn nothing about $T$ or $V$ from the on-ledger data. The Pedersen commitment is computationally hiding under the discrete logarithm assumption.
+**Value Privacy**: Observers learn nothing about $T$ or $V$ from the on-ledger data. The Pedersen commitment is computationally hiding under the discrete logarithm assumption, and computationally binding provided no party knows the discrete-log relations between the generators (guaranteed by the hash-to-curve derivation described in [Section 2.3](#23-generator-derivation)).
 
 **Type Privacy**: Token types are hidden through the hash function $H_{Type}$, which maps types to random-looking field elements.
 

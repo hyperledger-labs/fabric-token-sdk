@@ -22,7 +22,7 @@ import (
 )
 
 var (
-	// Driver is the Token-SDK driver to use.
+	// Driver is the Panurus token driver to use.
 	Driver string
 	// OutputDir is the directory to output the generated files.
 	OutputDir string

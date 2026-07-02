@@ -175,7 +175,7 @@ func (d *CryptoMaterialGenerator) GenerateOwnerIdentities(tms *topology.TMS, n *
 			)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
-			// overwrite the signer config file so that the token-sdk will interpreter this wallet as a remote one or verify only wallet
+			// overwrite the signer config file so that panurus will interpreter this wallet as a remote one or verify only wallet
 			raw, err := proto.Marshal(signerConfig)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 

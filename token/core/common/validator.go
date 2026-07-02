@@ -366,6 +366,7 @@ func (v *Validator[P, T, TA, IA, DS]) VerifyAuditing(
 		Deserializer:      v.Deserializer,
 		Ledger:            ledger,
 		SignatureProvider: signatureProvider,
+		MetadataCounter:   map[MetadataCounterID]int{},
 		Attributes:        attributes,
 	}
 	for _, v := range v.AuditingValidators {

@@ -7,6 +7,11 @@ replace (
 	github.com/LFDT-Panurus/panurus/integration => ./../../integration
 )
 
+replace (
+	github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/state/cc/query => github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/state/cc/query v0.0.0-20260618115140-04366ada95c8
+	github.com/hyperledger-labs/fabric-smart-client/platform/view/services/comm/host/libp2p => github.com/hyperledger-labs/fabric-smart-client/platform/view/services/comm/host/libp2p v0.0.0-20260618115140-04366ada95c8
+)
+
 require (
 	github.com/IBM/idemix v0.0.2
 	github.com/IBM/mathlib v0.1.0

@@ -75,7 +75,7 @@ func TestLookupNamespace(t *testing.T) {
 	// Test Case: No Hit
 	ns, err = s.LookupNamespace("n3", "c3")
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "no token-sdk configuration")
+	assert.Contains(t, err.Error(), "no configuration")
 	assert.Empty(t, ns)
 
 	// Test Case: Multiple Hits
@@ -108,7 +108,7 @@ func TestLookupNamespace(t *testing.T) {
 
 	_, err = s.LookupNamespace("n1", "c1")
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "multiple token-sdk configurations")
+	assert.Contains(t, err.Error(), "multiple configurations")
 }
 
 func TestConfigurationFor(t *testing.T) {
