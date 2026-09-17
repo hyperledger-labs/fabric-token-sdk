@@ -437,6 +437,10 @@ func (c *CollectEndorsementsView) signExternal(ctx context.Context, party view.I
 	return sigma, nil
 }
 
+// SigResponseTimeout bounds how long the initiator waits for one remote
+// signer's reply within a signature fan-out phase.
+const SigResponseTimeout = 1 * time.Minute
+
 // signRemote requests a signature from a remote party by opening a network session,
 // sending the signature request, receiving the signature, and verifying it.
 // This is used when the signing party is on a different node.
@@ -457,7 +461,7 @@ func (c *CollectEndorsementsView) signRemote(
 	}
 
 	var signaturePayload SignaturePayload
-	if err := ts.ReceiveTypedWithTimeout(TypeSignature, &signaturePayload, time.Minute); err != nil {
+	if err := ts.ReceiveTypedWithTimeout(TypeSignature, &signaturePayload, SigResponseTimeout); err != nil {
 		return nil, errors.Wrap(err, "failed reading message")
 	}
 	sigma := signaturePayload.Signature
@@ -902,7 +906,9 @@ func (c *CollectEndorsementsView) getSession(context view.Context, p view.Identi
 }
 
 // AnswerCollectionTimeout bounds a whole signature fan-out phase, not a single
-// answer.
+// answer. It is the phase's true upper bound rather than a backstop: a worker's
+// own SigResponseTimeout covers only the receive, not the session dial or the
+// signature verification around it.
 const AnswerCollectionTimeout = 2 * time.Minute
 
 // noPerAnswerTimeout disables the collector's own per-Collect timer, so a fan-out
