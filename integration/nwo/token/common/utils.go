@@ -22,6 +22,7 @@ const (
 )
 
 func pathExists(path string) bool {
+	//nolint:gosec // G703: path is FAB_BINS (operator-set) joined with a fixed cmd name, not attacker input
 	if _, err := os.Stat(filepath.Clean(path)); os.IsNotExist(err) {
 		return false
 	}
