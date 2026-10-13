@@ -24,29 +24,41 @@ import (
 // These tests stand up a real Besu and deploy the real contracts into it. They are the Week-6
 // building block: everything the suite does later assumes a node exists with the contracts on it.
 //
-// They are skipped when docker or forge are unavailable so the ordinary unit run stays hermetic, and
+// They are skipped when docker, forge or the Besu image are unavailable so the ordinary unit run stays hermetic, and
 // they carry their own network and container names so a leftover from a previous run cannot make them
 // pass or fail spuriously.
 
-func requireBesuTooling(t *testing.T) {
+// requireBesuTooling skips the test unless forge, docker and the Besu image are all available, and
+// returns the image to boot. The image is resolved once, the way the suite resolves it, so the check
+// and the boot cannot disagree when BESU_IMAGE overrides the default.
+func requireBesuTooling(t *testing.T) string {
 	t.Helper()
 	if _, err := exec.LookPath("forge"); err != nil {
 		t.Skip("forge not installed; skipping the Besu deployment test")
 	}
-	if _, err := docker.GetInstance(); err != nil {
+	d, err := docker.GetInstance()
+	if err != nil {
 		t.Skip("docker not available; skipping the Besu deployment test")
 	}
+	// forge and docker alone are not enough: CI installs both for the Solidity suite without pulling the
+	// Besu image, and booting it would then fail the whole unit run rather than skip.
+	image := resolveImage("", besuImageEnvVar, DefaultBesuImage)
+	if err := d.CheckImagesExist(image); err != nil {
+		t.Skipf("besu image %s not pulled; skipping the Besu deployment test", image)
+	}
+
+	return image
 }
 
 // startTestBesu boots a node and removes the container afterwards. There is no docker network to
 // create or clean up: the node is reached over its published port like everything else here.
 func startTestBesu(t *testing.T, name string, port int) *Besu {
 	t.Helper()
-	requireBesuTooling(t)
+	image := requireBesuTooling(t)
 
 	_ = exec.Command("docker", "rm", "-f", name).Run()
 	node, err := StartBesu(context.Background(), BesuConfig{
-		Name: name, Port: port, StartTimeout: 3 * time.Minute,
+		Image: image, Name: name, Port: port, StartTimeout: 3 * time.Minute,
 	})
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = node.Stop(context.Background()) })
