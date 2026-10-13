@@ -521,6 +521,11 @@ func TestFetchPublicParameters(t *testing.T) {
 	out, err := n.FetchPublicParameters("token")
 	require.NoError(t, err)
 	assert.Equal(t, []byte("public-params"), out)
+
+	// The TMS is built from this, so it has to see a contract deployed within the finalization
+	// window, the same way Connect's deployment check does.
+	_, _, _, tag := evm.CallArgsForCall(0)
+	assert.Equal(t, client.BlockTagLatest, tag)
 }
 
 // TestLookupTransferMetadataKeyTimesOut checks the polling contract: the value is written when the
