@@ -23,6 +23,7 @@ These targets run various test suites.
 | `make unit-tests` | Runs standard unit tests for Panurus, excluding integration and regression tests. |
 | `make unit-tests-race` | Runs unit tests with the Go race detector enabled. |
 | `make unit-tests-regression` | Runs regression tests. |
+| `make test-evm-contracts` | Runs the EVM driver's Solidity tests (`forge test`) and `forge fmt --check`. Skips without `forge` or the `forge-std` submodule; set `EVM_CONTRACTS_REQUIRED=1` to fail instead. |
 
 ### Integration Tests
 
