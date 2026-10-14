@@ -13,6 +13,7 @@ import (
 	"github.com/LFDT-Panurus/panurus/token/services/storage/auditdb/locker/memory"
 	lockerpostgres "github.com/LFDT-Panurus/panurus/token/services/storage/auditdb/locker/postgres"
 	dbdriver "github.com/LFDT-Panurus/panurus/token/services/storage/db/driver"
+	sqlpostgres "github.com/LFDT-Panurus/panurus/token/services/storage/db/sql/postgres"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 )
 
@@ -21,6 +22,9 @@ import (
 type WriteDBProvider interface {
 	WriteDB() *sql.DB
 }
+
+// The postgres audit store must keep satisfying WriteDBProvider; both ends match dynamically.
+var _ WriteDBProvider = (*sqlpostgres.AuditTransactionStore)(nil)
 
 // NewFromConfig builds the appropriate Locker based on cfg.
 func NewFromConfig(cfg Config, store any, replicaID id.ReplicaIDProvider) (Locker, error) {
