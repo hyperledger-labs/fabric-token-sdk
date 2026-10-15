@@ -27,9 +27,9 @@ panurus_core_common_metrics_transfer_service_duration_seconds | histogram | netw
 panurus_core_common_metrics_transfer_service_errors_total | counter | network,channel,namespace,method | token/core/common/metrics/transfer.go | Total number of TransferService method errors
 panurus_core_common_metrics_transfer_service_operations_total | counter | network,channel,namespace,method | token/core/common/metrics/transfer.go | Total number of TransferService method invocations
 panurus_services_auditor_auditor_append_duration_seconds | histogram | - | token/services/auditor/metrics.go | Histogram of Append() processing time per transaction, in seconds
-panurus_services_auditor_auditor_append_errors_total | counter | - | token/services/auditor/metrics.go | Total number of Append() calls that failed to write to the audit database
+panurus_services_auditor_auditor_append_errors_total | counter | - | token/services/auditor/metrics.go | Total number of Append() calls that failed to store the audit record
 panurus_services_auditor_auditor_audit_duration_seconds | histogram | - | token/services/auditor/metrics.go | Histogram of Audit() processing time per transaction (including lock acquisition), in seconds
-panurus_services_auditor_auditor_audit_lock_conflicts_total | counter | - | token/services/auditor/metrics.go | Total number of Audit() calls that failed to acquire enrollment-ID locks
+panurus_services_auditor_auditor_audit_lock_conflicts_total | counter | - | token/services/auditor/metrics.go | Total number of Audit() and Append() calls that failed to acquire enrollment-ID locks
 panurus_services_auditor_auditor_releases_total | counter | - | token/services/auditor/metrics.go | Total number of Release() calls (explicit and deferred)
 panurus_services_certifier_interactive_certification_dropped_tokens_total | counter | channel,namespace | token/services/certifier/interactive/metrics.go | Total number of tokens dropped because the certification buffer was full.
 panurus_services_certifier_interactive_certification_errors_total | counter | channel,namespace | token/services/certifier/interactive/metrics.go | Total number of failed certification request attempts.

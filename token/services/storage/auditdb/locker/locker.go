@@ -57,11 +57,11 @@ type Locker interface {
 	//
 	// It detects lost locks, not absent ones: an anchor that holds no locks
 	// succeeds, whether because its enrollment-ID set was empty or because the
-	// caller never locked anything for it. Callers append records for anchors they
-	// never locked (an auditor that validates and approves without calling Audit),
-	// so treating that as a failure would reject legitimate writes — and would do
-	// so only on the backends able to notice, which is the divergence this
-	// contract exists to prevent.
+	// caller never locked anything for it. A record whose request yields no
+	// enrollment IDs locks nothing, and a caller may legitimately write for an
+	// anchor it never locked, so treating either as a failure would reject
+	// legitimate writes — and would do so only on the backends able to notice,
+	// which is the divergence this contract exists to prevent.
 	AssertLocksHeld(ctx context.Context, anchor string) error
 }
 
