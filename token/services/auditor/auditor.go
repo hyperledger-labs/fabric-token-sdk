@@ -14,6 +14,7 @@ import (
 
 	"github.com/LFDT-Panurus/panurus/token"
 	"github.com/LFDT-Panurus/panurus/token/core/common/metrics"
+	"github.com/LFDT-Panurus/panurus/token/driver/protos-go/v1/request"
 	"github.com/LFDT-Panurus/panurus/token/services/identity"
 	"github.com/LFDT-Panurus/panurus/token/services/logging"
 	"github.com/LFDT-Panurus/panurus/token/services/network"
@@ -556,12 +557,13 @@ func rejectMultiOwnerActions(record *token.AuditRecord) error {
 // of the owner where present, the one carried by the request otherwise (see
 // Request.AuditRecord). An owner the identity layer cannot decode counts as
 // resolving to nothing; any other resolution failure — a storage error, a
-// canceled context — fails the audit. An input the request describes no sender for is an
-// upgrade input, and falls back to the enrollment ID the request issues to;
-// an upgrade issued to a composite owner spanning enrollment IDs fails the
-// audit (see issuedToEIDAndRH). An owner that maps to no single enrollment ID
-// leaves its input unattributed rather than booked under a guessed enrollment
-// ID, so a record keeping such an input is not fully attributed on return.
+// canceled context — fails the audit. An input of an issue action is an
+// upgrade input, and falls back to the enrollment ID the outputs of that same
+// issue action are issued to; an upgrade issued to a composite owner spanning
+// enrollment IDs fails the audit (see issuedToEIDAndRH). An owner that maps to
+// no single enrollment ID leaves its input unattributed rather than booked
+// under a guessed enrollment ID, so a record keeping such an input is not
+// fully attributed on return.
 func (r *requestWrapper) completeInputsWithEmptyEID(ctx context.Context, record *token.AuditRecord) error {
 	filter := record.Inputs.ByEnrollmentID("")
 	if filter.Count() == 0 {
@@ -583,9 +585,20 @@ func (r *requestWrapper) completeInputsWithEmptyEID(ctx context.Context, record 
 		if tokens[i] == nil {
 			return errors.Errorf("failed to audit inputs: nil input at [%d]th input", i)
 		}
-		// an input the request describes no sender for: extractIssueInputs fills
-		// only the token id, so across the built-in drivers this is an upgrade
-		upgraded := len(item.Owner) == 0
+		// attribution reads the kind of action an input belongs to, so an input
+		// naming none cannot be attributed: it would skip the upgrade fallback
+		// below and credit an upgraded amount to its receiver without ever
+		// debiting it. Every input built through token.NewInput names its
+		// action, so an unnamed one is a programming error, not a request the
+		// audit can pass.
+		if item.ActionType == request.ActionType_ACTION_TYPE_UNSPECIFIED {
+			return errors.Errorf("failed to audit inputs: input [%v] names no action kind", item.Id)
+		}
+		// an input of an issue action: extractIssueInputs fills only the token
+		// id, so across the built-in drivers this is an upgrade. Reading the
+		// action kind off the input keeps a transfer input whose sender happens
+		// to carry no identity out of the upgrade fallback.
+		upgraded := item.ActionType == request.ActionType_ACTION_TYPE_ISSUE
 
 		item.Owner = tokens[i].Owner
 		item.Type = tokens[i].Type
@@ -631,11 +644,16 @@ func (r *requestWrapper) completeInputsWithEmptyEID(ctx context.Context, record 
 	return nil
 }
 
-// issuedToEIDAndRH returns the enrollment ID and revocation handle the given issue
-// action issues to, and empty values when it does not issue to exactly one party.
-// An issued output carries both an issuer and an owner; a redeem output carries an
-// issuer but no owner. Every issued output of the action must resolve to the same
+// issuedToEIDAndRH returns the enrollment ID and revocation handle the issue
+// action at actionIndex issues to, and empty values when it does not issue to
+// exactly one party. Every issued output of the action must resolve to the same
 // enrollment ID. The handle is kept only while it stays paired with that ID.
+//
+// The action is named by the pair (issue, actionIndex): issue and transfer
+// actions are numbered independently, so an ActionIndex match alone also picks
+// up the outputs of the transfer action sitting at the same index. A redeem
+// output is dropped on its empty owner — it is issuer-only, and nothing is
+// issued to it to attribute an input from.
 //
 // A composite owner issues one output row per member, all under one output index.
 // Members resolving to distinct enrollment IDs leave no single enrollment ID to
@@ -645,7 +663,7 @@ func (r *requestWrapper) completeInputsWithEmptyEID(ctx context.Context, record 
 // nothing is credited and the input may stay unattributed.
 func issuedToEIDAndRH(outputs *token.OutputStream, actionIndex int) (string, string, error) {
 	issued := outputs.Filter(func(o *token.Output) bool {
-		return o.ActionIndex == actionIndex && len(o.Issuer) != 0 && len(o.Owner) != 0
+		return o.ActionType == request.ActionType_ACTION_TYPE_ISSUE && o.ActionIndex == actionIndex && len(o.Owner) != 0
 	}).Outputs()
 	if len(issued) == 0 {
 		return "", "", nil

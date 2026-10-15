@@ -114,8 +114,11 @@ func TestRequest_Outputs_CompositeSameEIDKeepsMemberRows(t *testing.T) {
 	outputs, err := newCompositeTransferRequest(t, ws).Outputs(t.Context())
 	require.NoError(t, err)
 
-	// one row per member, same physical output index
+	// one row per member, same physical output index, both naming the transfer
+	// action that created them: the upgrade fallback keys on that kind
 	require.Equal(t, 2, outputs.Count())
+	assert.Equal(t, request.ActionType_ACTION_TYPE_TRANSFER, outputs.At(0).ActionType)
+	assert.Equal(t, request.ActionType_ACTION_TYPE_TRANSFER, outputs.At(1).ActionType)
 	assert.Equal(t, "wallet-42", outputs.At(0).EnrollmentID)
 	assert.Equal(t, "wallet-42", outputs.At(1).EnrollmentID)
 	assert.Equal(t, outputs.At(0).Index, outputs.At(1).Index)
@@ -219,6 +222,8 @@ func TestRequest_Outputs_IssueCompositeSameEIDKeepsMemberRows(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, 2, outputs.Count())
+	assert.Equal(t, request.ActionType_ACTION_TYPE_ISSUE, outputs.At(0).ActionType)
+	assert.Equal(t, request.ActionType_ACTION_TYPE_ISSUE, outputs.At(1).ActionType)
 	assert.Equal(t, []string{"rh-0", "rh-1"}, outputs.RevocationHandles())
 	assert.Equal(t, "40", outputs.ByEnrollmentID("wallet-42").UniquePerOutput().Sum().String())
 }

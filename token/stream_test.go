@@ -13,6 +13,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/LFDT-Panurus/panurus/token/driver/protos-go/v1/request"
 	"github.com/LFDT-Panurus/panurus/token/token"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/stretchr/testify/assert"
@@ -285,10 +286,15 @@ func TestOutputStream_UniquePerOutput(t *testing.T) {
 	}
 }
 
-// extractedInput builds an input the way the request's extraction path does,
-// so its position takes part in deduplication.
+// extractedInput builds a transfer action's input the way the request's
+// extraction path does, so its position takes part in deduplication.
 func extractedInput(actionIndex, index int, id *token.ID, eID, rh string) *Input {
-	in := NewInput(actionIndex, index, id)
+	return extractedInputOf(request.ActionType_ACTION_TYPE_TRANSFER, actionIndex, index, id, eID, rh)
+}
+
+// extractedInputOf is extractedInput for an action of the given kind.
+func extractedInputOf(actionType request.ActionType, actionIndex, index int, id *token.ID, eID, rh string) *Input {
+	in := NewInput(actionType, actionIndex, index, id)
 	in.EnrollmentID = eID
 	in.RevocationHandler = rh
 
@@ -363,6 +369,19 @@ func TestInputStream_UniquePerInput(t *testing.T) {
 			[]*Input{
 				extractedInput(0, 0, &token.ID{TxId: "tx0", Index: 0}, "enroll1", ""),
 				extractedInput(0, 0, nil, "enroll1", ""),
+			},
+		},
+		{
+			// issue and transfer actions are numbered independently, so these two
+			// rows name different tokens despite sharing an action and input index
+			"an issue row and a transfer row with the same position both survive",
+			[]*Input{
+				extractedInputOf(request.ActionType_ACTION_TYPE_ISSUE, 0, 0, nil, "enroll1", ""),
+				extractedInputOf(request.ActionType_ACTION_TYPE_TRANSFER, 0, 0, nil, "enroll1", ""),
+			},
+			[]*Input{
+				extractedInputOf(request.ActionType_ACTION_TYPE_ISSUE, 0, 0, nil, "enroll1", ""),
+				extractedInputOf(request.ActionType_ACTION_TYPE_TRANSFER, 0, 0, nil, "enroll1", ""),
 			},
 		},
 		{

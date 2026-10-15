@@ -13,6 +13,7 @@ import (
 	"math/big"
 
 	"github.com/LFDT-Panurus/panurus/token/driver"
+	"github.com/LFDT-Panurus/panurus/token/driver/protos-go/v1/request"
 	"github.com/LFDT-Panurus/panurus/token/token"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 )
@@ -24,7 +25,15 @@ type QueryService interface {
 // Output models the output of a token action
 type Output struct {
 	token.Token
-	// ActionIndex is the index of the action that created this output
+	// ActionType is the kind of the action that created this output. Issue and
+	// transfer actions are numbered independently, so ActionIndex identifies an
+	// action only together with this field (see ActionIndex).
+	ActionType request.ActionType
+	// ActionIndex is the index of the action that created this output within the
+	// actions of its own kind: the issue actions of a request are numbered
+	// 0..n-1 and its transfer actions 0..m-1, so an issue action and a transfer
+	// action of the same request can share an index. Pair it with ActionType to
+	// name one action.
 	ActionIndex int
 	// Index is the absolute position of this output in the token request
 	Index uint64
@@ -232,6 +241,11 @@ func (o *OutputStream) String() string {
 
 // Input models an input of a token action
 type Input struct {
+	// ActionType is the kind of the action that spends this input. As for an
+	// Output, it is what makes ActionIndex name a single action.
+	ActionType request.ActionType
+	// ActionIndex is the index of the action that spends this input among the
+	// actions of its own kind; see Output.ActionIndex.
 	ActionIndex int
 	// Index is the position of this input within its action; it takes part in
 	// deduplication only on inputs built through NewInput
@@ -250,12 +264,13 @@ type Input struct {
 	positionKnown bool
 }
 
-// NewInput returns an Input positioned within its action. The position stands
-// in for the token ID during deduplication when the metadata has the token ID
-// filtered out (see UniquePerInput), so inputs are built through here; an
-// input built as a literal keeps no position and never collapses on it.
-func NewInput(actionIndex, index int, id *token.ID) *Input {
-	return &Input{ActionIndex: actionIndex, Index: index, Id: id, positionKnown: true}
+// NewInput returns an Input positioned within its action, which is the action
+// of kind actionType at actionIndex. The position stands in for the token ID
+// during deduplication when the metadata has the token ID filtered out (see
+// UniquePerInput), so inputs are built through here; an input built as a
+// literal keeps no position and never collapses on it.
+func NewInput(actionType request.ActionType, actionIndex, index int, id *token.ID) *Input {
+	return &Input{ActionType: actionType, ActionIndex: actionIndex, Index: index, Id: id, positionKnown: true}
 }
 
 // InputStream models a stream over a set of inputs (Input).
@@ -410,18 +425,20 @@ func (is *InputStream) ByType(tokenType token.Type) *InputStream {
 // UniquePerInput returns a stream keeping, for each spent token and
 // EnrollmentID, only the first input, so amount aggregation counts a
 // composite owner's members once. The token is identified by its token ID,
-// or by (ActionIndex, Index) when the token ID has been filtered out of the
-// metadata; the two key spaces never mix, since only transfer inputs lose
-// their token ID. The position counts only for inputs built through NewInput:
-// a literal-built input without a token ID is kept as it stands, never
-// collapsed on a position nobody set. Identity consumers use the full stream
-// instead.
+// or by its position within its action when the token ID has been filtered
+// out of the metadata. That position is (ActionType, ActionIndex, Index), not
+// (ActionIndex, Index): issue and transfer actions are numbered
+// independently, so an issue input and a transfer input can share an index.
+// The position counts only for inputs built through NewInput: a literal-built
+// input without a token ID is kept as it stands, never collapsed on a
+// position nobody set. Identity consumers use the full stream instead.
 func (is *InputStream) UniquePerInput() *InputStream {
 	type idKey struct {
 		id  token.ID
 		eID string
 	}
 	type posKey struct {
+		actionType  request.ActionType
 		actionIndex int
 		index       int
 		eID         string
@@ -442,7 +459,7 @@ func (is *InputStream) UniquePerInput() *InputStream {
 		if !t.positionKnown {
 			return true
 		}
-		k := posKey{actionIndex: t.ActionIndex, index: t.Index, eID: t.EnrollmentID}
+		k := posKey{actionType: t.ActionType, actionIndex: t.ActionIndex, index: t.Index, eID: t.EnrollmentID}
 		if seenByPos[k] {
 			return false
 		}
