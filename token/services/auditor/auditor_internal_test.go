@@ -1043,12 +1043,16 @@ func (t tmsExt) SetTokenManagementService(req *token.Request) error {
 	return nil
 }
 
-// stubTMSProvider returns tms when set, an inert stub otherwise.
+// stubTMSProvider returns err when set, tms when set, an inert stub otherwise.
 type stubTMSProvider struct {
 	tms dep.TokenManagementServiceWithExtensions
+	err error
 }
 
 func (s *stubTMSProvider) TokenManagementService(...token.ServiceOption) (dep.TokenManagementServiceWithExtensions, error) {
+	if s.err != nil {
+		return nil, s.err
+	}
 	if s.tms != nil {
 		return s.tms, nil
 	}
@@ -1432,6 +1436,216 @@ func TestService_Append_WithoutAudit_ProviderTMSAttributesTheRecord(t *testing.T
 	assert.Positive(t, providerWS.GetEIDAndRHCallCount())
 	assert.Equal(t, 0, c.qe.ListAuditTokensCallCount())
 	assert.Equal(t, 0, c.ws.GetEIDAndRHCallCount())
+}
+
+// ---------------------------------------------------------------------------
+// Append locks whatever it attributes itself (issue #2250)
+// ---------------------------------------------------------------------------
+
+// writeCountingStore counts the store transactions opened to write a record,
+// so a test can tell a refused Append from one that wrote.
+type writeCountingStore struct {
+	dbdriver.AuditTransactionStore
+	writes int
+}
+
+func (s *writeCountingStore) NewTransactionStoreTransaction() (dbdriver.TransactionStoreTransaction, error) {
+	s.writes++
+
+	return &stubStoreTx{}, nil
+}
+
+// failingLocker refuses every acquisition with err, and counts the attempts.
+type failingLocker struct {
+	err      error
+	attempts int
+}
+
+func (l *failingLocker) AcquireLocks(context.Context, string, ...string) error {
+	l.attempts++
+
+	return l.err
+}
+func (l *failingLocker) ReleaseLocks(context.Context, string)          {}
+func (l *failingLocker) AssertLocksHeld(context.Context, string) error { return nil }
+
+// An Append that finds no cached record attributes the record afresh, and must
+// lock the enrollment IDs that attribution books it under: before this, the
+// re-attribution ran with the first acquisition already released, and could
+// store an enrollment ID that was never locked. Both ways of getting there —
+// a second Append, whose deferred Release dropped the cache, and an explicit
+// Release between the two calls — land in the same place.
+func TestService_Append_LocksTheReattributedRecord(t *testing.T) {
+	payer := driver.Identity("payer-owner")
+	recipient := driver.Identity("recipient-owner")
+
+	for _, tc := range []struct {
+		name      string
+		dropCache func(*testing.T, *exactSpendTestContext)
+	}{
+		{
+			name: "after a first Append",
+			dropCache: func(t *testing.T, c *exactSpendTestContext) {
+				t.Helper()
+				require.NoError(t, c.svc.Append(context.Background(), c.tx))
+			},
+		},
+		{
+			name: "after an explicit Release",
+			dropCache: func(t *testing.T, c *exactSpendTestContext) {
+				t.Helper()
+				c.svc.Release(context.Background(), c.tx)
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			c := newExactSpendTestContext(t, payer, recipient, "payer-eid")
+
+			_, _, err := c.svc.Audit(context.Background(), c.tx)
+			require.NoError(t, err)
+			tc.dropCache(t, c)
+			// the audited record was reused and everything was released
+			require.Len(t, c.locker.acquired, 1)
+			require.Nil(t, c.svc.cachedAuditRecord(c.tx.req))
+
+			vaultReads := c.qe.ListAuditTokensCallCount()
+			require.NoError(t, c.svc.Append(context.Background(), c.tx))
+
+			// the record was re-attributed, and the locks were taken for it again
+			assert.Greater(t, c.qe.ListAuditTokensCallCount(), vaultReads)
+			require.Len(t, c.locker.acquired, 2)
+			assert.Contains(t, c.locker.acquired[1], "payer-eid")
+			assert.Contains(t, c.locker.acquired[1], "recipient-eid")
+			assert.NotContains(t, c.locker.acquired[1], "")
+		})
+	}
+}
+
+// Append called on its own — the Validate -> Append flow, with no Audit at
+// all — attributes the record too, so it takes the locks for it as well.
+func TestService_Append_WithoutAudit_LocksTheAttributedRecord(t *testing.T) {
+	payer := driver.Identity("payer-owner")
+	recipient := driver.Identity("recipient-owner")
+	c := newExactSpendTestContext(t, payer, recipient, "payer-eid")
+
+	require.NoError(t, c.svc.Append(context.Background(), c.tx))
+
+	require.Len(t, c.locker.acquired, 1)
+	assert.Contains(t, c.locker.acquired[0], "payer-eid")
+	assert.Contains(t, c.locker.acquired[0], "recipient-eid")
+	assert.NotContains(t, c.locker.acquired[0], "")
+}
+
+// The record Append attributes is stored as it stands: the acquisition covers
+// it, and the store is handed that record rather than attributing a second one
+// of its own — which, being unlocked, is the hazard this fix removes.
+func TestService_Append_WithoutAudit_StoresWhatItLocked(t *testing.T) {
+	payer := driver.Identity("payer-owner")
+	recipient := driver.Identity("recipient-owner")
+	c := newExactSpendTestContext(t, payer, recipient, "payer-eid")
+
+	require.NoError(t, c.svc.Append(context.Background(), c.tx))
+
+	// Audit over the same request measures what one attribution costs in vault
+	// reads; Append spends exactly that, so it attributed once
+	audited := newExactSpendTestContext(t, payer, recipient, "payer-eid")
+	_, _, err := audited.svc.Audit(context.Background(), audited.tx)
+	require.NoError(t, err)
+	assert.Equal(t, audited.qe.ListAuditTokensCallCount(), c.qe.ListAuditTokensCallCount())
+	assert.Len(t, c.locker.acquired, 1)
+}
+
+// countingCounter accumulates what was added to it.
+type countingCounter struct{ total float64 }
+
+func (c *countingCounter) With(...string) metrics.Counter { return c }
+func (c *countingCounter) Add(delta float64)              { c.total += delta }
+
+// newCountingMetricsProvider returns a provider handing out counters the test
+// can read back by metric name.
+func newCountingMetricsProvider() (*commondrivermock.MetricsProvider, map[string]*countingCounter) {
+	counters := map[string]*countingCounter{}
+	mp := &commondrivermock.MetricsProvider{}
+	mp.NewCounterCalls(func(o metrics.CounterOpts) metrics.Counter {
+		c := &countingCounter{}
+		counters[o.Name] = c
+
+		return c
+	})
+	mp.NewGaugeReturns(&noopGauge{})
+	mp.NewHistogramReturns(&noopHistogram{})
+
+	return mp, counters
+}
+
+// Every way an Append can fail to store the record counts towards
+// auditor_append_errors_total, the attribution and locking it now does
+// included — otherwise the counter reads as zero through failures that never
+// reached the write.
+func TestService_Append_CountsEveryFailureAsAppendError(t *testing.T) {
+	payer := driver.Identity("payer-owner")
+	recipient := driver.Identity("recipient-owner")
+
+	for _, tc := range []struct {
+		name     string
+		sabotage func(*exactSpendTestContext) error
+	}{
+		{
+			name: "tms resolution",
+			sabotage: func(c *exactSpendTestContext) error {
+				c.svc.tmsProvider = &stubTMSProvider{err: errors.New("tms err")}
+
+				return nil
+			},
+		},
+		{
+			name: "lock acquisition",
+			sabotage: func(c *exactSpendTestContext) error {
+				auditDB, err := auditdb.NewStoreService(
+					&stubAuditStore{},
+					auditdb.WithLocker(&failingLocker{err: auditdb.ErrLockAcquireTimeout}),
+				)
+				if err != nil {
+					return err
+				}
+				c.svc.auditDB = auditDB
+
+				return nil
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			c := newExactSpendTestContext(t, payer, recipient, "payer-eid")
+			provider, counters := newCountingMetricsProvider()
+			c.svc.metrics = newMetrics(provider)
+			require.NoError(t, tc.sabotage(c))
+
+			require.Error(t, c.svc.Append(context.Background(), c.tx))
+			assert.InDelta(t, 1, counters["auditor_append_errors_total"].total, 0)
+		})
+	}
+}
+
+// A failed acquisition fails the Append: the record is not stored under
+// enrollment IDs this node does not hold.
+func TestService_Append_LockFailureRefusesTheWrite(t *testing.T) {
+	payer := driver.Identity("payer-owner")
+	recipient := driver.Identity("recipient-owner")
+	c := newExactSpendTestContext(t, payer, recipient, "payer-eid")
+
+	store := &writeCountingStore{}
+	// ErrLockAcquireTimeout is final: the locker already spent its whole
+	// waiting budget, so the retry runner does not try again
+	locker := &failingLocker{err: auditdb.ErrLockAcquireTimeout}
+	auditDB, err := auditdb.NewStoreService(store, auditdb.WithLocker(locker))
+	require.NoError(t, err)
+	c.svc.auditDB = auditDB
+
+	err = c.svc.Append(context.Background(), c.tx)
+	require.Error(t, err)
+	require.ErrorIs(t, err, auditdb.ErrLockAcquireTimeout)
+	assert.Equal(t, 1, locker.attempts)
+	assert.Equal(t, 0, store.writes)
 }
 
 // newUpgradeTestRequest builds an upgrade-shaped request: one issue action

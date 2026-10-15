@@ -168,9 +168,9 @@ labels**, so a node auditing several TMSs reports them aggregated; see
 | Metric | Type | Labels | Description |
 |---|---|---|---|
 | `panurus_services_auditor_auditor_audit_duration_seconds` | histogram | — | Histogram of Audit() processing time per transaction (including lock acquisition), in seconds |
-| `panurus_services_auditor_auditor_audit_lock_conflicts_total` | counter | — | Total number of Audit() calls that failed to acquire enrollment-ID locks |
+| `panurus_services_auditor_auditor_audit_lock_conflicts_total` | counter | — | Total number of Audit() and Append() calls that failed to acquire enrollment-ID locks |
 | `panurus_services_auditor_auditor_append_duration_seconds` | histogram | — | Histogram of Append() processing time per transaction, in seconds |
-| `panurus_services_auditor_auditor_append_errors_total` | counter | — | Total number of Append() calls that failed to write to the audit database |
+| `panurus_services_auditor_auditor_append_errors_total` | counter | — | Total number of Append() calls that failed to store the audit record |
 | `panurus_services_auditor_auditor_releases_total` | counter | — | Total number of Release() calls (explicit and deferred) |
 
 Source: `token/services/auditor/metrics.go`.

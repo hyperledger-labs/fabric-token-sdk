@@ -16,19 +16,22 @@ type Metrics struct {
 	// invocation (lock acquisition included), in seconds.
 	AuditDuration metrics.Histogram
 
-	// AuditLockConflicts counts calls to Audit() that failed because another
-	// anchor held one of the enrollment IDs, i.e. those whose error carries
-	// ErrLockContention. Failures with no second holder involved — a cancelled
-	// caller, a database outage — are not conflicts and are deliberately not
-	// counted here, so that alerting on this metric measures contention only.
+	// AuditLockConflicts counts the lock acquisitions that failed because
+	// another anchor held one of the enrollment IDs, i.e. those whose error
+	// carries ErrLockContention. Both acquisition sites count here: Audit(),
+	// and the Append() that locks a record it attributed itself. Failures with
+	// no second holder involved — a cancelled caller, a database outage — are
+	// not conflicts and are deliberately not counted here, so that alerting on
+	// this metric measures contention only.
 	AuditLockConflicts metrics.Counter
 
 	// AppendDuration is a histogram of the total wall-clock time for each
 	// Append() invocation, in seconds.
 	AppendDuration metrics.Histogram
 
-	// AppendErrors counts calls to Append() that failed when writing to the
-	// audit database.
+	// AppendErrors counts calls to Append() that failed to store the record:
+	// attributing it, locking the enrollment IDs it is booked under, or the
+	// write to the audit database itself.
 	AppendErrors metrics.Counter
 
 	// ReleasesTotal counts all calls to Release(), whether invoked explicitly
@@ -53,7 +56,7 @@ func newMetrics(p metrics.Provider) *Metrics {
 		}),
 		AuditLockConflicts: p.NewCounter(metrics.CounterOpts{
 			Name: "auditor_audit_lock_conflicts_total",
-			Help: "Total number of Audit() calls that failed to acquire enrollment-ID locks",
+			Help: "Total number of Audit() and Append() calls that failed to acquire enrollment-ID locks",
 		}),
 		AppendDuration: p.NewHistogram(metrics.HistogramOpts{
 			Name:                           "auditor_append_duration_seconds",
@@ -64,7 +67,7 @@ func newMetrics(p metrics.Provider) *Metrics {
 		}),
 		AppendErrors: p.NewCounter(metrics.CounterOpts{
 			Name: "auditor_append_errors_total",
-			Help: "Total number of Append() calls that failed to write to the audit database",
+			Help: "Total number of Append() calls that failed to store the audit record",
 		}),
 		ReleasesTotal: p.NewCounter(metrics.CounterOpts{
 			Name: "auditor_releases_total",
