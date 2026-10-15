@@ -1983,3 +1983,27 @@ func PreparePublicParamsWithNewIssuer(network *integration.Infrastructure, issue
 
 	return ppBytes
 }
+
+// CheckEndorserSelection asks each of the given nodes to confirm that it resolved
+// expectedMSPIDs as its endorser selection, that the selection leaves it a usable set of
+// endorsers, and that the peers of excludedMSPIDs — which could have endorsed — are kept
+// out.
+//
+// It is the assertion that the selection has an effect: a namespace policy a single
+// organization can satisfy is also satisfied by the endorsers discovery returns when no
+// selection applies, so running the token flow succeeds either way.
+func CheckEndorserSelection(network *integration.Infrastructure, expectedMSPIDs, excludedMSPIDs []string, ids ...*token3.NodeReference) {
+	for _, id := range ids {
+		for _, replicaName := range id.AllNames() {
+			// Discovery is retried: the peers of a channel that has just been brought up
+			// may not have gossiped the chaincode yet.
+			gomega.Eventually(func(g gomega.Gomega, replicaName string) {
+				_, err := network.Client(replicaName).CallView("EndorserSelectionCheck", common.JSONMarshall(&views.EndorserSelectionCheck{
+					ExpectedMSPIDs: expectedMSPIDs,
+					ExcludedMSPIDs: excludedMSPIDs,
+				}))
+				g.Expect(err).NotTo(gomega.HaveOccurred(), "failed to check the endorser selection at [%s]", replicaName)
+			}).WithArguments(replicaName).WithTimeout(eventualCheckTimeout).WithPolling(eventualCheckPolling).Should(gomega.Succeed())
+		}
+	}
+}

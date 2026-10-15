@@ -35,6 +35,10 @@ token:
                 type: {{ EndorsementPolicyType }}
               endorsers: {{ range Endorsers }}
               - {{ . }}{{ end }}
+            {{ end }}{{ if EndorserSelection }}
+            endorsement:
+              mspIDs: {{ range EndorserSelection }}
+              - {{ . }}{{ end }}
             {{ end }}
         storage:
           cleanup:

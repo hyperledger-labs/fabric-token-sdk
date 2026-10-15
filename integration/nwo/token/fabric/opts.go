@@ -94,3 +94,22 @@ func GetNamespacePolicy(tms *topology.TMS) string {
 
 	return v.(string)
 }
+
+// WithEndorsersFromOwnOrg makes every node of the given TMS restrict Token Chaincode
+// endorsement to the peers of its own organization, by setting
+// services.network.fabric.endorsement.mspIDs to that node's own MSP ID.
+//
+// The selection only narrows discovery, so it needs a namespace endorsement policy a
+// single organization can satisfy (see WithNamespacePolicy).
+func WithEndorsersFromOwnOrg(tms *topology.TMS) *topology.TMS {
+	tms.BackendParams["fabric.endorsement.ownOrg"] = true
+
+	return tms
+}
+
+// EndorsersFromOwnOrg reports whether WithEndorsersFromOwnOrg was set for the given TMS.
+func EndorsersFromOwnOrg(tms *topology.TMS) bool {
+	v, ok := tms.BackendParams["fabric.endorsement.ownOrg"]
+
+	return ok && v.(bool)
+}

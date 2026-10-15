@@ -55,6 +55,10 @@ type Opts struct {
 	// NamespacePolicy, if set, is used as the raw endorsement policy DSL string
 	// for the token namespace, instead of the default unanimity policy over Orgs.
 	NamespacePolicy string
+	// EndorsersFromOwnOrg, when true, makes every node restrict Token Chaincode
+	// endorsement to the peers of its own organization
+	// (services.network.fabric.endorsement.mspIDs).
+	EndorsersFromOwnOrg bool
 }
 
 func SetDefaultParams(tms *topology.TMS, opts TMSOpts) {

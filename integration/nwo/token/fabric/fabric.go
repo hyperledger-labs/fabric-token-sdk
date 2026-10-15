@@ -23,6 +23,7 @@ import (
 	"github.com/LFDT-Panurus/panurus/token"
 	"github.com/LFDT-Panurus/panurus/token/services/logging"
 	api2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
+	fabricopts "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/opts"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	sfcnode "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	"github.com/onsi/gomega"
@@ -145,6 +146,7 @@ func (p *NetworkHandler) GenerateExtension(tms *topology2.TMS, node *sfcnode.Nod
 		"EndorserID":            func() string { return "" },
 		"Endorser":              func() bool { return topology2.ToOptions(node.Options).Endorser() },
 		"EndorsementPolicyType": func() string { return FSCEndorsementPolicyType(tms) },
+		"EndorserSelection":     func() []string { return EndorserSelectionFor(tms, node) },
 	}).Parse(Extension)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
@@ -153,6 +155,35 @@ func (p *NetworkHandler) GenerateExtension(tms *topology2.TMS, node *sfcnode.Nod
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 	return ext.String()
+}
+
+// EndorserSelectionFor returns the MSP IDs that node must restrict Token Chaincode
+// endorsement to for the given TMS, which the TMS extension writes to
+// services.network.fabric.endorsement.mspIDs. It returns nil when the TMS configures no
+// selection, and for a node with no Fabric organization, which has nothing to select.
+func EndorserSelectionFor(tms *topology2.TMS, node *sfcnode.Node) []string {
+	if !EndorsersFromOwnOrg(tms) {
+		return nil
+	}
+
+	var mspIDs []string
+	seen := map[string]struct{}{}
+	for _, organization := range fabricopts.Get(node.PlatformOpts()).Organizations() {
+		// A node may be registered in more than one network; only this TMS's network
+		// decides which peers may endorse its invocations. An entry with no network is one
+		// added with fabric.WithOrganization, which applies to the default network.
+		if len(organization.Network) > 0 && organization.Network != tms.Network {
+			continue
+		}
+		mspID := organization.Org + "MSP"
+		if _, duplicate := seen[mspID]; duplicate {
+			continue
+		}
+		seen[mspID] = struct{}{}
+		mspIDs = append(mspIDs, mspID)
+	}
+
+	return mspIDs
 }
 
 func (p *NetworkHandler) PostRun(load bool, tms *topology2.TMS) {

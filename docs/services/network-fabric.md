@@ -261,6 +261,13 @@ per-TMS state. Notes:
   endorsement and public-parameters traffic inside its organization, but may still send
   those queries to another organization's peers.
 
+Integration coverage lives in the `T15` spec of the dlog fungible suite
+(`integration/token/fungible/dlog`, `make integration-tests-dlog-fabric-t15`): an anonymous
+(zkatdlog) topology where both organizations host the token chaincode, the namespace policy
+is `OR('Org1MSP.member','Org2MSP.member')`, and every node restricts endorsement to its own
+organization. It asserts that each node narrows discovery to its own organization, and runs
+the standard fungible flow over that selection.
+
 ### FSC Endorsement
 
 As an alternative to chaincode-based endorsement, FSC nodes equipped with a proper

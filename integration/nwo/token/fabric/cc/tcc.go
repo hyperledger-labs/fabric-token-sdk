@@ -78,16 +78,7 @@ func (p *GenericBackend) PrepareNamespace(tms *topology3.TMS) {
 	gomega.Expect(orgs).ToNot(gomega.BeEmpty(), "missing orgs for tms [%s:%s:%s:%s:%s]", tms.Network, tms.Channel, tms.Namespace, tms.Driver, tms.Alias)
 
 	// Standard Chaincode
-	policy := "AND ("
-	var policySb77 strings.Builder
-	for i, org := range orgs {
-		if i > 0 {
-			_, _ = policySb77.WriteString(",")
-		}
-		_, _ = policySb77.WriteString("'" + org + "MSP.member'")
-	}
-	policy += policySb77.String()
-	policy += ")"
+	policy := namespacePolicy(tms, orgs)
 
 	var peers []string
 	for _, org := range orgs {
@@ -113,6 +104,22 @@ func (p *GenericBackend) PrepareNamespace(tms *topology3.TMS) {
 		Peers:   peers,
 	})
 	p.Fabric(tms).Topology().AddChaincode(cc)
+}
+
+// namespacePolicy returns the endorsement policy for the token namespace of tms: the raw
+// policy DSL string configured with fabric.WithNamespacePolicy, which the fabricx backend
+// also reads, or unanimity over orgs when none is configured.
+func namespacePolicy(tms *topology3.TMS, orgs []string) string {
+	if policy := fabric.GetNamespacePolicy(tms); len(policy) > 0 {
+		return policy
+	}
+
+	members := make([]string, len(orgs))
+	for i, org := range orgs {
+		members[i] = "'" + org + "MSP.member'"
+	}
+
+	return "AND (" + strings.Join(members, ",") + ")"
 }
 
 // InstallPublicParams does nothing, cause the chaincode initialization is done already in
