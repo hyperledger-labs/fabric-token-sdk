@@ -38,6 +38,7 @@ func (p *SDK) Install() error {
 			registry.RegisterFactory("spending", &views.CurrentSpendingViewFactory{}),
 			registry.RegisterFactory("balance", &views.BalanceViewFactory{}),
 			registry.RegisterFactory("CheckPublicParamsMatch", &views.CheckPublicParamsMatchViewFactory{}),
+			registry.RegisterFactory("EndorserSelectionCheck", &views.EndorserSelectionCheckViewFactory{}),
 			registry.RegisterFactory("SetTransactionAuditStatus", &views.SetTransactionAuditStatusViewFactory{}),
 			registry.RegisterFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{}),
 			registry.RegisterFactory("PruneInvalidUnspentTokens", &views.PruneInvalidUnspentTokensViewFactory{}),

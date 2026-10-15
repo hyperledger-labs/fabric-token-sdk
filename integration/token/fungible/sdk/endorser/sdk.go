@@ -38,6 +38,7 @@ func (p *SDK) Install() error {
 			registry.RegisterFactory("EndorserFinality", &endorser.FinalityViewFactory{}),
 			registry.RegisterFactory("FetchAndUpdatePublicParams", &views.UpdatePublicParamsViewFactory{}),
 			registry.RegisterFactory("CheckPublicParamsMatch", &views.CheckPublicParamsMatchViewFactory{}),
+			registry.RegisterFactory("EndorserSelectionCheck", &views.EndorserSelectionCheckViewFactory{}),
 		)
 	}); err != nil {
 		return errors.WithMessagef(err, "failed to install endorser's views")

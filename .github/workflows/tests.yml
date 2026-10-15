@@ -210,6 +210,7 @@ jobs:
           dlog-fabric-t12,
           dlog-fabric-t13,
 #          dlog-fabric-t14,
+          dlog-fabric-t15,
           fabricx-dlog-t1-websocket,
           fabricx-dlog-t1-libp2p,
           fabricx-dlog-t1-replicas,

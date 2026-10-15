@@ -50,6 +50,7 @@ func (p *SDK) Install() error {
 			registry.RegisterFactory("prepareTransfer", &views.PrepareTransferViewFactory{}),
 			registry.RegisterFactory("broadcastPreparedTransfer", &views.BroadcastPreparedTransferViewFactory{}),
 			registry.RegisterFactory("CheckPublicParamsMatch", &views.CheckPublicParamsMatchViewFactory{}),
+			registry.RegisterFactory("EndorserSelectionCheck", &views.EndorserSelectionCheckViewFactory{}),
 			registry.RegisterFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{}),
 			registry.RegisterFactory("SetTransactionOwnerStatus", &views.SetTransactionOwnerStatusViewFactory{}),
 			registry.RegisterFactory("PruneInvalidUnspentTokens", &views.PruneInvalidUnspentTokensViewFactory{}),

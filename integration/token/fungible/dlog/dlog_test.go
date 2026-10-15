@@ -27,7 +27,13 @@ const (
 	HSM
 	WebEnabled
 	WithEndorsers
+	OwnOrgEndorsers
 )
+
+// namespacePolicyEitherOrg lets the peers of either organization endorse the token
+// namespace on their own: a node that selects only its own organization needs a policy
+// that organization can satisfy, which the default unanimity is not.
+const namespacePolicyEitherOrg = "OR ('Org1MSP.member','Org2MSP.member')"
 
 var _ = Describe("EndToEnd", func() {
 	for _, t := range integration2.AllTestTypes {
@@ -134,6 +140,24 @@ var _ = Describe("EndToEnd", func() {
 
 	}
 
+	// Endorser selection is orthogonal to the P2P communication type, and TestAll is the
+	// most expensive spec in this suite, so this runs on one infrastructure type rather
+	// than the loop over all of them.
+	Describe("Fungible with endorsement pinned to each node's own organization", integration2.WebSocketNoReplication.Label, func() {
+		ts, selector := newTestSuite(integration2.WebSocketNoReplication.CommType, Aries|OwnOrgEndorsers, integration2.WebSocketNoReplication.ReplicationFactor, "", "alice", "bob", "charlie")
+		BeforeEach(ts.Setup)
+		AfterEach(ts.TearDown)
+		It("succeeded", Label("T15"), func() {
+			// The selection is resolved per node: issuer is an Org1 node, alice an Org2
+			// one. Asserting it here, rather than only running the flow, is what shows the
+			// selection narrows the endorsers — under namespacePolicyEitherOrg the flow
+			// succeeds whether or not it is honoured.
+			fungible.CheckEndorserSelection(ts.II, []string{"Org1MSP"}, []string{"Org2MSP"}, selector.Get("issuer"))
+			fungible.CheckEndorserSelection(ts.II, []string{"Org2MSP"}, []string{"Org1MSP"}, selector.Get("alice"))
+			fungible.TestAll(ts.II, "auditor", nil, true, selector)
+		})
+	})
+
 	for _, tokenSelector := range integration2.TokenSelectors {
 		Describe("TokenSelector Test", integration2.WebSocketNoReplication.Label, Label(tokenSelector), func() {
 			ts, replicaSelector := newTestSuite(integration2.WebSocketNoReplication.CommType, Aries, integration2.WebSocketNoReplication.ReplicationFactor, tokenSelector, "alice", "bob", "charlie")
@@ -146,23 +170,28 @@ var _ = Describe("EndToEnd", func() {
 
 func newTestSuite(commType fsc.P2PCommunicationType, mask int, factor int, tokenSelector string, names ...string) (*token2.TestSuite, *token2.ReplicaSelector) {
 	opts, selector := token2.NewReplicationOptions(factor, names...)
-	ts := token2.NewTestSuite(StartPortDlog, topology.Topology(
-		common.Opts{
-			Backend:             "fabric",
-			CommType:            commType,
-			DefaultTMSOpts:      common.TMSOpts{TokenSDKDriver: zkatdlognoghv1.DriverIdentifier, Aries: mask&Aries > 0},
-			NoAuditor:           mask&NoAuditor > 0,
-			AuditorAsIssuer:     mask&AuditorAsIssuer > 0,
-			HSM:                 mask&HSM > 0,
-			WebEnabled:          mask&WebEnabled > 0,
-			SDKs:                []nodepkg.SDK{&fdlog.SDK{}},
-			Monitoring:          false,
-			ReplicationOpts:     opts,
-			FSCBasedEndorsement: mask&WithEndorsers > 0,
-			FSCLogSpec:          "info",
-			TokenSelector:       tokenSelector,
-		},
-	))
+	tmsOpts := common.Opts{
+		Backend:             "fabric",
+		CommType:            commType,
+		DefaultTMSOpts:      common.TMSOpts{TokenSDKDriver: zkatdlognoghv1.DriverIdentifier, Aries: mask&Aries > 0},
+		NoAuditor:           mask&NoAuditor > 0,
+		AuditorAsIssuer:     mask&AuditorAsIssuer > 0,
+		HSM:                 mask&HSM > 0,
+		WebEnabled:          mask&WebEnabled > 0,
+		SDKs:                []nodepkg.SDK{&fdlog.SDK{}},
+		Monitoring:          false,
+		ReplicationOpts:     opts,
+		FSCBasedEndorsement: mask&WithEndorsers > 0,
+		FSCLogSpec:          "info",
+		TokenSelector:       tokenSelector,
+	}
+	if mask&OwnOrgEndorsers > 0 {
+		// Both organizations host the token chaincode, so that restricting a node to its
+		// own organization actually narrows the set of endorsers discovery would return.
+		tmsOpts.NamespacePolicy = namespacePolicyEitherOrg
+		tmsOpts.EndorsersFromOwnOrg = true
+	}
+	ts := token2.NewTestSuite(StartPortDlog, topology.Topology(tmsOpts))
 
 	return ts, selector
 }

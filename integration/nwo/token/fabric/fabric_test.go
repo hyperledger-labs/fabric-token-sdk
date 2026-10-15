@@ -65,10 +65,11 @@ func (b *fakeWatcherBackend) PublicParamsInstallTimeout() time.Duration { return
 
 func newTMS() *topology2.TMS {
 	return &topology2.TMS{
-		Network:   "testnet",
-		Channel:   "testchannel",
-		Namespace: "tns",
-		Driver:    "fabtoken",
+		Network:       "testnet",
+		Channel:       "testchannel",
+		Namespace:     "tns",
+		Driver:        "fabtoken",
+		BackendParams: map[string]any{},
 	}
 }
 

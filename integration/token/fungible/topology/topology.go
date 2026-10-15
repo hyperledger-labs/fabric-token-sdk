@@ -208,11 +208,17 @@ func Topology(opts common.Opts) []api.Topology {
 		if len(opts.FSCEndorsementPolicyType) > 0 {
 			fabric2.WithFSCEndorsementPolicyType(tms, opts.FSCEndorsementPolicyType)
 		}
-		if len(opts.NamespacePolicy) > 0 {
-			fabric2.WithNamespacePolicy(tms, opts.NamespacePolicy)
-		}
 	}
-	if opts.FSCEndorsementPolicyType == endorsementfsc.NamespacePolicy {
+	if len(opts.NamespacePolicy) > 0 {
+		fabric2.WithNamespacePolicy(tms, opts.NamespacePolicy)
+	}
+	if opts.EndorsersFromOwnOrg {
+		fabric2.WithEndorsersFromOwnOrg(tms)
+	}
+	// The token chaincode is hosted by Org1 alone unless the namespace endorsement policy
+	// spans more organizations: a policy naming an org whose peers do not host the
+	// chaincode can never be satisfied.
+	if opts.FSCEndorsementPolicyType == endorsementfsc.NamespacePolicy || len(opts.NamespacePolicy) > 0 {
 		fabric2.SetOrgs(tms, orgs...)
 	} else {
 		fabric2.SetOrgs(tms, "Org1")
