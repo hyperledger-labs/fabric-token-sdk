@@ -46,6 +46,21 @@ func minimalRequest(anchor string) *token.Request {
 }
 
 // ---------------------------------------------------------------------------
+// Action-kind stamping
+//
+// A hand-built record states the kind of action each input and output belongs
+// to in the literal that builds it, next to the ActionIndex it pairs with, the
+// way the extraction paths in token/request.go do: issue and transfer actions
+// are numbered independently, so ActionIndex alone does not name an action, and
+// the upgrade fallback keys on the pair.
+// ---------------------------------------------------------------------------
+
+const (
+	issueAction    = request.ActionType_ACTION_TYPE_ISSUE
+	transferAction = request.ActionType_ACTION_TYPE_TRANSFER
+)
+
+// ---------------------------------------------------------------------------
 // newMetrics / Provider tests
 // ---------------------------------------------------------------------------
 
@@ -301,8 +316,8 @@ func TestRequestWrapper_CompleteInputsWithEmptyEID_WithInputs(t *testing.T) {
 		token.NewRequest(tmsWithToken, token.RequestAnchor("tx-cid2")), tmsWithToken,
 	)
 	recordWithInputs := &token.AuditRecord{
-		Inputs:  token.NewInputStream(nil, []*token.Input{{Id: &token2.ID{TxId: "123"}}}, 0),
-		Outputs: token.NewOutputStream([]*token.Output{{EnrollmentID: "target"}}, 0),
+		Inputs:  token.NewInputStream(nil, []*token.Input{{ActionType: transferAction, Id: &token2.ID{TxId: "123"}}}, 0),
+		Outputs: token.NewOutputStream([]*token.Output{{ActionType: transferAction, EnrollmentID: "target"}}, 0),
 	}
 	err := rw.completeInputsWithEmptyEID(context.Background(), recordWithInputs)
 	require.NoError(t, err)
@@ -326,9 +341,9 @@ func TestRequestWrapper_CompleteInputsWithEmptyEID_UsesRecordAuditInfo(t *testin
 	)
 	record := &token.AuditRecord{
 		Inputs: token.NewInputStream(nil, []*token.Input{
-			{Id: &token2.ID{TxId: "123"}, OwnerAuditInfo: []byte("carried-audit-info")},
+			{ActionType: transferAction, Id: &token2.ID{TxId: "123"}, OwnerAuditInfo: []byte("carried-audit-info")},
 		}, 0),
-		Outputs: token.NewOutputStream([]*token.Output{{EnrollmentID: "target"}}, 0),
+		Outputs: token.NewOutputStream([]*token.Output{{ActionType: transferAction, EnrollmentID: "target"}}, 0),
 	}
 	err := rw.completeInputsWithEmptyEID(context.Background(), record)
 	require.NoError(t, err)
@@ -353,8 +368,8 @@ func TestCompleteInputsWithEmptyEID_CompositeOwnerStaysUnattributed(t *testing.T
 		token.NewRequest(tmsWithToken, token.RequestAnchor("tx-unres")), tmsWithToken,
 	)
 	record := &token.AuditRecord{
-		Inputs:  token.NewInputStream(nil, []*token.Input{{Id: &token2.ID{TxId: "123"}}}, 0),
-		Outputs: token.NewOutputStream([]*token.Output{{EnrollmentID: "target"}}, 0),
+		Inputs:  token.NewInputStream(nil, []*token.Input{{ActionType: transferAction, Id: &token2.ID{TxId: "123"}}}, 0),
+		Outputs: token.NewOutputStream([]*token.Output{{ActionType: transferAction, EnrollmentID: "target"}}, 0),
 	}
 	err := rw.completeInputsWithEmptyEID(context.Background(), record)
 	require.NoError(t, err)
@@ -381,8 +396,8 @@ func TestCompleteInputsWithEmptyEID_MissingAuditInfoStaysUnattributed(t *testing
 		token.NewRequest(tmsWithToken, token.RequestAnchor("tx-no-audit-info")), tmsWithToken,
 	)
 	record := &token.AuditRecord{
-		Inputs:  token.NewInputStream(nil, []*token.Input{{Id: &token2.ID{TxId: "123"}}}, 0),
-		Outputs: token.NewOutputStream([]*token.Output{{EnrollmentID: "target"}}, 0),
+		Inputs:  token.NewInputStream(nil, []*token.Input{{ActionType: issueAction, Id: &token2.ID{TxId: "123"}}}, 0),
+		Outputs: token.NewOutputStream([]*token.Output{{ActionType: issueAction, EnrollmentID: "target"}}, 0),
 	}
 	err := rw.completeInputsWithEmptyEID(context.Background(), record)
 	require.NoError(t, err)
@@ -405,8 +420,9 @@ func TestCompleteInputsWithEmptyEID_UpgradeInputTakesIssuedEID(t *testing.T) {
 	)
 	record := &token.AuditRecord{
 		// no owner: the issue metadata of an upgrade holds only the token id
-		Inputs: token.NewInputStream(nil, []*token.Input{{Id: &token2.ID{TxId: "123"}}}, 0),
+		Inputs: token.NewInputStream(nil, []*token.Input{{ActionType: issueAction, Id: &token2.ID{TxId: "123"}}}, 0),
 		Outputs: token.NewOutputStream([]*token.Output{{
+			ActionType:        issueAction,
 			Issuer:            driver.Identity("issuer"),
 			Owner:             []byte("post-upgrade-owner"),
 			EnrollmentID:      "alice",
@@ -433,11 +449,13 @@ func TestCompleteInputsWithEmptyEID_TransferInputIgnoresIssuedEID(t *testing.T) 
 	)
 	record := &token.AuditRecord{
 		Inputs: token.NewInputStream(nil, []*token.Input{{
+			ActionType:     transferAction,
 			Id:             &token2.ID{TxId: "123"},
 			Owner:          []byte("composite-owner"),
 			OwnerAuditInfo: []byte("composite-audit-info"),
 		}}, 0),
 		Outputs: token.NewOutputStream([]*token.Output{{
+			ActionType:   issueAction,
 			Issuer:       driver.Identity("issuer"),
 			Owner:        []byte("bob"),
 			EnrollmentID: "bob",
@@ -460,10 +478,10 @@ func TestCompleteInputsWithEmptyEID_AmbiguousIssuedEIDStaysUnattributed(t *testi
 		token.NewRequest(tmsWithToken, token.RequestAnchor("tx-two-receivers")), tmsWithToken,
 	)
 	record := &token.AuditRecord{
-		Inputs: token.NewInputStream(nil, []*token.Input{{Id: &token2.ID{TxId: "123"}}}, 0),
+		Inputs: token.NewInputStream(nil, []*token.Input{{ActionType: issueAction, Id: &token2.ID{TxId: "123"}}}, 0),
 		Outputs: token.NewOutputStream([]*token.Output{
-			{Index: 0, Issuer: driver.Identity("issuer"), Owner: []byte("alice"), EnrollmentID: "alice"},
-			{Index: 1, Issuer: driver.Identity("issuer"), Owner: []byte("bob"), EnrollmentID: "bob"},
+			{ActionType: issueAction, Index: 0, Issuer: driver.Identity("issuer"), Owner: []byte("alice"), EnrollmentID: "alice"},
+			{ActionType: issueAction, Index: 1, Issuer: driver.Identity("issuer"), Owner: []byte("bob"), EnrollmentID: "bob"},
 		}, 0),
 	}
 	err := rw.completeInputsWithEmptyEID(context.Background(), record)
@@ -484,10 +502,10 @@ func TestCompleteInputsWithEmptyEID_CompositeUpgradeSharedEIDAttributed(t *testi
 		token.NewRequest(tmsWithToken, token.RequestAnchor("tx-composite-upgrade")), tmsWithToken,
 	)
 	record := &token.AuditRecord{
-		Inputs: token.NewInputStream(nil, []*token.Input{{Id: &token2.ID{TxId: "123"}}}, 0),
+		Inputs: token.NewInputStream(nil, []*token.Input{{ActionType: issueAction, Id: &token2.ID{TxId: "123"}}}, 0),
 		Outputs: token.NewOutputStream([]*token.Output{
-			{Index: 0, Issuer: driver.Identity("issuer"), Owner: []byte("member-0"), EnrollmentID: "alice", RevocationHandler: "rh-0"},
-			{Index: 0, Issuer: driver.Identity("issuer"), Owner: []byte("member-1"), EnrollmentID: "alice", RevocationHandler: "rh-1"},
+			{ActionType: issueAction, Index: 0, Issuer: driver.Identity("issuer"), Owner: []byte("member-0"), EnrollmentID: "alice", RevocationHandler: "rh-0"},
+			{ActionType: issueAction, Index: 0, Issuer: driver.Identity("issuer"), Owner: []byte("member-1"), EnrollmentID: "alice", RevocationHandler: "rh-1"},
 		}, 0),
 	}
 	err := rw.completeInputsWithEmptyEID(context.Background(), record)
@@ -510,10 +528,10 @@ func TestCompleteInputsWithEmptyEID_CompositeUpgradeSpanningEIDsFailsAudit(t *te
 		token.NewRequest(tmsWithToken, token.RequestAnchor("tx-composite-span")), tmsWithToken,
 	)
 	record := &token.AuditRecord{
-		Inputs: token.NewInputStream(nil, []*token.Input{{Id: &token2.ID{TxId: "123"}}}, 0),
+		Inputs: token.NewInputStream(nil, []*token.Input{{ActionType: issueAction, Id: &token2.ID{TxId: "123"}}}, 0),
 		Outputs: token.NewOutputStream([]*token.Output{
-			{Index: 0, Issuer: driver.Identity("issuer"), Owner: []byte("member-0"), EnrollmentID: "alice"},
-			{Index: 0, Issuer: driver.Identity("issuer"), Owner: []byte("member-1"), EnrollmentID: "bob"},
+			{ActionType: issueAction, Index: 0, Issuer: driver.Identity("issuer"), Owner: []byte("member-0"), EnrollmentID: "alice"},
+			{ActionType: issueAction, Index: 0, Issuer: driver.Identity("issuer"), Owner: []byte("member-1"), EnrollmentID: "bob"},
 		}, 0),
 	}
 	err := rw.completeInputsWithEmptyEID(context.Background(), record)
@@ -536,10 +554,10 @@ func TestCompleteInputsWithEmptyEID_PartlyResolvedIssuedOutputsFailAudit(t *test
 		token.NewRequest(tmsWithToken, token.RequestAnchor("tx-unresolved-output")), tmsWithToken,
 	)
 	record := &token.AuditRecord{
-		Inputs: token.NewInputStream(nil, []*token.Input{{Id: &token2.ID{TxId: "123"}}}, 0),
+		Inputs: token.NewInputStream(nil, []*token.Input{{ActionType: issueAction, Id: &token2.ID{TxId: "123"}}}, 0),
 		Outputs: token.NewOutputStream([]*token.Output{
-			{Index: 0, Issuer: driver.Identity("issuer"), Owner: []byte("member-0"), EnrollmentID: "alice", RevocationHandler: "alice-rh"},
-			{Index: 0, Issuer: driver.Identity("issuer"), Owner: []byte("member-1"), EnrollmentID: ""},
+			{ActionType: issueAction, Index: 0, Issuer: driver.Identity("issuer"), Owner: []byte("member-0"), EnrollmentID: "alice", RevocationHandler: "alice-rh"},
+			{ActionType: issueAction, Index: 0, Issuer: driver.Identity("issuer"), Owner: []byte("member-1"), EnrollmentID: ""},
 		}, 0),
 	}
 	err := rw.completeInputsWithEmptyEID(context.Background(), record)
@@ -558,10 +576,10 @@ func TestCompleteInputsWithEmptyEID_NoResolvedIssuedOutputStaysUnattributed(t *t
 		token.NewRequest(tmsWithToken, token.RequestAnchor("tx-all-unresolved")), tmsWithToken,
 	)
 	record := &token.AuditRecord{
-		Inputs: token.NewInputStream(nil, []*token.Input{{Id: &token2.ID{TxId: "123"}}}, 0),
+		Inputs: token.NewInputStream(nil, []*token.Input{{ActionType: issueAction, Id: &token2.ID{TxId: "123"}}}, 0),
 		Outputs: token.NewOutputStream([]*token.Output{
-			{Index: 0, Issuer: driver.Identity("issuer"), Owner: []byte("unknown-0"), EnrollmentID: ""},
-			{Index: 1, Issuer: driver.Identity("issuer"), Owner: []byte("unknown-1"), EnrollmentID: ""},
+			{ActionType: issueAction, Index: 0, Issuer: driver.Identity("issuer"), Owner: []byte("unknown-0"), EnrollmentID: ""},
+			{ActionType: issueAction, Index: 1, Issuer: driver.Identity("issuer"), Owner: []byte("unknown-1"), EnrollmentID: ""},
 		}, 0),
 	}
 	err := rw.completeInputsWithEmptyEID(context.Background(), record)
@@ -582,10 +600,10 @@ func TestCompleteInputsWithEmptyEID_MixedRevocationHandlesDropTheHandle(t *testi
 		token.NewRequest(tmsWithToken, token.RequestAnchor("tx-mixed-rh")), tmsWithToken,
 	)
 	record := &token.AuditRecord{
-		Inputs: token.NewInputStream(nil, []*token.Input{{Id: &token2.ID{TxId: "123"}}}, 0),
+		Inputs: token.NewInputStream(nil, []*token.Input{{ActionType: issueAction, Id: &token2.ID{TxId: "123"}}}, 0),
 		Outputs: token.NewOutputStream([]*token.Output{
-			{Issuer: driver.Identity("issuer"), Owner: []byte("alice"), EnrollmentID: "alice", RevocationHandler: ""},
-			{Issuer: driver.Identity("issuer"), Owner: []byte("alice2"), EnrollmentID: "alice", RevocationHandler: "other-rh"},
+			{ActionType: issueAction, Issuer: driver.Identity("issuer"), Owner: []byte("alice"), EnrollmentID: "alice", RevocationHandler: ""},
+			{ActionType: issueAction, Issuer: driver.Identity("issuer"), Owner: []byte("alice2"), EnrollmentID: "alice", RevocationHandler: "other-rh"},
 		}, 0),
 	}
 	err := rw.completeInputsWithEmptyEID(context.Background(), record)
@@ -610,12 +628,12 @@ func TestCompleteInputsWithEmptyEID_UpgradeFallbackIsActionScoped(t *testing.T) 
 	)
 	record := &token.AuditRecord{
 		Inputs: token.NewInputStream(nil, []*token.Input{
-			{ActionIndex: 0, Id: &token2.ID{TxId: "123"}},
-			{ActionIndex: 1, Id: &token2.ID{TxId: "456"}},
+			{ActionType: issueAction, ActionIndex: 0, Id: &token2.ID{TxId: "123"}},
+			{ActionType: issueAction, ActionIndex: 1, Id: &token2.ID{TxId: "456"}},
 		}, 0),
 		Outputs: token.NewOutputStream([]*token.Output{
-			{ActionIndex: 0, Issuer: driver.Identity("issuer"), Owner: []byte("alice"), EnrollmentID: "alice", RevocationHandler: "alice-rh"},
-			{ActionIndex: 1, Issuer: driver.Identity("issuer"), Owner: []byte("bob"), EnrollmentID: "bob", RevocationHandler: "bob-rh"},
+			{ActionType: issueAction, ActionIndex: 0, Issuer: driver.Identity("issuer"), Owner: []byte("alice"), EnrollmentID: "alice", RevocationHandler: "alice-rh"},
+			{ActionType: issueAction, ActionIndex: 1, Issuer: driver.Identity("issuer"), Owner: []byte("bob"), EnrollmentID: "bob", RevocationHandler: "bob-rh"},
 		}, 0),
 	}
 	err := rw.completeInputsWithEmptyEID(context.Background(), record)
@@ -627,6 +645,108 @@ func TestCompleteInputsWithEmptyEID_UpgradeFallbackIsActionScoped(t *testing.T) 
 	assert.Equal(t, "bob-rh", record.Inputs.At(1).RevocationHandler)
 }
 
+// Issue and transfer actions are numbered independently, so a request combining
+// an upgrade issue at index 0 with a transfer at index 0 puts both actions'
+// outputs under the same ActionIndex. The fallback must read only the issue
+// action's: separating them on issuer presence instead held only while no
+// driver attached an issuer to an owned transfer output, and the moment one
+// does the two enrollment IDs disagree and the upgrade silently loses its
+// attribution — crediting the upgraded amount without debiting anybody.
+func TestCompleteInputsWithEmptyEID_UpgradeFallbackIgnoresTransferOutputsAtTheSameIndex(t *testing.T) {
+	tmsWithToken, ws := newInternalTestManagementServiceWithTokens(t, []*token2.Token{
+		{Type: "USD", Quantity: "100", Owner: []byte("alice-pre-upgrade")},
+	})
+	ws.GetAuditInfoReturns(nil, nil)
+	rw := newRequestWrapper(
+		token.NewRequest(tmsWithToken, token.RequestAnchor("tx-index-collision")), tmsWithToken,
+	)
+	outputs := []*token.Output{{
+		ActionType:  issueAction,
+		ActionIndex: 0, Index: 0,
+		Issuer: driver.Identity("issuer"), Owner: []byte("alice"),
+		EnrollmentID: "alice", RevocationHandler: "alice-rh",
+	}}
+	// the transfer action at index 0 pays bob, and carries an issuer: a driver is
+	// free to attach one, and no filter keyed on the action can be fooled by it
+	outputs = append(outputs, &token.Output{
+		ActionType:  transferAction,
+		ActionIndex: 0, Index: 1,
+		Issuer: driver.Identity("issuer"), Owner: []byte("bob"),
+		EnrollmentID: "bob", RevocationHandler: "bob-rh",
+	})
+	record := &token.AuditRecord{
+		Inputs:  token.NewInputStream(nil, []*token.Input{{ActionType: issueAction, ActionIndex: 0, Id: &token2.ID{TxId: "123"}}}, 0),
+		Outputs: token.NewOutputStream(outputs, 0),
+	}
+	err := rw.completeInputsWithEmptyEID(context.Background(), record)
+	require.NoError(t, err)
+
+	in := record.Inputs.At(0)
+	assert.Equal(t, "alice", in.EnrollmentID)
+	assert.Equal(t, "alice-rh", in.RevocationHandler)
+}
+
+// The same collision, failing the other way: an unresolved output of the
+// transfer action at the same index would make the issue action look like one
+// that only partly resolves, and that fails the audit outright.
+func TestCompleteInputsWithEmptyEID_UnresolvedTransferOutputDoesNotFailTheUpgrade(t *testing.T) {
+	tmsWithToken, ws := newInternalTestManagementServiceWithTokens(t, []*token2.Token{
+		{Type: "USD", Quantity: "100", Owner: []byte("alice-pre-upgrade")},
+	})
+	ws.GetAuditInfoReturns(nil, nil)
+	rw := newRequestWrapper(
+		token.NewRequest(tmsWithToken, token.RequestAnchor("tx-unresolved-transfer")), tmsWithToken,
+	)
+	outputs := []*token.Output{{
+		ActionType:  issueAction,
+		ActionIndex: 0, Index: 0,
+		Issuer: driver.Identity("issuer"), Owner: []byte("alice"),
+		EnrollmentID: "alice", RevocationHandler: "alice-rh",
+	}}
+	outputs = append(outputs, &token.Output{
+		ActionType:  transferAction,
+		ActionIndex: 0, Index: 1,
+		Issuer: driver.Identity("issuer"), Owner: []byte("multisig"),
+		EnrollmentID: "",
+	})
+	record := &token.AuditRecord{
+		Inputs:  token.NewInputStream(nil, []*token.Input{{ActionType: issueAction, ActionIndex: 0, Id: &token2.ID{TxId: "123"}}}, 0),
+		Outputs: token.NewOutputStream(outputs, 0),
+	}
+	err := rw.completeInputsWithEmptyEID(context.Background(), record)
+	require.NoError(t, err)
+
+	assert.Equal(t, "alice", record.Inputs.At(0).EnrollmentID)
+}
+
+// The upgrade fallback is for inputs of an issue action. A transfer input whose
+// sender carries no identity is not one: it stays unattributed rather than
+// being charged whatever the request's issue action at the same index issues to.
+func TestCompleteInputsWithEmptyEID_TransferInputWithoutSenderStaysUnattributed(t *testing.T) {
+	tmsWithToken, ws := newInternalTestManagementServiceWithTokens(t, []*token2.Token{
+		{Type: "USD", Quantity: "100", Owner: []byte("owner1")},
+	})
+	ws.GetAuditInfoReturns([]byte("owner1-audit-info"), nil)
+	ws.GetEIDAndRHReturns("", "", nil)
+	rw := newRequestWrapper(
+		token.NewRequest(tmsWithToken, token.RequestAnchor("tx-senderless-transfer")), tmsWithToken,
+	)
+	record := &token.AuditRecord{
+		Inputs: token.NewInputStream(nil, []*token.Input{{ActionType: transferAction, ActionIndex: 0, Id: &token2.ID{TxId: "123"}}}, 0),
+		Outputs: token.NewOutputStream([]*token.Output{{
+			ActionType:  issueAction,
+			ActionIndex: 0, Issuer: driver.Identity("issuer"), Owner: []byte("alice"),
+			EnrollmentID: "alice", RevocationHandler: "alice-rh",
+		}}, 0),
+	}
+	err := rw.completeInputsWithEmptyEID(context.Background(), record)
+	require.NoError(t, err)
+
+	in := record.Inputs.At(0)
+	assert.Empty(t, in.EnrollmentID)
+	assert.Empty(t, in.RevocationHandler)
+}
+
 // The vault answering with fewer tokens than were asked for must not be indexed
 // past: this runs on the approval path, where a panic would take the audit down.
 func TestCompleteInputsWithEmptyEID_ShortVaultResultErrors(t *testing.T) {
@@ -635,7 +755,7 @@ func TestCompleteInputsWithEmptyEID_ShortVaultResultErrors(t *testing.T) {
 		token.NewRequest(tmsWithToken, token.RequestAnchor("tx-short")), tmsWithToken,
 	)
 	record := &token.AuditRecord{
-		Inputs:  token.NewInputStream(nil, []*token.Input{{Id: &token2.ID{TxId: "123"}}}, 0),
+		Inputs:  token.NewInputStream(nil, []*token.Input{{ActionType: transferAction, Id: &token2.ID{TxId: "123"}}}, 0),
 		Outputs: token.NewOutputStream([]*token.Output{{EnrollmentID: "target"}}, 0),
 	}
 	err := rw.completeInputsWithEmptyEID(context.Background(), record)
@@ -649,7 +769,7 @@ func TestCompleteInputsWithEmptyEID_NilVaultTokenErrors(t *testing.T) {
 		token.NewRequest(tmsWithToken, token.RequestAnchor("tx-nil-token")), tmsWithToken,
 	)
 	record := &token.AuditRecord{
-		Inputs:  token.NewInputStream(nil, []*token.Input{{Id: &token2.ID{TxId: "123"}}}, 0),
+		Inputs:  token.NewInputStream(nil, []*token.Input{{ActionType: transferAction, Id: &token2.ID{TxId: "123"}}}, 0),
 		Outputs: token.NewOutputStream([]*token.Output{{EnrollmentID: "target"}}, 0),
 	}
 	err := rw.completeInputsWithEmptyEID(context.Background(), record)
@@ -671,11 +791,12 @@ func TestCompleteInputsWithEmptyEID_OwnerResolutionErrorLeavesUnattributed(t *te
 	)
 	record := &token.AuditRecord{
 		Inputs: token.NewInputStream(nil, []*token.Input{{
+			ActionType:     transferAction,
 			Id:             &token2.ID{TxId: "123"},
 			Owner:          []byte("owner1"),
 			OwnerAuditInfo: []byte("legacy-audit-info"),
 		}}, 0),
-		Outputs: token.NewOutputStream([]*token.Output{{EnrollmentID: "target"}}, 0),
+		Outputs: token.NewOutputStream([]*token.Output{{ActionType: transferAction, EnrollmentID: "target"}}, 0),
 	}
 	err := rw.completeInputsWithEmptyEID(context.Background(), record)
 	require.NoError(t, err)
@@ -699,7 +820,7 @@ func TestCompleteInputsWithEmptyEID_AuditInfoStorageErrorFailsAudit(t *testing.T
 		token.NewRequest(tmsWithToken, token.RequestAnchor("tx-storage-err")), tmsWithToken,
 	)
 	record := &token.AuditRecord{
-		Inputs:  token.NewInputStream(nil, []*token.Input{{Id: &token2.ID{TxId: "123"}}}, 0),
+		Inputs:  token.NewInputStream(nil, []*token.Input{{ActionType: transferAction, Id: &token2.ID{TxId: "123"}}}, 0),
 		Outputs: token.NewOutputStream([]*token.Output{{EnrollmentID: "target"}}, 0),
 	}
 	err := rw.completeInputsWithEmptyEID(context.Background(), record)
@@ -724,7 +845,7 @@ func TestCompleteInputsWithEmptyEID_ContextCancellationPropagates(t *testing.T) 
 		token.NewRequest(tmsWithToken, token.RequestAnchor("tx-ctx-cancel")), tmsWithToken,
 	)
 	record := &token.AuditRecord{
-		Inputs:  token.NewInputStream(nil, []*token.Input{{Id: &token2.ID{TxId: "123"}}}, 0),
+		Inputs:  token.NewInputStream(nil, []*token.Input{{ActionType: transferAction, Id: &token2.ID{TxId: "123"}}}, 0),
 		Outputs: token.NewOutputStream([]*token.Output{{EnrollmentID: "target"}}, 0),
 	}
 	err := rw.completeInputsWithEmptyEID(ctx, record)
@@ -745,8 +866,9 @@ func TestCompleteInputsWithEmptyEID_UpgradeOwnerResolutionErrorTakesIssuedEID(t 
 		token.NewRequest(tmsWithToken, token.RequestAnchor("tx-upgrade-res-err")), tmsWithToken,
 	)
 	record := &token.AuditRecord{
-		Inputs: token.NewInputStream(nil, []*token.Input{{Id: &token2.ID{TxId: "123"}}}, 0),
+		Inputs: token.NewInputStream(nil, []*token.Input{{ActionType: issueAction, Id: &token2.ID{TxId: "123"}}}, 0),
 		Outputs: token.NewOutputStream([]*token.Output{{
+			ActionType:        issueAction,
 			Issuer:            driver.Identity("issuer"),
 			Owner:             []byte("post-upgrade-owner"),
 			EnrollmentID:      "alice",
@@ -868,7 +990,7 @@ func TestCompleteInputsWithEmptyEID_ListTokensError(t *testing.T) {
 
 	rw := newRequestWrapper(token.NewRequest(tms, token.RequestAnchor("tx-list-err")), tms)
 	record := &token.AuditRecord{
-		Inputs:  token.NewInputStream(nil, []*token.Input{{Id: &token2.ID{TxId: "123"}}}, 0),
+		Inputs:  token.NewInputStream(nil, []*token.Input{{ActionType: transferAction, Id: &token2.ID{TxId: "123"}}}, 0),
 		Outputs: token.NewOutputStream([]*token.Output{{EnrollmentID: "target"}}, 0),
 	}
 	err = rw.completeInputsWithEmptyEID(context.Background(), record)
@@ -909,12 +1031,31 @@ func TestCompleteInputsWithEmptyEID_ToQuantityError(t *testing.T) {
 
 	rw := newRequestWrapper(token.NewRequest(tms, token.RequestAnchor("tx-qty-err")), tms)
 	record := &token.AuditRecord{
-		Inputs:  token.NewInputStream(nil, []*token.Input{{Id: &token2.ID{TxId: "123"}}}, 0),
+		Inputs:  token.NewInputStream(nil, []*token.Input{{ActionType: transferAction, Id: &token2.ID{TxId: "123"}}}, 0),
 		Outputs: token.NewOutputStream([]*token.Output{{EnrollmentID: "target"}}, 0),
 	}
 	err = rw.completeInputsWithEmptyEID(context.Background(), record)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed converting token quantity")
+}
+
+// An input that names no action kind cannot be attributed: the upgrade
+// fallback is keyed on the kind, so an unnamed input would skip it silently
+// and leave an upgraded amount credited but never debited. It fails the audit.
+func TestCompleteInputsWithEmptyEID_InputWithoutActionKindErrors(t *testing.T) {
+	tmsWithToken, _ := newInternalTestManagementServiceWithTokens(t, []*token2.Token{
+		{Type: "USD", Quantity: "100", Owner: []byte("owner1")},
+	})
+	rw := newRequestWrapper(
+		token.NewRequest(tmsWithToken, token.RequestAnchor("tx-no-action-kind")), tmsWithToken,
+	)
+	record := &token.AuditRecord{
+		Inputs:  token.NewInputStream(nil, []*token.Input{{Id: &token2.ID{TxId: "123"}}}, 0),
+		Outputs: token.NewOutputStream([]*token.Output{{ActionType: issueAction, EnrollmentID: "target"}}, 0),
+	}
+
+	err := rw.completeInputsWithEmptyEID(context.Background(), record)
+	require.ErrorContains(t, err, "names no action kind")
 }
 
 // ---------------------------------------------------------------------------

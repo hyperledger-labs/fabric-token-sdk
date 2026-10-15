@@ -676,6 +676,7 @@ func (r *Request) extractIssueOutputs(ctx context.Context, i int, counter uint64
 		if noOutputForRecipient {
 			outputs = append(outputs, &Output{
 				Token:                *tok,
+				ActionType:           request.ActionType_ACTION_TYPE_ISSUE,
 				ActionIndex:          i,
 				Index:                counter,
 				Owner:                tok.Owner,
@@ -702,6 +703,7 @@ func (r *Request) extractIssueOutputs(ctx context.Context, i int, counter uint64
 
 				outputs = append(outputs, &Output{
 					Token:                *tok,
+					ActionType:           request.ActionType_ACTION_TYPE_ISSUE,
 					ActionIndex:          i,
 					Index:                counter,
 					Owner:                recipient,
@@ -789,6 +791,7 @@ func (r *Request) extractTransferOutputs(ctx context.Context, i int, counter uin
 		if noOutputForRecipient {
 			outputs = append(outputs, &Output{
 				Token:                *tok,
+				ActionType:           request.ActionType_ACTION_TYPE_TRANSFER,
 				ActionIndex:          i,
 				Index:                counter,
 				Owner:                tok.Owner,
@@ -835,6 +838,7 @@ func (r *Request) extractTransferOutputs(ctx context.Context, i int, counter uin
 				r.TokenService.logger.Debugf("Transfer Action Output [%d,%d][%s:%d] is present, extract [%s]", i, j, r.Anchor, counter, Hashable(ledgerOutput))
 				outputs = append(outputs, &Output{
 					Token:                *tok,
+					ActionType:           request.ActionType_ACTION_TYPE_TRANSFER,
 					ActionIndex:          i,
 					Index:                counter,
 					Owner:                recipient,
@@ -908,7 +912,7 @@ func (r *Request) inputs(ctx context.Context, failOnMissing bool) (*InputStream,
 func (r *Request) extractIssueInputs(actionIndex int, metadata *IssueMetadata) ([]*Input, error) {
 	var inputs []*Input
 	for j, input := range metadata.Inputs {
-		inputs = append(inputs, NewInput(actionIndex, j, input.TokenID))
+		inputs = append(inputs, NewInput(request.ActionType_ACTION_TYPE_ISSUE, actionIndex, j, input.TokenID))
 	}
 
 	return inputs, nil
@@ -935,7 +939,7 @@ func (r *Request) extractTransferInputs(ctx context.Context, actionIndex int, me
 				return nil, errors.Wrapf(err, "failed getting enrollment id and revocation handle [%d,%d]", actionIndex, j)
 			}
 
-			in := NewInput(actionIndex, j, metadata.TokenIDAt(j))
+			in := NewInput(request.ActionType_ACTION_TYPE_TRANSFER, actionIndex, j, metadata.TokenIDAt(j))
 			in.Owner = sender.Identity
 			in.OwnerAuditInfo = sender.AuditInfo
 			in.EnrollmentID = eID
