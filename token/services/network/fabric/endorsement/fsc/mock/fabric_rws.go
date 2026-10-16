@@ -129,6 +129,20 @@ type FabricRWSet struct {
 		result1 driver.PKey
 		result2 error
 	}
+	GetReadVersionStub        func(driver.Namespace, driver.PKey) (driver.RawVersion, error)
+	getReadVersionMutex       sync.RWMutex
+	getReadVersionArgsForCall []struct {
+		arg1 driver.Namespace
+		arg2 driver.PKey
+	}
+	getReadVersionReturns struct {
+		result1 driver.RawVersion
+		result2 error
+	}
+	getReadVersionReturnsOnCall map[int]struct {
+		result1 driver.RawVersion
+		result2 error
+	}
 	GetStateStub        func(driver.Namespace, driver.PKey, ...driver.GetStateOpt) (driver.RawValue, error)
 	getStateMutex       sync.RWMutex
 	getStateArgsForCall []struct {
@@ -846,6 +860,71 @@ func (fake *FabricRWSet) GetReadKeyAtReturnsOnCall(i int, result1 driver.PKey, r
 	}
 	fake.getReadKeyAtReturnsOnCall[i] = struct {
 		result1 driver.PKey
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FabricRWSet) GetReadVersion(arg1 driver.Namespace, arg2 driver.PKey) (driver.RawVersion, error) {
+	fake.getReadVersionMutex.Lock()
+	ret, specificReturn := fake.getReadVersionReturnsOnCall[len(fake.getReadVersionArgsForCall)]
+	fake.getReadVersionArgsForCall = append(fake.getReadVersionArgsForCall, struct {
+		arg1 driver.Namespace
+		arg2 driver.PKey
+	}{arg1, arg2})
+	stub := fake.GetReadVersionStub
+	fakeReturns := fake.getReadVersionReturns
+	fake.recordInvocation("GetReadVersion", []interface{}{arg1, arg2})
+	fake.getReadVersionMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FabricRWSet) GetReadVersionCallCount() int {
+	fake.getReadVersionMutex.RLock()
+	defer fake.getReadVersionMutex.RUnlock()
+	return len(fake.getReadVersionArgsForCall)
+}
+
+func (fake *FabricRWSet) GetReadVersionCalls(stub func(driver.Namespace, driver.PKey) (driver.RawVersion, error)) {
+	fake.getReadVersionMutex.Lock()
+	defer fake.getReadVersionMutex.Unlock()
+	fake.GetReadVersionStub = stub
+}
+
+func (fake *FabricRWSet) GetReadVersionArgsForCall(i int) (driver.Namespace, driver.PKey) {
+	fake.getReadVersionMutex.RLock()
+	defer fake.getReadVersionMutex.RUnlock()
+	argsForCall := fake.getReadVersionArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FabricRWSet) GetReadVersionReturns(result1 driver.RawVersion, result2 error) {
+	fake.getReadVersionMutex.Lock()
+	defer fake.getReadVersionMutex.Unlock()
+	fake.GetReadVersionStub = nil
+	fake.getReadVersionReturns = struct {
+		result1 driver.RawVersion
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FabricRWSet) GetReadVersionReturnsOnCall(i int, result1 driver.RawVersion, result2 error) {
+	fake.getReadVersionMutex.Lock()
+	defer fake.getReadVersionMutex.Unlock()
+	fake.GetReadVersionStub = nil
+	if fake.getReadVersionReturnsOnCall == nil {
+		fake.getReadVersionReturnsOnCall = make(map[int]struct {
+			result1 driver.RawVersion
+			result2 error
+		})
+	}
+	fake.getReadVersionReturnsOnCall[i] = struct {
+		result1 driver.RawVersion
 		result2 error
 	}{result1, result2}
 }
