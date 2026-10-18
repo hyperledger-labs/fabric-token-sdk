@@ -15,15 +15,15 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 )
 
-var closedMsgChan = func() chan *view.Message {
-	ch := make(chan *view.Message)
-	close(ch)
-
-	return ch
-}()
+// messageBufferSize is the capacity of each direction of a LocalBidirectionalChannel.
+const messageBufferSize = 10
 
 // LocalBidirectionalChannel is a bidirectional channel that is used to simulate
 // a session between two views (let's call them L and R) running in the same process.
+//
+// Closing either end terminates the conversation for both: the two message channels
+// are closed, so a peer parked on Receive is released, and any further Send returns
+// an error instead of writing into a channel nobody drains.
 type LocalBidirectionalChannel struct {
 	left  view.Session
 	right view.Session
@@ -35,8 +35,8 @@ func NewLocalBidirectionalChannel(ctx context.Context, caller string, contextID 
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to generate session ID")
 	}
-	lr := make(chan *view.Message, 10)
-	rl := make(chan *view.Message, 10)
+	lr := make(chan *view.Message, messageBufferSize)
+	rl := make(chan *view.Message, messageBufferSize)
 
 	info := view.SessionInfo{
 		ID:             base64.StdEncoding.EncodeToString(ID),
@@ -47,29 +47,30 @@ func NewLocalBidirectionalChannel(ctx context.Context, caller string, contextID 
 		Closed:         false,
 	}
 
-	leftClosed := make(chan struct{})
-	rightClosed := make(chan struct{})
+	state := &channelState{
+		done:     make(chan struct{}),
+		finished: make(chan struct{}),
+		channels: [2]chan *view.Message{lr, rl},
+	}
 
 	return &LocalBidirectionalChannel{
 		left: &localSession{
-			name:           "left",
-			contextID:      contextID,
-			caller:         caller,
-			info:           info,
-			readChannel:    rl,
-			writeChannel:   lr,
-			closedChan:     leftClosed,
-			peerClosedChan: rightClosed,
+			name:         "left",
+			contextID:    contextID,
+			caller:       caller,
+			info:         info,
+			readChannel:  rl,
+			writeChannel: lr,
+			state:        state,
 		},
 		right: &localSession{
-			name:           "right",
-			contextID:      contextID,
-			caller:         caller,
-			info:           info,
-			readChannel:    lr,
-			writeChannel:   rl,
-			closedChan:     rightClosed,
-			peerClosedChan: leftClosed,
+			name:         "right",
+			contextID:    contextID,
+			caller:       caller,
+			info:         info,
+			readChannel:  lr,
+			writeChannel: rl,
+			state:        state,
 		},
 	}, nil
 }
@@ -84,29 +85,101 @@ func (c *LocalBidirectionalChannel) RightSession() view.Session {
 	return c.right
 }
 
-// localSession is a local session that is used to simulate a session between two views.
-// It has a read channel and a write channel.
-type localSession struct {
-	name         string
-	contextID    string
-	caller       string
-	info         view.SessionInfo
-	readChannel  chan *view.Message
-	writeChannel chan *view.Message
-
-	mu             sync.RWMutex
-	closed         bool
-	closedChan     chan struct{}
-	peerClosedChan chan struct{}
-	inFlight       int
-	writeClosed    bool
+// channelState is the state shared by the two ends of a LocalBidirectionalChannel.
+// Both message channels are owned here because closing one end closes both of them.
+type channelState struct {
+	// mu guards closed. It is never held across a channel send, so Close never
+	// blocks behind a sender parked on a full buffer.
+	mu     sync.RWMutex
+	closed bool
+	// done is closed by close to release senders parked on a full buffer.
+	done chan struct{}
+	// finished is closed once the message channels are closed, so that a concurrent
+	// second close returns only when the close is complete.
+	finished chan struct{}
+	// senders counts the sends that are in flight, so that the message channels
+	// are closed only once no send can still be selecting on them.
+	senders  sync.WaitGroup
+	channels [2]chan *view.Message
 }
 
-func (s *localSession) Info() view.SessionInfo {
+// isClosed reports whether either end of the channel has been closed.
+func (s *channelState) isClosed() bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	return s.info
+	return s.closed
+}
+
+// beginSend registers an in-flight send. It reports false if the channel is already
+// closed, in which case no matching endSend call must be made.
+func (s *channelState) beginSend() bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	if s.closed {
+		return false
+	}
+	// Registered under the read lock, so it is ordered before close takes the write
+	// lock and, therefore, before the Wait in close.
+	s.senders.Add(1)
+
+	return true
+}
+
+// endSend deregisters an in-flight send.
+func (s *channelState) endSend() {
+	s.senders.Done()
+}
+
+// close terminates the conversation for both ends. It marks the channel closed,
+// releases the senders parked on a full buffer, and closes both message channels
+// once the in-flight sends have left. It is idempotent and never blocks on a send.
+func (s *channelState) close() {
+	s.mu.Lock()
+	if s.closed {
+		s.mu.Unlock()
+		// Another goroutine is closing: return only once it is done, so that a
+		// returned close always means the message channels are closed.
+		<-s.finished
+
+		return
+	}
+	s.closed = true
+	// Senders parked on a full buffer bail out as soon as this is closed.
+	close(s.done)
+	// The lock is dropped before the wait below: holding it there would queue Info,
+	// the sends that are still starting, and the peer's close behind the senders
+	// that are still leaving.
+	s.mu.Unlock()
+
+	// No lock is held here: the parked senders observe done and return immediately,
+	// and no new send can register, so the wait is bounded.
+	s.senders.Wait()
+	for _, ch := range s.channels {
+		close(ch)
+	}
+	close(s.finished)
+}
+
+// localSession is a local session that is used to simulate a session between two views.
+// It has a read channel and a write channel.
+type localSession struct {
+	name      string
+	contextID string
+	caller    string
+	// info is immutable; the Closed flag reported by Info comes from the shared state.
+	info         view.SessionInfo
+	readChannel  chan *view.Message
+	writeChannel chan *view.Message
+	state        *channelState
+}
+
+func (s *localSession) Info() view.SessionInfo {
+	info := s.info
+	info.Closed = s.state.isClosed()
+
+	return info
 }
 
 func (s *localSession) Send(ctx context.Context, payload []byte) error {
@@ -122,89 +195,49 @@ func (s *localSession) send(ctx context.Context, payload []byte, status int32) e
 		ctx = context.Background()
 	}
 
-	s.mu.Lock()
-	if s.closed {
-		s.mu.Unlock()
-
+	if !s.state.beginSend() {
 		return errors.New("session is closed")
 	}
-	s.inFlight++
-	info := s.info
-	s.mu.Unlock()
-
-	defer func() {
-		s.mu.Lock()
-		s.inFlight--
-		if s.inFlight == 0 && s.closed && !s.writeClosed {
-			s.writeClosed = true
-			close(s.writeChannel)
-		}
-		s.mu.Unlock()
-	}()
+	defer s.state.endSend()
 
 	msg := &view.Message{
-		SessionID:    info.ID,
+		SessionID:    s.info.ID,
 		ContextID:    s.contextID,
 		Caller:       s.caller,
-		FromEndpoint: info.RemoteEndpoint,
-		FromPKID:     info.RemotePKID,
+		FromEndpoint: s.info.RemoteEndpoint,
+		FromPKID:     s.info.RemotePKID,
 		Status:       status,
 		Payload:      payload,
 		Ctx:          ctx,
 	}
 
-	// If the peer has already closed its side, fail fast rather than dropping the
-	// message into a buffer nobody will drain. Without this check the non-blocking
-	// send below would report success or failure purely on buffer occupancy, so a
-	// caller could believe a message was delivered to a closed peer.
-	select {
-	case <-s.peerClosedChan:
-		return errors.New("session is closed")
-	default:
-	}
-
+	// The non-blocking attempt comes first on purpose: it makes the outcome
+	// deterministic when the buffer has room and ctx is already cancelled. Collapsing
+	// the two selects into one would let Go pick at random between the write and
+	// <-ctx.Done(), so an identical call would succeed or fail on a coin flip.
+	// TestLocalBidirectionalChannel_CancelledContextBufferedSend pins this down.
 	select {
 	case s.writeChannel <- msg:
 		return nil
 	default:
 	}
 
+	// The buffer is full: park until it drains, the channel is closed, or the
+	// caller's context is done. Only here does a send observe ctx.
 	select {
 	case s.writeChannel <- msg:
 		return nil
-	case <-s.closedChan:
-		return errors.New("session is closed")
-	case <-s.peerClosedChan:
+	case <-s.state.done:
 		return errors.New("session is closed")
 	case <-ctx.Done():
-		return errors.Wrap(ctx.Err(), "context cancelled while sending message")
+		return errors.Wrapf(ctx.Err(), "failed sending message on session [%s]", s.info.ID)
 	}
 }
 
 func (s *localSession) Receive() <-chan *view.Message {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	if s.closed {
-		return closedMsgChan
-	}
-
 	return s.readChannel
 }
 
 func (s *localSession) Close() {
-	s.mu.Lock()
-	if s.closed {
-		s.mu.Unlock()
-
-		return
-	}
-	s.closed = true
-	s.info.Closed = true
-	close(s.closedChan)
-	if s.inFlight == 0 {
-		s.writeClosed = true
-		close(s.writeChannel)
-	}
-	s.mu.Unlock()
+	s.state.close()
 }
