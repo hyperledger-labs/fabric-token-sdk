@@ -189,6 +189,7 @@ clean:
 	rm -rf ./integration/token/fungible/ofabtoken/out/
 	rm -rf ./integration/token/fungible/mixed/out/
 	rm -rf ./integration/token/fungible/zkatsnark/out/
+	rm -rf ./integration/token/fungible/zkatsnark/testdata/
 	rm -rf ./integration/token/nft/dlog/out/
 	rm -rf ./integration/token/nft/fabtoken/out/
 	rm -rf ./integration/token/nft/odlog/out/

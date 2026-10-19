@@ -22,7 +22,7 @@ type SpendDescription struct {
 	ValueCommitInX []byte // 32 bytes
 	ValueCommitInY []byte // 32 bytes
 	TypeCommitment []byte // 32 bytes: MiMC(TokenType, TypeRandomness)
-	SpendProof     []byte // 244 bytes: Groth16 proof for SpendCircuit
+	SpendProof     []byte // 292 bytes: Groth16 proof for SpendCircuit
 }
 
 // TransferAction represents consuming one or more existing tokens and

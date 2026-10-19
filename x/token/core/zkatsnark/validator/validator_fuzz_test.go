@@ -29,7 +29,7 @@ func validTransferActionRaw(tb testing.TB, withInputIDs bool) []byte {
 				ValueCommitInX: make([]byte, 32),
 				ValueCommitInY: make([]byte, 32),
 				TypeCommitment: make([]byte, 32),
-				SpendProof:     make([]byte, 244),
+				SpendProof:     make([]byte, 292),
 			},
 		},
 		Outputs: []snarktoken.OutputDescription{
@@ -38,7 +38,7 @@ func validTransferActionRaw(tb testing.TB, withInputIDs bool) []byte {
 				ValueCommitOutX: make([]byte, 32),
 				ValueCommitOutY: make([]byte, 32),
 				TypeCommitment:  make([]byte, 32),
-				OutputProof:     make([]byte, 244),
+				OutputProof:     make([]byte, 292),
 				Recipient:       []byte("alice"),
 			},
 		},
@@ -51,7 +51,7 @@ func validTransferActionRaw(tb testing.TB, withInputIDs bool) []byte {
 			ValueCommitOutX: make([]byte, 32),
 			ValueCommitOutY: make([]byte, 32),
 			TypeCommitment:  make([]byte, 32),
-			OutputProof:     make([]byte, 244),
+			OutputProof:     make([]byte, 292),
 			Recipient:       []byte("bob"),
 		}
 		raw, err := json.Marshal(outputDesc)
@@ -77,7 +77,7 @@ func validIssueActionRaw(tb testing.TB) []byte {
 				ValueCommitOutX: make([]byte, 32),
 				ValueCommitOutY: make([]byte, 32),
 				TypeCommitment:  make([]byte, 32),
-				OutputProof:     make([]byte, 244),
+				OutputProof:     make([]byte, 292),
 				Recipient:       []byte("alice"),
 			},
 		},
@@ -104,7 +104,7 @@ func transferActionWithNilInputID(tb testing.TB) []byte {
 				ValueCommitInX: make([]byte, 32),
 				ValueCommitInY: make([]byte, 32),
 				TypeCommitment: make([]byte, 32),
-				SpendProof:     make([]byte, 244),
+				SpendProof:     make([]byte, 292),
 			},
 		},
 		Outputs: []snarktoken.OutputDescription{
@@ -113,7 +113,7 @@ func transferActionWithNilInputID(tb testing.TB) []byte {
 				ValueCommitOutX: make([]byte, 32),
 				ValueCommitOutY: make([]byte, 32),
 				TypeCommitment:  make([]byte, 32),
-				OutputProof:     make([]byte, 244),
+				OutputProof:     make([]byte, 292),
 				Recipient:       []byte("alice"),
 			},
 		},

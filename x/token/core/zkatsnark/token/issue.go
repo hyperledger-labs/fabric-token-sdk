@@ -21,7 +21,7 @@ type OutputDescription struct {
 	ValueCommitOutX []byte // 32 bytes: Jubjub X coordinate of cv
 	ValueCommitOutY []byte // 32 bytes: Jubjub Y coordinate of cv
 	TypeCommitment  []byte // 32 bytes: MiMC(TokenType, TypeRandomness)
-	OutputProof     []byte // 244 bytes: Groth16 proof for OutputCircuit
+	OutputProof     []byte // 292 bytes: Groth16 proof for OutputCircuit
 	Recipient       []byte // intended recipient identity
 }
 
