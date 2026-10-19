@@ -311,7 +311,7 @@ func collectTokenIDs(locks []driver3.LockRecord) []token.ID {
 // TestListLocksReportsLockAge verifies that ListLocks round-trips the lock's creation
 // timestamp accurately, including across the sqlite/Postgres TIMESTAMPTZ divergence
 // that scannableTime handles (see #2395 Phase 1). LockRecord.CreatedAt is the field
-// the CERT report's "how long has this token been contested" question turns on, so a
+// the stress report's "how long has this token been contested" question turns on, so a
 // silent truncation or timezone shift here would make lock-age reporting unreliable
 // without ever failing ListLocks itself.
 func TestListLocksReportsLockAge(t *testing.T, tokenDB driver3.TokenStore, tokenLockDB driver3.TokenLockStore, tokenTransactionDB driver3.TokenTransactionStore) {
@@ -338,7 +338,7 @@ func TestListLocksReportsLockAge(t *testing.T, tokenDB driver3.TokenStore, token
 }
 
 // TestReleaseAfterConfirm reproduces, at the store level, the literal
-// invariant the CERT report flagged for token f8a27fc4...: once a lock's consuming
+// invariant the stress report flagged for token f8a27fc4...: once a lock's consuming
 // transaction reaches a terminal status and the lock has been released (as the
 // settlement path added in Phase 5 now does via UnlockByTxID), ListLocks must not go
 // on reporting it - regardless of how old the lock was when it was released. This
@@ -357,7 +357,7 @@ func TestReleaseAfterConfirm(t *testing.T, tokenDB driver3.TokenStore, tokenLock
 	require.NoError(t, tokenLockDB.LockAt(ctx, &tokenID, "consumer", "owner1", time.Now().Add(-10*time.Minute)))
 	require.NoError(t, tokenTransactionDB.SetStatus(ctx, "consumer", driver3.Confirmed, ""))
 
-	// Before release, the lock is exactly the leak the CERT report flagged: an old
+	// Before release, the lock is exactly the leak the stress report flagged: an old
 	// lock whose consumer has already reached a terminal status.
 	locks, err := tokenLockDB.ListLocks(ctx)
 	require.NoError(t, err)
@@ -522,7 +522,7 @@ func requireLockRecord(t *testing.T, locks []driver3.LockRecord, tokenID token.I
 // requireNoLeakedLocks asserts that no currently held lock has a consumer that has
 // already reached a terminal status - i.e. that ListLocks agrees with
 // driver3.IsTerminalStatus that nothing is leaked. This is the literal invariant
-// the CERT report's ">6 minutes after SETTLED" observation flagged for #2395.
+// the stress report's ">6 minutes after SETTLED" observation flagged for #2395.
 func requireNoLeakedLocks(t *testing.T, tokenLockDB driver3.TokenLockStore) {
 	t.Helper()
 

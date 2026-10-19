@@ -221,7 +221,7 @@ func TestHotTokenContentionWithSettlement(t *testing.T, replicas []EnhancedManag
 }
 
 // TestStaticHotTokenContentionPareto targets the shape TestHotTokenContentionWithSettlement's
-// rotating hot token structurally cannot: CERT's actual incident had a small, static set of
+// rotating hot token structurally cannot: stress's actual incident had a small, static set of
 // tokens - never spent, only locked and released - absorbing the overwhelming majority of lock
 // conflicts (one of them contested well over a thousand times in a few minutes). A rotating hot
 // token (see TestHotTokenContention's doc comment) dilutes any single ID's share by

@@ -96,6 +96,26 @@ func (p *benchMetricsProvider) NewHistogram(opts fscmetrics.HistogramOpts) fscme
 	return &benchHistogram{hv: hv}
 }
 
+// reset zeroes every recorded value while keeping the vectors sherdlock.Metrics already holds
+// pointers to, so the next report covers only what happened after the call. b.Run invokes a
+// benchmark function once per b.N round on the same selector; without this each round's report
+// would include every earlier round, notably the one-off first fetch of the b.N=1 round.
+func (p *benchMetricsProvider) reset() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	for _, cv := range p.counters {
+		cv.mu.Lock()
+		clear(cv.vals)
+		cv.mu.Unlock()
+	}
+	for _, hv := range p.histograms {
+		hv.mu.Lock()
+		clear(hv.count)
+		clear(hv.sum)
+		hv.mu.Unlock()
+	}
+}
+
 // counterTotal sums every label combination recorded for the named counter.
 func (p *benchMetricsProvider) counterTotal(name string) (float64, bool) {
 	p.mu.Lock()
@@ -271,8 +291,22 @@ type Locker interface {
 }
 
 type extendedSelector struct {
+	// Selector serves every Select for the legacy "selector+*" settings. nil for sherdlock
+	// settings, which use NewSelector instead.
 	Selector token.Selector
-	Lock     Locker
+	// NewSelector builds a fresh sherdlock selector for a single Select, mirroring production,
+	// where sherdlock.Manager hands each transaction its own selector over a shared fetcher and
+	// locker. Reusing one selector across iterations kept its candidate iterator alive between
+	// calls, so the store was read once per ~10k selects and the fetcher strategies under
+	// comparison were never actually exercised.
+	NewSelector func() token.Selector
+	// Lock is the raw in-memory locker tokens are locked in, for every setting: sherdlock's
+	// in-memory adapter locks through it too, under the wallet ID.
+	Lock Locker
+	// WalletID is the owner Select locks tokens under (ownerFilter.ID()). The in-memory locker
+	// is sharded by owner, so Unselect must unlock under the same one: unlocking under any other
+	// owner silently does nothing.
+	WalletID string
 	// Metrics is non-nil for sherdlock-backed selectors, giving benchmarks a way to read back
 	// what sherdlock.Metrics actually observed (see reportSherdlockMetrics). nil for the legacy
 	// "selector+*" settings, which don't build a sherdlock.Metrics at all.
@@ -280,32 +314,38 @@ type extendedSelector struct {
 }
 
 func (s *extendedSelector) Select(ctx context.Context, ownerFilter token.OwnerFilter, q string, tokenType token2.Type) ([]*token2.ID, token2.Quantity, error) {
-	return s.Selector.Select(ctx, ownerFilter, q, tokenType)
+	if s.NewSelector == nil {
+		return s.Selector.Select(ctx, ownerFilter, q, tokenType)
+	}
+	sel := s.NewSelector()
+	ids, quantity, err := sel.Select(ctx, ownerFilter, q, tokenType)
+	// Closing only drops the selector's candidate iterator: the locks it took stay in s.Lock
+	// until Unselect releases them.
+	if closeErr := sel.Close(); closeErr != nil && err == nil {
+		err = closeErr
+	}
+
+	return ids, quantity, err
 }
-func (s *extendedSelector) Close() error { return s.Selector.Close() }
+
+func (s *extendedSelector) Close() error {
+	if s.Selector == nil {
+		return nil
+	}
+
+	return s.Selector.Close()
+}
 
 func (s *extendedSelector) BenchMetrics() *benchMetricsProvider { return s.Metrics }
 
-// Unselect releases the tokens Select returned. For the "simple" selector (s.Lock != nil) this
-// unlocks by ID. sherdlock selectors (s.Lock == nil, since sherdlock owns locking internally via
-// its TokenLocker) instead need UnlockAll: without this branch, Unselect silently did nothing
-// for every sherdlock-based setting, so locked tokens accumulated across benchmark iterations
-// and never came back, growing the live candidate scan on every subsequent Select until the
-// wallet looked contended or exhausted. That is a correctness bug in this harness, not evidence
-// of anything wrong in the selector under test.
+// Unselect releases the tokens Select returned, by ID and under the owner they were locked for.
+// Both selector families lock in s.Lock under ownerFilter.ID(), so this covers them alike, and
+// it is safe under BenchmarkSelectorParallel since it touches only the given tokens. Unlocking
+// under the empty owner, as this used to, released nothing: locked tokens piled up across
+// iterations and every Select had to scan past all of them, which is what made "selector+lock"
+// look hundreds of times slower than it is.
 func (s *extendedSelector) Unselect(id ...*token2.ID) {
-	if s.Lock != nil {
-		s.Lock.UnlockIDs(context.Background(), "", id...)
-
-		return
-	}
-	if u, ok := s.Selector.(interface {
-		UnlockAll(ctx context.Context) error
-	}); ok {
-		if err := u.UnlockAll(context.Background()); err != nil {
-			panic("benchmark harness: UnlockAll failed: " + err.Error())
-		}
-	}
+	s.Lock.UnlockIDs(context.Background(), s.WalletID, id...)
 }
 
 // BenchmarkSelectorSingle measures pure, uncontended Select() latency and throughput: a single
@@ -337,6 +377,7 @@ func BenchmarkSelectorSingle(b *testing.B) {
 		setup(&s)
 		b.ResetTimer()
 		b.Run(s.name, func(b *testing.B) {
+			resetBenchMetrics(s.selector.BenchMetrics())
 			var contended int
 			for range b.N {
 				ids, _, err := s.selector.Select(b.Context(), s.filter, testutils.SelectQuantity, testutils.TokenType)
@@ -400,6 +441,7 @@ func BenchmarkSelectorParallel(b *testing.B) {
 		setup(&s)
 		b.ResetTimer()
 		b.Run(s.name, func(b *testing.B) {
+			resetBenchMetrics(s.selector.BenchMetrics())
 			var contended, unexpectedCount int32
 			b.SetParallelism(s.clients)
 			b.RunParallel(func(pb *testing.PB) {
@@ -429,8 +471,20 @@ func BenchmarkSelectorParallel(b *testing.B) {
 	}
 }
 
+// resetBenchMetrics zeroes mp at the start of a b.N round (see benchMetricsProvider.reset). No-op
+// for the settings that record no metrics.
+func resetBenchMetrics(mp *benchMetricsProvider) {
+	if mp != nil {
+		mp.reset()
+	}
+}
+
+// benchWalletID is the wallet every benchmark token belongs to, and so the owner its tokens
+// are locked under.
+const benchWalletID = "wallet0"
+
 func setup(s *Setting) {
-	walletID := "wallet0"
+	walletID := benchWalletID
 	walletOwner := []byte(walletID)
 
 	walletIDByRawIdentity := func(rawIdentity []byte) string {
@@ -480,25 +534,42 @@ func NewSelector(qs *testutils.MockQueryService, walletIDByRawIdentity WalletIDB
 	return &extendedSelector{
 		Selector: s,
 		Lock:     lock,
+		WalletID: benchWalletID,
 	}, nil
+}
+
+// benchSelectorSeq numbers the transactions newSherdlockSetting's selectors lock for.
+var benchSelectorSeq atomic.Uint64
+
+// newSherdlockSetting wires a sherdlock setting the way sherdlock.Manager does in production:
+// one fetcher, locker and Metrics shared by every selector, and a fresh selector per Select.
+// wire receives the shared Metrics, since the mixed fetcher records into it too.
+//
+// Each selector locks for its own transaction. A shared txID would let one selector's UnlockAll,
+// which sherdlock runs on any failed Select and which unlocks by txID, release tokens other
+// goroutines still hold under BenchmarkSelectorParallel.
+func newSherdlockSetting(mp *benchMetricsProvider, lock selector.Locker, backoff time.Duration, wire func(m *sherdlock.Metrics) (sherdlock.TokenFetcher, sherdlock.Locker)) *extendedSelector {
+	m := sherdlock.NewMetrics(mp)
+	fetcher, locker := wire(m)
+
+	return &extendedSelector{
+		NewSelector: func() token.Selector {
+			txID := testutils.TxID + "-" + strconv.FormatUint(benchSelectorSeq.Add(1), 10)
+
+			return sherdlock.NewSherdSelector(txID, fetcher, locker, testutils.TokenQuantityPrecision, backoff, testutils.SelectorNumRetries, m)
+		},
+		Lock:     lock,
+		WalletID: benchWalletID,
+		Metrics:  mp,
+	}
 }
 
 func NewSherdSelector(qs *testutils.MockQueryService, _ WalletIDByRawIdentityFunc, lock selector.Locker) (ExtendedSelector, CleanupFunction) {
 	mp := newBenchMetricsProvider()
 
-	return &extendedSelector{
-		Selector: sherdlock.NewSherdSelector(
-			testutils.TxID,
-			sherdlock.NewLazyFetcher(qs),
-			inmemory2.NewLocker(lock),
-			testutils.TokenQuantityPrecision,
-			sherdlock.NoBackoff,
-			testutils.SelectorNumRetries,
-			sherdlock.NewMetrics(mp),
-		),
-		Lock:    nil,
-		Metrics: mp,
-	}, nil
+	return newSherdlockSetting(mp, lock, sherdlock.NoBackoff, func(m *sherdlock.Metrics) (sherdlock.TokenFetcher, sherdlock.Locker) {
+		return sherdlock.NewLazyFetcher(qs), inmemory2.NewLocker(lock)
+	}), nil
 }
 
 // NewStubbornSherdSelector wires the same lazy sherdlock stack as NewSherdSelector, but through
@@ -509,19 +580,9 @@ func NewSherdSelector(qs *testutils.MockQueryService, _ WalletIDByRawIdentityFun
 func NewStubbornSherdSelector(qs *testutils.MockQueryService, _ WalletIDByRawIdentityFunc, lock selector.Locker) (ExtendedSelector, CleanupFunction) {
 	mp := newBenchMetricsProvider()
 
-	return &extendedSelector{
-		Selector: sherdlock.NewSherdSelector(
-			testutils.TxID,
-			sherdlock.NewLazyFetcher(qs),
-			inmemory2.NewLocker(lock),
-			testutils.TokenQuantityPrecision,
-			benchBackoff,
-			testutils.SelectorNumRetries,
-			sherdlock.NewMetrics(mp),
-		),
-		Lock:    nil,
-		Metrics: mp,
-	}, nil
+	return newSherdlockSetting(mp, lock, benchBackoff, func(m *sherdlock.Metrics) (sherdlock.TokenFetcher, sherdlock.Locker) {
+		return sherdlock.NewLazyFetcher(qs), inmemory2.NewLocker(lock)
+	}), nil
 }
 
 // NewCachedSherdSelector wires sherdlock's "eager"/cached fetcher strategy (sherdlock.Cached,
@@ -532,21 +593,10 @@ func NewStubbornSherdSelector(qs *testutils.MockQueryService, _ WalletIDByRawIde
 // periodically refreshed snapshot" for the same selection workload.
 func NewCachedSherdSelector(qs *testutils.MockQueryService, _ WalletIDByRawIdentityFunc, lock selector.Locker) (ExtendedSelector, CleanupFunction) {
 	mp := newBenchMetricsProvider()
-	m := sherdlock.NewMetrics(mp)
 
-	return &extendedSelector{
-		Selector: sherdlock.NewSherdSelector(
-			testutils.TxID,
-			sherdlock.NewCachedFetcher(qs, 0, 0, 0),
-			inmemory2.NewLocker(lock),
-			testutils.TokenQuantityPrecision,
-			sherdlock.NoBackoff,
-			testutils.SelectorNumRetries,
-			m,
-		),
-		Lock:    nil,
-		Metrics: mp,
-	}, nil
+	return newSherdlockSetting(mp, lock, sherdlock.NoBackoff, func(m *sherdlock.Metrics) (sherdlock.TokenFetcher, sherdlock.Locker) {
+		return sherdlock.NewCachedFetcher(qs, 0, 0, 0), inmemory2.NewLocker(lock)
+	}), nil
 }
 
 // NewMixedSherdSelector wires sherdlock's "mixed" fetcher strategy (sherdlock.Mixed): try the
@@ -555,21 +605,10 @@ func NewCachedSherdSelector(qs *testutils.MockQueryService, _ WalletIDByRawIdent
 // "mixed" - none of this file's other providers exercise it.
 func NewMixedSherdSelector(qs *testutils.MockQueryService, _ WalletIDByRawIdentityFunc, lock selector.Locker) (ExtendedSelector, CleanupFunction) {
 	mp := newBenchMetricsProvider()
-	m := sherdlock.NewMetrics(mp)
 
-	return &extendedSelector{
-		Selector: sherdlock.NewSherdSelector(
-			testutils.TxID,
-			sherdlock.NewMixedFetcher(qs, m, 0, 0, 0),
-			inmemory2.NewLocker(lock),
-			testutils.TokenQuantityPrecision,
-			sherdlock.NoBackoff,
-			testutils.SelectorNumRetries,
-			m,
-		),
-		Lock:    nil,
-		Metrics: mp,
-	}, nil
+	return newSherdlockSetting(mp, lock, sherdlock.NoBackoff, func(m *sherdlock.Metrics) (sherdlock.TokenFetcher, sherdlock.Locker) {
+		return sherdlock.NewMixedFetcher(qs, m, 0, 0, 0), inmemory2.NewLocker(lock)
+	}), nil
 }
 
 // benchBatchLocker adds sherdlock.BatchLocker to any sherdlock.Locker by looping single-token
@@ -607,19 +646,9 @@ func (l *benchBatchLocker) LockBatch(ctx context.Context, tokenIDs []*token2.ID,
 func NewBatchLockSherdSelector(qs *testutils.MockQueryService, _ WalletIDByRawIdentityFunc, lock selector.Locker) (ExtendedSelector, CleanupFunction) {
 	mp := newBenchMetricsProvider()
 
-	return &extendedSelector{
-		Selector: sherdlock.NewSherdSelector(
-			testutils.TxID,
-			sherdlock.NewLazyFetcher(qs),
-			&benchBatchLocker{Locker: inmemory2.NewLocker(lock)},
-			testutils.TokenQuantityPrecision,
-			sherdlock.NoBackoff,
-			testutils.SelectorNumRetries,
-			sherdlock.NewMetrics(mp),
-		),
-		Lock:    nil,
-		Metrics: mp,
-	}, nil
+	return newSherdlockSetting(mp, lock, sherdlock.NoBackoff, func(m *sherdlock.Metrics) (sherdlock.TokenFetcher, sherdlock.Locker) {
+		return sherdlock.NewLazyFetcher(qs), &benchBatchLocker{Locker: inmemory2.NewLocker(lock)}
+	}), nil
 }
 
 type Setting struct {

@@ -35,8 +35,7 @@ const (
 	// nextCandidate considers together once it finds one that, on its own,
 	// already covers the remaining requested amount. bucketedIterator's
 	// shuffle (fetcher.go) only randomizes tokens whose Quantity is
-	// byte-equal, so with realistic wallets (mostly-distinct amounts, as in
-	// the #2395 CERT incident) every such bucket has size 1 and the
+	// byte-equal, so with realistic wallets every such bucket has size 1 and the
 	// ascending scan is fully deterministic: any request smaller than the
 	// smallest token always targets that single token, exactly the hot-spot
 	// #2395 warned against. sufficiencyWindow widens the randomization to
@@ -58,14 +57,12 @@ const (
 	// token and one huge one, as in TestSizeOrderedSelection_SmallestFit) would otherwise have
 	// sufficiencyWindow trivially swallow the huge token just because nothing else was in
 	// between, defeating the smallest-fit bias for the smallest wallets, which are also the
-	// ones a hot-token incident hurts the most. 5x keeps the window meaningful (room for
-	// several genuinely similarly-sized candidates around the CERT incident's 1/1.5/2/3 EUR
-	// cluster) while still refusing to lock, say, a 200 EUR token when a 1 EUR one would do.
+	// ones a hot-token incident hurts the most. 5x keeps the window meaningful while still
+	// refusing to lock, say, a 200 EUR token when a 1 EUR one would do.
 	//
 	// The bound is deliberately anchor-relative and not remaining-relative: with the remaining
-	// amount as the basis, any wallet whose smallest token already exceeds 5x the request (a
-	// 1 EUR payment out of 20/30/40/50 EUR denominations - entirely ordinary, and the #2395
-	// CERT incident's own shape) would see its very first lookahead candidate rejected, leaving
+	// amount as the basis, any wallet whose smallest token already exceeds 5x the request would
+	// see its very first lookahead candidate rejected, leaving
 	// a window of size 1 and fully deterministic selection: the mechanism would be inert in
 	// exactly the regime it exists for. Anchoring on the smallest sufficient token keeps the
 	// selected token within 5x of what would have been locked regardless, in every regime.

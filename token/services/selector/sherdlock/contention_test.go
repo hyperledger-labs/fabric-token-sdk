@@ -229,7 +229,7 @@ func startManagersWithLockCountersAndLockStore(t *testing.T, number int, backoff
 }
 
 // TestStaticHotTokenContentionPareto drives testutils.TestStaticHotTokenContentionPareto
-// against a real Postgres-backed selector, and asserts the CERT-shaped concentration that
+// against a real Postgres-backed selector, and asserts the stress-shaped concentration that
 // TestHotTokenContention's rotating hot token cannot reproduce (see that test's doc comment
 // and testutils.TestStaticHotTokenContentionPareto's): a small, static set of token IDs
 // absorbing the large majority of lock conflicts, with at least one of them contested many
@@ -356,7 +356,7 @@ func runHotTokenContention(t *testing.T, label, strategy string, scenario func(t
 	// roundTrips is expected to come out equal across strategies for the same workload here -
 	// the selector always claims a covering window via LockBatch, one round trip per window
 	// regardless of strategy, so batching (not strategy choice) is what saves round trips.
-	// uniqueViolations is the real, hard count of the server-side errors that caused the CERT
+	// uniqueViolations is the real, hard count of the server-side errors that caused the stress
 	// log storm: it is 0 in every strategy in this benchmark, because that error is only
 	// possible via the single-token Lock path under LockStrategyInsert, which a BatchLocker-
 	// capable selector (this one) never takes - see TestHotTokenContention_SingleTokenLockPath

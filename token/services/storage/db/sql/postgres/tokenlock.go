@@ -68,7 +68,7 @@ type TokenLockStore struct {
 	// came from a real server-side unique-constraint violation - possible solely via Lock under
 	// LockStrategyInsert (LockBatch never issues a plain INSERT, and LockStrategyOnConflict/
 	// LockStrategySkipLocked translate a lost race into a clean zero-row result instead), so it
-	// is the real, hard count of the server-side errors that caused the CERT log storm. Exists so
+	// is the real, hard count of the server-side errors that caused the stress log storm. Exists so
 	// a benchmark can report both with real numbers rather than inferring them from conflict rate,
 	// which does not move across strategies: see RoundTrips and UniqueViolations.
 	roundTrips       atomic.Int64

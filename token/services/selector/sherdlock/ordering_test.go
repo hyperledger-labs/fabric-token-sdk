@@ -93,7 +93,7 @@ func TestSizeOrderedSelection_SameAmountBucketShuffle(t *testing.T) {
 // TestSizeOrderedSelection_SufficiencyWindowShuffle closes the gap left by
 // TestSizeOrderedSelection_SmallestFit and TestSizeOrderedSelection_SameAmountBucketShuffle:
 // neither covers several *distinct* amounts that each individually satisfy the request, which
-// is exactly the #2395 CERT-incident shape ("a 1 EUR request grabbed the 200 EUR token")
+// is exactly the #2395 stress shape ("a 1 EUR request grabbed the 200 EUR token")
 // bucketedIterator's byte-equal-only shuffle (fetcher.go) cannot help with, since every bucket
 // there has size 1 for distinct amounts. This test wires a wallet with amounts 2, 3, 4, 5, 6
 // and 200 EUR - all individually sufficient for a 1 EUR request - and repeats the selection
