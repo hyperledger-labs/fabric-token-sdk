@@ -65,9 +65,16 @@ type IssueAction struct {
 	Outputs          []OutputDescription
 	BindingSignature []byte // 96 bytes: R.X || R.Y || S
 	TotalValue       []byte
+	limits           *driver.ResourceLimits
+	Metadata         map[string][]byte `json:"Metadata,omitempty"` // action metadata, set from the issue options
 }
 
 // ── driver.Action ──────────────────────────────────────────────────────────────
+
+// SetLimits configures the resource limits enforced by Validate and Deserialize.
+func (a *IssueAction) SetLimits(limits driver.ResourceLimits) {
+	a.limits = &limits
+}
 
 // Validate performs a basic structural self-check on the action.
 func (a *IssueAction) Validate() error {
@@ -75,7 +82,7 @@ func (a *IssueAction) Validate() error {
 		return errors.New("issue action has no outputs")
 	}
 
-	return nil
+	return a.checkLimits()
 }
 
 // ── driver.ActionWithInputs ────────────────────────────────────────────────────
@@ -105,9 +112,9 @@ func (a *IssueAction) IsGraphHiding() bool {
 	return false
 }
 
-// GetMetadata returns nil, zkatsnark has no per-action metadata.
+// GetMetadata returns the metadata of the action.
 func (a *IssueAction) GetMetadata() map[string][]byte {
-	return nil
+	return a.Metadata
 }
 
 // ExtraSigners returns nil, zkatsnark does not require extra signers.
@@ -129,7 +136,21 @@ func (a *IssueAction) Serialize() ([]byte, error) {
 
 // Deserialize populates the action from bytes produced by Serialize.
 func (a *IssueAction) Deserialize(raw []byte) error {
-	return json.Unmarshal(raw, a)
+	if err := json.Unmarshal(raw, a); err != nil {
+		return errors.Wrap(err, "failed to deserialize issue action")
+	}
+
+	return a.checkLimits()
+}
+
+// checkLimits enforces the configured resource limits on the action.
+func (a *IssueAction) checkLimits() error {
+	limits := effectiveLimits(a.limits)
+	if err := checkCountLimits(0, len(a.Outputs), limits); err != nil {
+		return err
+	}
+
+	return checkMetadataLimits(a.Metadata, limits)
 }
 
 // NumOutputs returns the number of outputs.

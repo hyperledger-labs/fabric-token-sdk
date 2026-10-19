@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 
 	"github.com/LFDT-Panurus/panurus/token/core/common"
+	"github.com/LFDT-Panurus/panurus/token/core/common/meta"
 	"github.com/LFDT-Panurus/panurus/token/driver"
 	"github.com/LFDT-Panurus/panurus/token/services/logging"
 	token2 "github.com/LFDT-Panurus/panurus/token/token"
@@ -143,7 +144,12 @@ func (s *TransferService) Transfer(
 		}
 	}
 
-	action, notes, err := s.Orchestrator.BuildTransferAction(ctx, inputs, outputs, tokenType, s.PublicParametersManager.PublicParams())
+	var actionMetadata map[string][]byte
+	if opts != nil {
+		actionMetadata = meta.TransferActionMetadata(opts.Attributes)
+	}
+
+	action, notes, err := s.Orchestrator.BuildTransferAction(ctx, inputs, outputs, tokenType, s.PublicParametersManager.PublicParams(), actionMetadata)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to generate zk transfer")
 	}

@@ -39,9 +39,16 @@ type TransferAction struct {
 	Outputs          []OutputDescription
 	BindingSignature []byte // 96 bytes: R.X || R.Y || S
 	Issuer           []byte `json:"Issuer,omitempty"` // issuer identity for redeem actions
+	limits           *driver.ResourceLimits
+	Metadata         map[string][]byte `json:"Metadata,omitempty"` // action metadata, set from the transfer options
 }
 
 // ── driver.Action ──────────────────────────────────────────────────────────────
+
+// SetLimits configures the resource limits enforced by Validate and Deserialize.
+func (a *TransferAction) SetLimits(limits driver.ResourceLimits) {
+	a.limits = &limits
+}
 
 // Validate performs a basic structural self-check on the action.
 func (a *TransferAction) Validate() error {
@@ -49,7 +56,7 @@ func (a *TransferAction) Validate() error {
 		return errors.New("transfer action has no inputs and no outputs")
 	}
 
-	return nil
+	return a.checkLimits()
 }
 
 // ── driver.ActionWithInputs ────────────────────────────────────────────────────
@@ -92,9 +99,9 @@ func (a *TransferAction) IsGraphHiding() bool {
 	return false
 }
 
-// GetMetadata returns nil, zkatsnark has no per-action metadata.
+// GetMetadata returns the metadata of the action.
 func (a *TransferAction) GetMetadata() map[string][]byte {
-	return nil
+	return a.Metadata
 }
 
 // ExtraSigners returns nil, zkatsnark does not require extra signers.
@@ -116,7 +123,21 @@ func (a *TransferAction) Serialize() ([]byte, error) {
 
 // Deserialize populates the action from bytes produced by Serialize.
 func (a *TransferAction) Deserialize(raw []byte) error {
-	return json.Unmarshal(raw, a)
+	if err := json.Unmarshal(raw, a); err != nil {
+		return errors.Wrap(err, "failed to deserialize transfer action")
+	}
+
+	return a.checkLimits()
+}
+
+// checkLimits enforces the configured resource limits on the action.
+func (a *TransferAction) checkLimits() error {
+	limits := effectiveLimits(a.limits)
+	if err := checkCountLimits(len(a.Inputs), len(a.Outputs), limits); err != nil {
+		return err
+	}
+
+	return checkMetadataLimits(a.Metadata, limits)
 }
 
 // NumOutputs returns the number of outputs.

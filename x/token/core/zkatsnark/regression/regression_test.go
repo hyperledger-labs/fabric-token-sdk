@@ -24,6 +24,7 @@ import (
 
 	"github.com/LFDT-Panurus/panurus/token/driver"
 	"github.com/LFDT-Panurus/panurus/token/driver/protos-go/v1/request"
+	"github.com/LFDT-Panurus/panurus/token/services/identity"
 	token2 "github.com/LFDT-Panurus/panurus/token/token"
 	"github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/pp"
 	"github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/prover"
@@ -119,6 +120,7 @@ func buildIssueAction(
 		outputs,
 		tokenType,
 		sharedPP,
+		nil,
 	)
 	require.NoError(t, err, "BuildIssueAction")
 
@@ -156,6 +158,7 @@ func buildTransferAction(
 		outputs,
 		tokenType,
 		sharedPP,
+		nil,
 	)
 	require.NoError(t, err, "BuildTransferAction")
 
@@ -254,7 +257,7 @@ func TestIssueAction_ValidatesSuccessfully(t *testing.T) {
 	setupShared(t)
 
 	issuer := []byte("test-issuer")
-	owner := []byte("test-owner")
+	owner := typedID(t, "test-owner")
 
 	action, _ := buildIssueAction(t, issuer, "USD", []uint64{100}, [][]byte{owner})
 
@@ -274,7 +277,7 @@ func TestIssueAction_TwoOutputs_ValidatesSuccessfully(t *testing.T) {
 	action, _ := buildIssueAction(
 		t, issuer, "EUR",
 		[]uint64{50, 75},
-		[][]byte{[]byte("alice"), []byte("bob")},
+		[][]byte{typedID(t, "alice"), typedID(t, "bob")},
 	)
 
 	val, err := validator.NewValidator(sharedPP, &testDeserializer{}, driver.ResourceLimits{})
@@ -290,7 +293,7 @@ func TestTransferAction_ValidatesSuccessfully(t *testing.T) {
 	setupShared(t)
 
 	issuer := []byte("test-issuer")
-	owner := []byte("test-owner")
+	owner := typedID(t, "test-owner")
 
 	// Issue 100 tokens to owner
 	_, issuedNotes := buildIssueAction(t, issuer, "USD", []uint64{100}, [][]byte{owner})
@@ -301,7 +304,7 @@ func TestTransferAction_ValidatesSuccessfully(t *testing.T) {
 		issuedNotes,
 		"USD",
 		[]uint64{60, 40},
-		[][]byte{[]byte("bob"), owner},
+		[][]byte{typedID(t, "bob"), owner},
 	)
 
 	val, err := validator.NewValidator(sharedPP, &testDeserializer{}, driver.ResourceLimits{})
@@ -317,7 +320,7 @@ func TestTransferAction_MultipleInputs_ValidatesSuccessfully(t *testing.T) {
 	setupShared(t)
 
 	issuer := []byte("test-issuer")
-	owner := []byte("test-owner")
+	owner := typedID(t, "test-owner")
 
 	// Issue two separate tokens
 	_, notes1 := buildIssueAction(t, issuer, "USD", []uint64{50}, [][]byte{owner})
@@ -329,7 +332,7 @@ func TestTransferAction_MultipleInputs_ValidatesSuccessfully(t *testing.T) {
 		[]*snarktoken.Note{notes1[0], notes2[0]},
 		"USD",
 		[]uint64{80},
-		[][]byte{[]byte("bob")},
+		[][]byte{typedID(t, "bob")},
 	)
 
 	val, err := validator.NewValidator(sharedPP, &testDeserializer{}, driver.ResourceLimits{})
@@ -352,7 +355,7 @@ func TestTransferAction_CommonValidator_SignaturesConsumed(t *testing.T) {
 	setupShared(t)
 
 	issuer := []byte("test-issuer")
-	owner := []byte("test-owner")
+	owner := typedID(t, "test-owner")
 
 	// Issue 100 tokens to owner
 	issueAction, issuedNotes := buildIssueAction(t, issuer, "USD", []uint64{100}, [][]byte{owner})
@@ -363,7 +366,7 @@ func TestTransferAction_CommonValidator_SignaturesConsumed(t *testing.T) {
 		issuedNotes,
 		"USD",
 		[]uint64{60, 40},
-		[][]byte{[]byte("bob"), owner},
+		[][]byte{typedID(t, "bob"), owner},
 	)
 
 	// Set InputIDs and InputTokens on the transfer action (as TransferService would)
@@ -422,7 +425,7 @@ func TestTransferAction_CommonValidator_TwoInputs_SignaturesConsumed(t *testing.
 	setupShared(t)
 
 	issuer := []byte("test-issuer")
-	owner := []byte("test-owner")
+	owner := typedID(t, "test-owner")
 
 	// Issue two tokens
 	issueAction1, notes1 := buildIssueAction(t, issuer, "USD", []uint64{50}, [][]byte{owner})
@@ -434,7 +437,7 @@ func TestTransferAction_CommonValidator_TwoInputs_SignaturesConsumed(t *testing.
 		[]*snarktoken.Note{notes1[0], notes2[0]},
 		"USD",
 		[]uint64{80},
-		[][]byte{[]byte("bob")},
+		[][]byte{typedID(t, "bob")},
 	)
 
 	// Set InputIDs and InputTokens
@@ -499,7 +502,7 @@ func TestTransferAction_MissingInputIDs_Fails(t *testing.T) {
 	setupShared(t)
 
 	issuer := []byte("test-issuer")
-	owner := []byte("test-owner")
+	owner := typedID(t, "test-owner")
 
 	_, issuedNotes := buildIssueAction(t, issuer, "USD", []uint64{100}, [][]byte{owner})
 
@@ -508,7 +511,7 @@ func TestTransferAction_MissingInputIDs_Fails(t *testing.T) {
 		issuedNotes,
 		"USD",
 		[]uint64{60, 40},
-		[][]byte{[]byte("bob"), owner},
+		[][]byte{typedID(t, "bob"), owner},
 	)
 
 	// Deliberately do NOT set InputIDs
@@ -549,4 +552,13 @@ func TestTransferAction_MissingInputIDs_Fails(t *testing.T) {
 	)
 	require.Error(t, err, "VerifyTokenRequestFromRaw should fail when InputIDs are missing")
 	require.ErrorIs(t, err, validator.ErrMissingInputIDs)
+}
+
+// typedID returns a typed identity wrapping the given name, as owners are on a real ledger.
+func typedID(t *testing.T, name string) []byte {
+	t.Helper()
+	id, err := identity.WrapWithType(1, []byte(name))
+	require.NoError(t, err)
+
+	return id
 }
