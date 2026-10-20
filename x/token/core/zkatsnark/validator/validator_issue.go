@@ -9,14 +9,13 @@ import (
 	"context"
 	"slices"
 
-	"github.com/consensys/gnark-crypto/ecc"
-
-	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
-
 	"github.com/LFDT-Panurus/panurus/token/core/common"
+	"github.com/LFDT-Panurus/panurus/token/core/zkatdlog/nogh/v1/validator"
 	"github.com/LFDT-Panurus/panurus/token/driver"
 	"github.com/LFDT-Panurus/panurus/token/services/utils"
 	snarktoken "github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/token"
+	"github.com/consensys/gnark-crypto/ecc"
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 )
 
 // parseTotalValue decodes the wire-format TotalValue bytes into a uint64.
@@ -87,7 +86,7 @@ func IssueSignatureValidate(c context.Context, ctx *Context) error {
 
 	// Check the issuer is among those known (open-policy if list is empty)
 	if issuers := ctx.PP.Issuers(); len(issuers) != 0 && !slices.ContainsFunc(issuers, issuer.Equal) {
-		return errors.New("issuer not authorized")
+		return validator.ErrIssuerNotAuthorized
 	}
 
 	if utils.IsNil(ctx.Deserializer) {
