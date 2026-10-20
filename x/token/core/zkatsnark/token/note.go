@@ -96,26 +96,11 @@ func SampleFieldRandomness(curve ecc.ID) ([]byte, error) {
 	return s.RandomFieldElement()
 }
 
-// NewRandomNote constructs a Note for a newly created token with fresh
-// cryptographically random commitment randomness.
-// If curve is specified, randomness is sampled in that curve's scalar field;
-// otherwise DefaultRandomnessLength (64 bytes) of uniform randomness is used,
-// guaranteeing unbiased modular reduction across all supported curves.
-func NewRandomNote(value uint64, tokenType string, curve ...ecc.ID) (*Note, error) {
-	if len(curve) > 0 {
-		return NewRandomNoteForCurve(value, tokenType, curve[0])
-	}
-	rBytes, err := SampleRandomness(DefaultRandomnessLength)
-	if err != nil {
-		return nil, err
-	}
-
-	return &Note{Value: value, TokenType: tokenType, Randomness: rBytes, Issuer: nil}, nil
-}
-
-// NewRandomNoteForCurve constructs a Note whose randomness is a uniform
-// element of curve's scalar field.
-func NewRandomNoteForCurve(value uint64, tokenType string, curve ecc.ID) (*Note, error) {
+// NewRandomNote constructs a Note for a newly created token whose commitment
+// randomness is a uniform element of curve's scalar field. The curve is
+// mandatory so the randomness is always valid for the curve the note is
+// committed under.
+func NewRandomNote(value uint64, tokenType string, curve ecc.ID) (*Note, error) {
 	rBytes, err := SampleFieldRandomness(curve)
 	if err != nil {
 		return nil, err

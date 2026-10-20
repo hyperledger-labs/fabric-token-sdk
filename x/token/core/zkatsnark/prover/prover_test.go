@@ -10,7 +10,6 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
 	"github.com/consensys/gnark/frontend"
 	"github.com/stretchr/testify/require"
@@ -51,7 +50,7 @@ func setupProvers(t *testing.T) {
 func TestSpendProver(t *testing.T) {
 	setupProvers(t)
 
-	note, err := snarktoken.NewRandomNote(500, "USD")
+	note, err := snarktoken.NewRandomNote(500, "USD", testPP.Curve)
 	require.NoError(t, err)
 
 	var typeRandomness fr.Element
@@ -64,7 +63,7 @@ func TestSpendProver(t *testing.T) {
 	proof, err := spendProver.Prove(witnessRes.Assignment)
 	require.NoError(t, err)
 
-	witness, err := frontend.NewWitness(witnessRes.Assignment, ecc.BLS12_381.ScalarField())
+	witness, err := frontend.NewWitness(witnessRes.Assignment, testPP.Curve.ScalarField())
 	require.NoError(t, err)
 
 	publicWitness, err := witness.Public()
@@ -90,7 +89,7 @@ func TestOutputProver(t *testing.T) {
 	proof, err := outputProver.Prove(witnessRes.Assignment)
 	require.NoError(t, err)
 
-	witness, err := frontend.NewWitness(witnessRes.Assignment, ecc.BLS12_381.ScalarField())
+	witness, err := frontend.NewWitness(witnessRes.Assignment, testPP.Curve.ScalarField())
 	require.NoError(t, err)
 
 	publicWitness, err := witness.Public()

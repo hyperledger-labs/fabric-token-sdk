@@ -48,7 +48,7 @@ func compileTestCircuits(t *testing.T) {
 func TestBuildSpendWitness_Satisfiable(t *testing.T) {
 	compileTestCircuits(t)
 
-	note, err := snarktoken.NewRandomNote(500, "USD")
+	note, err := snarktoken.NewRandomNote(500, "USD", testPP.Curve)
 	require.NoError(t, err)
 
 	var typeRandomness fr.Element
@@ -58,7 +58,7 @@ func TestBuildSpendWitness_Satisfiable(t *testing.T) {
 	witnessRes, err := prover.BuildSpendWitness(note, tr[:], testPP)
 	require.NoError(t, err)
 
-	witness, err := frontend.NewWitness(witnessRes.Assignment, ecc.BLS12_381.ScalarField())
+	witness, err := frontend.NewWitness(witnessRes.Assignment, testPP.Curve.ScalarField())
 	require.NoError(t, err)
 
 	err = testSpendCS.IsSolved(witness)
@@ -66,7 +66,7 @@ func TestBuildSpendWitness_Satisfiable(t *testing.T) {
 }
 
 func TestBuildSpendWitness_CommitmentMatchesNote(t *testing.T) {
-	note, err := snarktoken.NewRandomNote(500, "USD")
+	note, err := snarktoken.NewRandomNote(500, "USD", testPP.Curve)
 	require.NoError(t, err)
 
 	var typeRandomness fr.Element
@@ -102,7 +102,7 @@ func TestBuildOutputWitness_Satisfiable(t *testing.T) {
 	witnessRes, err := prover.BuildOutputWitness(500, "USD", testPP, tr[:])
 	require.NoError(t, err)
 
-	witness, err := frontend.NewWitness(witnessRes.Assignment, ecc.BLS12_381.ScalarField())
+	witness, err := frontend.NewWitness(witnessRes.Assignment, testPP.Curve.ScalarField())
 	require.NoError(t, err)
 
 	err = testOutputCS.IsSolved(witness)
@@ -138,7 +138,7 @@ func TestBuildOutputWitness_ZeroValueRejectedBySolver(t *testing.T) {
 	wr, err := prover.BuildOutputWitness(0, "USD", testPP, tr[:])
 	require.NoError(t, err, "BuildOutputWitness itself does not enforce value > 0")
 
-	witness, err := frontend.NewWitness(wr.Assignment, ecc.BLS12_381.ScalarField())
+	witness, err := frontend.NewWitness(wr.Assignment, testPP.Curve.ScalarField())
 	require.NoError(t, err)
 
 	err = testOutputCS.IsSolved(witness)
@@ -181,7 +181,7 @@ func randomBN254TypeRandomness(t *testing.T) []byte {
 func TestBuildSpendWitness_BN254_Satisfiable(t *testing.T) {
 	p, spendCS, _ := compileTestCircuitsBN254(t)
 
-	note, err := snarktoken.NewRandomNote(500, "USD")
+	note, err := snarktoken.NewRandomNote(500, "USD", p.Curve)
 	require.NoError(t, err)
 
 	tr := randomBN254TypeRandomness(t)
@@ -189,7 +189,7 @@ func TestBuildSpendWitness_BN254_Satisfiable(t *testing.T) {
 	witnessRes, err := prover.BuildSpendWitness(note, tr, p)
 	require.NoError(t, err)
 
-	witness, err := frontend.NewWitness(witnessRes.Assignment, ecc.BN254.ScalarField())
+	witness, err := frontend.NewWitness(witnessRes.Assignment, p.Curve.ScalarField())
 	require.NoError(t, err)
 
 	err = spendCS.IsSolved(witness)
@@ -199,7 +199,7 @@ func TestBuildSpendWitness_BN254_Satisfiable(t *testing.T) {
 func TestBuildSpendWitness_BN254_CommitmentMatchesNote(t *testing.T) {
 	p, _, _ := compileTestCircuitsBN254(t)
 
-	note, err := snarktoken.NewRandomNote(500, "USD")
+	note, err := snarktoken.NewRandomNote(500, "USD", p.Curve)
 	require.NoError(t, err)
 
 	tr := randomBN254TypeRandomness(t)
@@ -222,7 +222,7 @@ func TestBuildOutputWitness_BN254_Satisfiable(t *testing.T) {
 	witnessRes, err := prover.BuildOutputWitness(500, "USD", p, tr)
 	require.NoError(t, err)
 
-	witness, err := frontend.NewWitness(witnessRes.Assignment, ecc.BN254.ScalarField())
+	witness, err := frontend.NewWitness(witnessRes.Assignment, p.Curve.ScalarField())
 	require.NoError(t, err)
 
 	err = outputCS.IsSolved(witness)
@@ -248,7 +248,7 @@ func TestBuildSpendWitness_UnsupportedCurve(t *testing.T) {
 	p := pp.DefaultPublicParams()
 	p.Curve = ecc.BW6_761 // unsupported
 
-	note, err := snarktoken.NewRandomNote(100, "USD")
+	note, err := snarktoken.NewRandomNote(100, "USD", testPP.Curve)
 	require.NoError(t, err)
 
 	var typeRandomness fr.Element

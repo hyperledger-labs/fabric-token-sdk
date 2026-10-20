@@ -37,8 +37,9 @@ func TestNoteCommitmentDeterminism(t *testing.T) {
 func TestNoteCommitmentDeterminism_WideRandomness(t *testing.T) {
 	// A curve-agnostic note with 64 bytes of randomness must be deterministic
 	// across all supported curves.
-	note, err := snarktoken.NewRandomNote(100, "USD")
+	r, err := snarktoken.SampleRandomness(snarktoken.DefaultRandomnessLength)
 	require.NoError(t, err)
+	note := &snarktoken.Note{Value: 100, TokenType: "USD", Randomness: r}
 	require.Len(t, note.Randomness, 64)
 
 	for _, curve := range supportedCurves {
@@ -91,10 +92,10 @@ func TestNoteRandomnessUniqueness(t *testing.T) {
 	}
 }
 
-func TestNewRandomNoteForCurve(t *testing.T) {
+func TestNewRandomNote(t *testing.T) {
 	for _, curve := range supportedCurves {
 		t.Run(curve.String(), func(t *testing.T) {
-			note, err := snarktoken.NewRandomNoteForCurve(100, "USD", curve)
+			note, err := snarktoken.NewRandomNote(100, "USD", curve)
 			require.NoError(t, err)
 			require.Len(t, note.Randomness, 32)
 			cm, err := note.Commitment(curve)
@@ -103,7 +104,7 @@ func TestNewRandomNoteForCurve(t *testing.T) {
 		})
 	}
 
-	_, err := snarktoken.NewRandomNoteForCurve(100, "USD", ecc.BW6_761)
+	_, err := snarktoken.NewRandomNote(100, "USD", ecc.BW6_761)
 	require.Error(t, err)
 }
 
@@ -147,7 +148,7 @@ func TestNoteSerializeDeserialize_AllCurvesAndLengths(t *testing.T) {
 
 func TestNoteCommitmentCrossCurveDistinction(t *testing.T) {
 	// Same value and token type must produce distinct commitments under BLS12-381 vs BN254
-	note, err := snarktoken.NewRandomNote(42, "EUR")
+	note, err := snarktoken.NewRandomNote(42, "EUR", ecc.BLS12_381)
 	require.NoError(t, err)
 
 	cmBLS, err := note.Commitment(ecc.BLS12_381)

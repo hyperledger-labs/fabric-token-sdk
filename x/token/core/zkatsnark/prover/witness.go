@@ -228,7 +228,7 @@ func BuildOutputWitness(value uint64, tokenType string, publicParams *pp.PublicP
 		return nil, err
 	}
 
-	note, err := snarktoken.NewRandomNote(value, tokenType)
+	note, err := snarktoken.NewRandomNote(value, tokenType, cc.id)
 	if err != nil {
 		return nil, errors.Wrapf(err, "prover: new output note failed")
 	}

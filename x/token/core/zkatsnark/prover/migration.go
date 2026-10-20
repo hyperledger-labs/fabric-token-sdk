@@ -73,7 +73,7 @@ func BuildMigrationWitness(
 		return nil, err
 	}
 
-	note, err := snarktoken.NewRandomNote(opening.Value, opening.TokenType)
+	note, err := snarktoken.NewRandomNote(opening.Value, opening.TokenType, cc.id)
 	if err != nil {
 		return nil, errors.Wrapf(err, "prover: migration note creation failed")
 	}

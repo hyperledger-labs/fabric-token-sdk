@@ -9,7 +9,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
 	"github.com/consensys/gnark/backend/witness"
 	"github.com/consensys/gnark/frontend"
@@ -45,7 +44,7 @@ func publicWitnessFromSpendDescription(t *testing.T, desc snarktoken.SpendDescri
 		// extracts the gnark:",public" fields, so these are never read.
 	}
 
-	w, err := frontend.NewWitness(assignment, ecc.BLS12_381.ScalarField(), frontend.PublicOnly())
+	w, err := frontend.NewWitness(assignment, testPP.Curve.ScalarField(), frontend.PublicOnly())
 	require.NoError(t, err, "building public witness from SpendDescription")
 
 	return w
@@ -71,7 +70,7 @@ func publicWitnessFromOutputDescription(t *testing.T, desc snarktoken.OutputDesc
 		// it; it only matters at compile time, already baked into outputVK.
 	}
 
-	w, err := frontend.NewWitness(assignment, ecc.BLS12_381.ScalarField(), frontend.PublicOnly())
+	w, err := frontend.NewWitness(assignment, testPP.Curve.ScalarField(), frontend.PublicOnly())
 	require.NoError(t, err, "building public witness from OutputDescription")
 
 	return w
@@ -82,9 +81,9 @@ func TestBuildTransferAction_Valid(t *testing.T) {
 
 	o := prover.NewOrchestrator(spendProver, outputProver, testPP)
 
-	note1, err := snarktoken.NewRandomNote(100, "USD")
+	note1, err := snarktoken.NewRandomNote(100, "USD", testPP.Curve)
 	require.NoError(t, err)
-	note2, err := snarktoken.NewRandomNote(50, "USD")
+	note2, err := snarktoken.NewRandomNote(50, "USD", testPP.Curve)
 	require.NoError(t, err)
 
 	action, outputs, err := o.BuildTransferAction(
@@ -143,12 +142,12 @@ func TestBuildTransferAction_Valid(t *testing.T) {
 		})
 	}
 
-	bvk, err := prover.ComputeBVK(ecc.BLS12_381, inResults, outResults, 0)
+	bvk, err := prover.ComputeBVK(testPP.Curve, inResults, outResults, 0)
 	require.NoError(t, err)
 
 	actionHash := prover.ComputeActionHash(snarktoken.ActionTypeTransfer, action.TypeCommitment, inResults, outResults)
 
-	suite, err := edwards.ForCurve(ecc.BLS12_381)
+	suite, err := edwards.ForCurve(testPP.Curve)
 	require.NoError(t, err)
 
 	err = suite.VerifyBinding(bvk, actionHash, action.BindingSignature)

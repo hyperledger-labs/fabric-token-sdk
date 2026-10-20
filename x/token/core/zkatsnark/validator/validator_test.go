@@ -256,9 +256,9 @@ func TestValidateTransfer_EndToEnd(t *testing.T) {
 	forEachConfig(t, func(t *testing.T, f *e2eFixture) {
 		t.Helper()
 
-		note1, err := snarktoken.NewRandomNote(100, "USD")
+		note1, err := snarktoken.NewRandomNote(100, "USD", f.cfg.curve)
 		require.NoError(t, err)
-		note2, err := snarktoken.NewRandomNote(50, "USD")
+		note2, err := snarktoken.NewRandomNote(50, "USD", f.cfg.curve)
 		require.NoError(t, err)
 
 		action, _, err := f.orch.BuildTransferAction(
@@ -308,7 +308,7 @@ func TestValidateTransfer_RejectsTamperedCommitment(t *testing.T) {
 	forEachConfig(t, func(t *testing.T, f *e2eFixture) {
 		t.Helper()
 
-		note, err := snarktoken.NewRandomNote(100, "USD")
+		note, err := snarktoken.NewRandomNote(100, "USD", f.cfg.curve)
 		require.NoError(t, err)
 
 		action, _, err := f.orch.BuildTransferAction(
@@ -334,7 +334,7 @@ func TestValidateTransfer_RejectsWrongTypeCommitment(t *testing.T) {
 	forEachConfig(t, func(t *testing.T, f *e2eFixture) {
 		t.Helper()
 
-		note, err := snarktoken.NewRandomNote(100, "USD")
+		note, err := snarktoken.NewRandomNote(100, "USD", f.cfg.curve)
 		require.NoError(t, err)
 
 		action, _, err := f.orch.BuildTransferAction(
@@ -364,7 +364,7 @@ func TestValidateTransfer_RejectsCorruptedBindingSignature(t *testing.T) {
 	forEachConfig(t, func(t *testing.T, f *e2eFixture) {
 		t.Helper()
 
-		note, err := snarktoken.NewRandomNote(100, "USD")
+		note, err := snarktoken.NewRandomNote(100, "USD", f.cfg.curve)
 		require.NoError(t, err)
 
 		action, _, err := f.orch.BuildTransferAction(
@@ -560,7 +560,7 @@ func TestValidateTransfer_RejectsNonCanonicalTypeCommitment(t *testing.T) {
 	forEachConfig(t, func(t *testing.T, f *e2eFixture) {
 		t.Helper()
 
-		note, err := snarktoken.NewRandomNote(100, "USD")
+		note, err := snarktoken.NewRandomNote(100, "USD", f.cfg.curve)
 		require.NoError(t, err)
 
 		action, _, err := f.orch.BuildTransferAction(
@@ -612,9 +612,9 @@ func TestTransferZKValidate_Valid(t *testing.T) {
 	forEachConfig(t, func(t *testing.T, f *e2eFixture) {
 		t.Helper()
 
-		note1, err := snarktoken.NewRandomNote(100, "USD")
+		note1, err := snarktoken.NewRandomNote(100, "USD", f.cfg.curve)
 		require.NoError(t, err)
-		note2, err := snarktoken.NewRandomNote(50, "USD")
+		note2, err := snarktoken.NewRandomNote(50, "USD", f.cfg.curve)
 		require.NoError(t, err)
 
 		action, _, err := f.orch.BuildTransferAction(
@@ -644,7 +644,7 @@ func TestTransferZKValidate_TamperedProof(t *testing.T) {
 	forEachConfig(t, func(t *testing.T, f *e2eFixture) {
 		t.Helper()
 
-		note, err := snarktoken.NewRandomNote(100, "USD")
+		note, err := snarktoken.NewRandomNote(100, "USD", f.cfg.curve)
 		require.NoError(t, err)
 
 		action, _, err := f.orch.BuildTransferAction(
@@ -776,7 +776,7 @@ func TestDeserializeActions_RoundTrip(t *testing.T) {
 		issueBytes, err := issueAction.Serialize()
 		require.NoError(t, err)
 
-		note, err := snarktoken.NewRandomNote(50, "USD")
+		note, err := snarktoken.NewRandomNote(50, "USD", f.cfg.curve)
 		require.NoError(t, err)
 		transferAction, _, err := f.orch.BuildTransferAction(
 			t.Context(),
@@ -866,7 +866,7 @@ func TestTransferSignatureValidate_MissingInputIDs(t *testing.T) {
 	forEachConfig(t, func(t *testing.T, f *e2eFixture) {
 		t.Helper()
 
-		note, err := snarktoken.NewRandomNote(100, "USD")
+		note, err := snarktoken.NewRandomNote(100, "USD", f.cfg.curve)
 		require.NoError(t, err)
 
 		action, _, err := f.orch.BuildTransferAction(
@@ -897,7 +897,7 @@ func TestTransferSignatureValidate_NilInputID(t *testing.T) {
 	forEachConfig(t, func(t *testing.T, f *e2eFixture) {
 		t.Helper()
 
-		note, err := snarktoken.NewRandomNote(100, "USD")
+		note, err := snarktoken.NewRandomNote(100, "USD", f.cfg.curve)
 		require.NoError(t, err)
 
 		action, _, err := f.orch.BuildTransferAction(
@@ -927,7 +927,7 @@ func TestTransferSignatureValidate_LedgerError(t *testing.T) {
 	forEachConfig(t, func(t *testing.T, f *e2eFixture) {
 		t.Helper()
 
-		note, err := snarktoken.NewRandomNote(100, "USD")
+		note, err := snarktoken.NewRandomNote(100, "USD", f.cfg.curve)
 		require.NoError(t, err)
 
 		action, _, err := f.orch.BuildTransferAction(
@@ -959,7 +959,7 @@ func TestTransferSignatureValidate_CommitmentMismatch(t *testing.T) {
 	forEachConfig(t, func(t *testing.T, f *e2eFixture) {
 		t.Helper()
 
-		note, err := snarktoken.NewRandomNote(100, "USD")
+		note, err := snarktoken.NewRandomNote(100, "USD", f.cfg.curve)
 		require.NoError(t, err)
 
 		action, _, err := f.orch.BuildTransferAction(
@@ -999,7 +999,7 @@ func TestTransferSignatureValidate_NilSignatureProvider(t *testing.T) {
 	forEachConfig(t, func(t *testing.T, f *e2eFixture) {
 		t.Helper()
 
-		note, err := snarktoken.NewRandomNote(100, "USD")
+		note, err := snarktoken.NewRandomNote(100, "USD", f.cfg.curve)
 		require.NoError(t, err)
 
 		action, _, err := f.orch.BuildTransferAction(
@@ -1043,7 +1043,7 @@ func TestTransferSignatureValidate_Success(t *testing.T) {
 	forEachConfig(t, func(t *testing.T, f *e2eFixture) {
 		t.Helper()
 
-		note, err := snarktoken.NewRandomNote(100, "USD")
+		note, err := snarktoken.NewRandomNote(100, "USD", f.cfg.curve)
 		require.NoError(t, err)
 
 		action, _, err := f.orch.BuildTransferAction(
@@ -1092,7 +1092,7 @@ func TestTransferSignatureValidate_Redeem_MissingIssuer(t *testing.T) {
 	forEachConfig(t, func(t *testing.T, f *e2eFixture) {
 		t.Helper()
 
-		note, err := snarktoken.NewRandomNote(100, "USD")
+		note, err := snarktoken.NewRandomNote(100, "USD", f.cfg.curve)
 		require.NoError(t, err)
 
 		action, _, err := f.orch.BuildTransferAction(
@@ -1140,7 +1140,7 @@ func TestTransferSignatureValidate_Redeem_Success(t *testing.T) {
 	forEachConfig(t, func(t *testing.T, f *e2eFixture) {
 		t.Helper()
 
-		note, err := snarktoken.NewRandomNote(100, "USD")
+		note, err := snarktoken.NewRandomNote(100, "USD", f.cfg.curve)
 		require.NoError(t, err)
 
 		action, _, err := f.orch.BuildTransferAction(

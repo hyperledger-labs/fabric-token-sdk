@@ -74,7 +74,7 @@ func TestTokensService_SupportedTokenFormats(t *testing.T) {
 
 func TestTokensService_Deobfuscate_Success(t *testing.T) {
 	// Create a note and compute its commitment so we can build a matching output.
-	note, err := snarktoken.NewRandomNote(100, "USD")
+	note, err := snarktoken.NewRandomNote(100, "USD", ecc.BLS12_381)
 	require.NoError(t, err)
 	note.Issuer = []byte("issuer-1")
 
@@ -121,7 +121,7 @@ func TestTokensService_Deobfuscate_BadMetadata(t *testing.T) {
 }
 
 func TestTokensService_Deobfuscate_BadOutput(t *testing.T) {
-	note, err := snarktoken.NewRandomNote(100, "USD")
+	note, err := snarktoken.NewRandomNote(100, "USD", ecc.BLS12_381)
 	require.NoError(t, err)
 
 	metadata, err := note.Serialize()
@@ -138,7 +138,7 @@ func TestTokensService_Deobfuscate_BadOutput(t *testing.T) {
 }
 
 func TestTokensService_Deobfuscate_CommitmentMismatch(t *testing.T) {
-	note, err := snarktoken.NewRandomNote(100, "USD")
+	note, err := snarktoken.NewRandomNote(100, "USD", ecc.BLS12_381)
 	require.NoError(t, err)
 
 	metadata, err := note.Serialize()

@@ -503,7 +503,7 @@ func TestComputeTypeCommitment_DifferentTypesGiveDifferentCommitments(t *testing
 // ── Note with issuer ──────────────────────────────────────────────────────────
 
 func TestNote_Serialize_WithIssuer_RoundTrip(t *testing.T) {
-	note, err := snarktoken.NewRandomNote(500, "USD")
+	note, err := snarktoken.NewRandomNote(500, "USD", ecc.BLS12_381)
 	require.NoError(t, err)
 	note.Issuer = []byte("issuer-abc")
 
