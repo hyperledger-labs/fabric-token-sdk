@@ -247,6 +247,22 @@ func (db *TokenLockStore) tryLockSkipLocked(ctx context.Context, tokenIDs []*tok
 // past rows a concurrent claimant is already processing instead of blocking on or colliding
 // with them. It never touches a (tx_id, idx) pair outside tokenIDs.
 //
+// The lock rows are inserted in (tx_id, idx) order, whatever order the caller listed the
+// candidates in. Inserting a key another transaction has inserted but not yet committed waits
+// for that transaction, and two claims that insert overlapping keys in different orders wait
+// for each other: a deadlock, which Postgres only notices after deadlock_timeout (1 s by
+// default), so a deadlocked claim costs a second and the selector then retries it. Without the
+// ORDER BY the insert order is the order the claim's source yields rows, which is the
+// planner's choice: the caller's list under a nested loop, the table under a hash join, and
+// the plan flips with the table's size and the window's length. The candidates are shuffled
+// within equal-amount runs on purpose (see bucketedIterator), so concurrent claimants do list
+// overlapping windows in different orders. A fixed insert order makes every claim take the
+// shared keys in the same sequence, so there is no cycle to detect. Under skipLocked the claim
+// walks past rows another claimant holds instead of waiting for them, and the overlapping-claims
+// test (TestTokenLockStore_LockBatch_OverlappingClaimsDoNotDeadlock) does not deadlock there
+// with or without this ordering; it is applied to every strategy because it costs a sort of at
+// most MaxLockBatchCandidates rows and keeps the three strategies' behaviour the same.
+//
 // Classifying costs no extra round trip: all three verdicts are read off one statement. The
 // spendability verdict comes from its own CTE rather than from the claim's source, because
 // under skipLocked those are not the same question - a row SKIP LOCKED walks past is a row
@@ -308,7 +324,7 @@ func (db *TokenLockStore) claimCandidates(ctx context.Context, tokenIDs []*token
 		eligibleCTE +
 		"claimed AS (" +
 		"INSERT INTO " + db.Table.TokenLocks + " (consumer_tx_id, tx_id, idx, created_at) " +
-		"SELECT " + consumerTxIDPlaceholder + ", tx_id, idx, " + createdAtPlaceholder + " FROM " + claimSource + " " +
+		"SELECT " + consumerTxIDPlaceholder + ", tx_id, idx, " + createdAtPlaceholder + " FROM " + claimSource + " ORDER BY tx_id, idx " +
 		"ON CONFLICT (tx_id, idx) DO NOTHING " +
 		"RETURNING tx_id, idx" +
 		") " +

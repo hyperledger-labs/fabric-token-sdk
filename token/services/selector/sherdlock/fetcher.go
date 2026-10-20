@@ -446,15 +446,26 @@ func (f *cachedFetcher) update(ctx context.Context) {
 	}
 
 	f.mu.Lock()
-	// Discard a snapshot that predates an invalidation. The read above started before
-	// InvalidateCache ran, so m cannot contain whatever made the caller invalidate - and
-	// since invalidating only clears lastFetched, the staleness re-check below would
-	// happily install m and stamp it fresh, losing the refresh for a whole freshness
-	// interval. Leaving lastFetched at 0 instead keeps the old snapshot visible to
-	// readers (the documented InvalidateCache contract) and turns the next read into
-	// another hard refresh, which reads after the invalidation. See #2395.
-	if f.invalidations.Load() != invalidationsAtStart {
-		logger.DebugfContext(ctx, "Cache invalidated while refreshing, discarding the snapshot")
+	// A snapshot that predates an invalidation cannot contain whatever made the caller
+	// invalidate, so it must not be stamped fresh: stamping it would swallow the
+	// invalidation for a whole freshness interval. See #2395.
+	//
+	// It must still be installed. Discarding it instead leaves the previous snapshot in
+	// place, and under sustained invalidations - a settling wallet invalidates on nearly
+	// every Select - every refresh is overtaken by the next invalidation before it
+	// finishes, so none is ever installed. The cache then serves its first snapshot for as
+	// long as the load lasts, full of tokens spent long ago, and every Select burns its
+	// whole retry budget walking them: most end in SelectorSufficientButLockedFunds on a
+	// wallet that can pay (in a 100-Select run with 16 clients, 3 snapshots were installed
+	// and 1,691 discarded). An overtaken snapshot is strictly newer than the one it
+	// replaces, so readers are better served by it, and leaving lastFetched at 0 keeps the
+	// cache stale: the next read refreshes again, after the invalidation.
+	overtaken := f.invalidations.Load() != invalidationsAtStart
+	if overtaken {
+		logger.DebugfContext(ctx, "Cache invalidated while refreshing, installing the snapshot but keeping the cache stale")
+		f.updateCache(ctx, m)
+		f.lastFetched.Store(0)
+		f.queriesResponded.Store(0)
 		f.finishUpdate()
 
 		return

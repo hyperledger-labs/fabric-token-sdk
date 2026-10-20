@@ -339,6 +339,17 @@ never reaches this configuration path at all.
     `INSERT ... ON CONFLICT DO NOTHING` backstop, so a claimant walks past a row a
     concurrent claimant is already mid-claim on instead of colliding with it.
 
+Under every strategy `LockBatch` inserts the lock rows in `(tx_id, idx)` order, whatever order
+the caller listed its candidates in. The candidates are shuffled within equal-amount runs, so
+concurrent claimants list overlapping windows in different orders; inserting the same keys in
+different orders makes the claims wait for each other and deadlock, which Postgres reports only
+after `deadlock_timeout` (1 s by default), so each deadlock costs a second and a retry. Which
+order an unsorted `INSERT ... SELECT` uses is the planner's choice and changes with table size
+and window length, so the order is fixed in the statement rather than relied on. Measured on
+the `multi-replica` workload with `insert`: 26–56 selects/s and a p95 of 1.2–2.3 s before,
+about 280–360 selects/s and a p95 of about 110–145 ms after. `skipLocked` did not deadlock in
+the overlapping-claims test with or without the ordering.
+
 **What each strategy actually changes, precisely — the mechanism has a narrower effect
 than "reduces lock contention" might suggest:**
 
@@ -522,12 +533,21 @@ counted under `cache_invalidations_total`.
 
 An invalidation is not the same as "mark it old" — it must also beat a refresh that is already in flight. A refresh releases the lock
 for the duration of its query, so one that started earlier is holding a snapshot that cannot
-contain whatever caused the invalidation; installing it and stamping it fresh would swallow
-the invalidation for a whole `fetcherCacheRefresh` interval. The fetcher therefore counts
-invalidations and compares the count before and after its query, discarding a snapshot that
-has been overtaken. Readers keep the previous snapshot in the meantime — invalidation never
-empties the cache — and the next request pays for a refresh that reads *after* the
-invalidation.
+contain whatever caused the invalidation; stamping it fresh would swallow the invalidation
+for a whole `fetcherCacheRefresh` interval. The fetcher therefore counts invalidations and
+compares the count before and after its query. A snapshot that has been overtaken is
+**installed but not stamped fresh**: readers get the newer data, the cache stays stale, and
+the next request pays for a refresh that reads *after* the invalidation. Invalidation never
+empties the cache.
+
+Installing the overtaken snapshot, rather than discarding it, matters under sustained
+invalidation. A wallet that settles continuously invalidates on nearly every `Select`, so with
+a discard rule every refresh is overtaken before it finishes and none is ever installed: the
+cache serves its first snapshot for as long as the load lasts, full of tokens spent long ago,
+and most selections exhaust their retries on them and fail with `SufficientButLockedFunds` on a
+wallet that can pay (measured: 16 clients settling one wallet, 3 snapshots installed and 1,691
+discarded in 100 selections, 74–78% of selections failing; with the install rule none failed
+and throughput was five to ten times higher). `lazy` reads through and is not affected.
 
 ### Fetcher strategies
 
@@ -614,3 +634,49 @@ The three keys below tune the cache that `mixed` and `eager` use, and are ignore
 - **fetcherCacheMaxQueries**: Maximum number of queries before forcing a cache refresh. Set to 0 to use the fetcher's default limit.
 
 **Example**: With `fetcherCacheSize: 1000`, `fetcherCacheRefresh: 30s`, and `fetcherCacheMaxQueries: 100`, the cache stores up to 1000 query results, refreshes data every 30 seconds, and forces a refresh after 100 queries.
+
+## Benchmarking against Postgres
+
+`BenchmarkSelectorPostgres` in `token/services/selector` measures the selectors against a real
+database. It complements the in-memory `BenchmarkSelectorSingle` and `BenchmarkSelectorParallel`,
+which isolate the selector logic but cannot see the spendable query, the lock inserts, the lock
+strategies, connection pools or several nodes sharing a database.
+
+### Configurations
+
+A case name encodes its configuration, e.g. `sherdlock+mixed+skipLocked+batch+clean+conns10`.
+By default the baseline (all production defaults) is swept one axis at a time:
+
+| Axis | Values | Default |
+|---|---|---|
+| driver | `sherdlock`, `simple` | `sherdlock` |
+| `token.selector.fetcherStrategy` | `lazy`, `eager`, `mixed` | `mixed` |
+| `token.storage.db.lockStrategy` | `insert`, `onConflict`, `skipLocked` | `insert` |
+| batch locking | `batch` (`LockBatch`), `single` (one `Lock` per token) | `batch` |
+| lease cleaner | `clean`, `noclean` | `clean` |
+| pool size | `conns10`, `conns50` | 10 |
+| replicas | 1, 3 (`multi-replica`) | 1 |
+
+`PANURUS_SELECTOR_BENCH_MATRIX=full` replaces the sweep with the cross product of fetcher, lock
+strategy and batch locking.
+
+### Workloads
+
+| Workload | What it exercises |
+|---|---|
+| `uncontended` | One client, 10k-token wallet, select 100 and release: the per-`Select` latency floor |
+| `wallet-size` | 1k / 100k (optionally 1M) tokens: how the spendable query, fetcher and lock anti-join scale |
+| `selection-size` | 1 / 10 / 100 / 500 tokens per `Select`: the sufficiency window and the `LockBatch` window limit |
+| `fragmented` | Power-law denominations; one case per request size (50 / 500 / 5000) plus a mix, so a tail can be attributed to a size |
+| `hot-wallet` | 16 clients on one wallet holding 1.5x their demand: lock conflicts and retries |
+| `hot-wallet-distinct-amounts` | The hot wallet with every token of a different amount, so concurrent batches list candidates in the same order; separates ordering effects (deadlocks) from contention |
+| `disjoint-wallets` | 16 clients, one wallet each: database and pool cost without logical contention |
+| `multi-replica` | The hot wallet served by 3 nodes on one database (the #2395 shape) |
+| `settle` | Select, spend the inputs and re-create outputs in one store transaction, release: the full lifecycle with churning token IDs. Run at 5 inputs per transaction (a typical transfer) and 100 (a stress case: settlement holds a pooled connection for ~250 ms, and with more clients than connections every `Select` queues behind it) |
+| `near-exhaustion` | Wallet holds what 10 of 16 clients need and each selection stays locked for 3 ms, so demand can exceed supply; retries absorb most shortages, so this mostly measures retry cost |
+| `stale-locks` | 30% of the wallet locked by a crashed replica, lease cleaner on and off |
+
+Run it with `make benchmark-selector-postgres` (see `token/services/selector/README.md` for the
+filters and environment variables).
+
+Measured results and per-workload recommendations: [selector-postgres-benchmark-report.md](selector-postgres-benchmark-report.md).

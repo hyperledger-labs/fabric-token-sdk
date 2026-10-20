@@ -75,8 +75,13 @@ func newBenchMetricsProvider() *benchMetricsProvider {
 func (p *benchMetricsProvider) NewCounter(opts fscmetrics.CounterOpts) fscmetrics.Counter {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	cv := &benchCounterVec{vals: map[string]float64{}}
-	p.counters[opts.Name] = cv
+	// Reuse the vector of a metric registered twice: sherdlock builds Metrics once for the
+	// fetcher provider and once for the service, and both must land in the same series.
+	cv, ok := p.counters[opts.Name]
+	if !ok {
+		cv = &benchCounterVec{vals: map[string]float64{}}
+		p.counters[opts.Name] = cv
+	}
 
 	return &benchCounter{cv: cv}
 }
@@ -90,8 +95,11 @@ func (p *benchMetricsProvider) NewGauge(fscmetrics.GaugeOpts) fscmetrics.Gauge {
 func (p *benchMetricsProvider) NewHistogram(opts fscmetrics.HistogramOpts) fscmetrics.Histogram {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	hv := &benchHistogramVec{count: map[string]float64{}, sum: map[string]float64{}}
-	p.histograms[opts.Name] = hv
+	hv, ok := p.histograms[opts.Name]
+	if !ok {
+		hv = &benchHistogramVec{count: map[string]float64{}, sum: map[string]float64{}}
+		p.histograms[opts.Name] = hv
+	}
 
 	return &benchHistogram{hv: hv}
 }
@@ -263,6 +271,11 @@ func reportSherdlockMetrics(b *testing.B, mp *benchMetricsProvider) {
 	}
 	if v, ok := mp.counterTotal("lock_conflicts_total"); ok {
 		b.Logf("metrics: lock_conflicts_total=%.0f", v)
+	}
+	for _, name := range []string{"stale_candidates_total", "cache_invalidations_total", "lock_store_errors_total"} {
+		if v, ok := mp.counterTotal(name); ok {
+			b.Logf("metrics: %s=%.0f", name, v)
+		}
 	}
 	for label, v := range mp.counterByLabel("selection_outcome_total") {
 		b.Logf("metrics: selection_outcome_total[%s]=%.0f", label, v)
