@@ -116,7 +116,7 @@ func BuildMigrationWitness(
 	var vField bls12381fr.Element
 	vField.SetUint64(opening.Value)
 
-	tField := snarktoken.EncodeTokenTypeBLS12381(opening.TokenType)
+	tField := snarktoken.EncodeTokenType[bls12381fr.Element](opening.TokenType)
 
 	tc, err := snarktoken.ComputeTypeCommitment(opening.TokenType, typeRandomness, curve)
 	if err != nil {
@@ -135,8 +135,8 @@ func BuildMigrationWitness(
 	if err := trField.SetBytesCanonical(typeRandomness); err != nil {
 		return nil, errors.Wrapf(err, "prover: invalid type randomness bytes")
 	}
-	var rField bls12381fr.Element
-	if err := rField.SetBytesCanonical(note.Randomness[:]); err != nil {
+	rField, err := snarktoken.FieldElementFromBytes[bls12381fr.Element](note.Randomness)
+	if err != nil {
 		return nil, errors.Wrapf(err, "prover: invalid note randomness bytes")
 	}
 

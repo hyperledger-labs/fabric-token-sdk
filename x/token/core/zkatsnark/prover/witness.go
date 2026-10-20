@@ -86,9 +86,9 @@ func buildSpendWitnessBLS12381(note *snarktoken.Note, cm, tc, typeRandomness []b
 
 	var vField bls12381fr.Element
 	vField.SetUint64(note.Value)
-	tField := snarktoken.EncodeTokenTypeBLS12381(note.TokenType)
-	var rField bls12381fr.Element
-	if err := rField.SetBytesCanonical(note.Randomness[:]); err != nil {
+	tField := snarktoken.EncodeTokenType[bls12381fr.Element](note.TokenType)
+	rField, err := snarktoken.FieldElementFromBytes[bls12381fr.Element](note.Randomness)
+	if err != nil {
 		return nil, errors.Wrapf(err, "prover: invalid randomness")
 	}
 	var trField bls12381fr.Element
@@ -151,9 +151,9 @@ func buildSpendWitnessBN254(note *snarktoken.Note, cm, tc, typeRandomness []byte
 
 	var vField bn254fr.Element
 	vField.SetUint64(note.Value)
-	tField := snarktoken.EncodeTokenTypeBN254(note.TokenType)
-	var rField bn254fr.Element
-	if err := rField.SetBytesCanonical(note.Randomness[:]); err != nil {
+	tField := snarktoken.EncodeTokenType[bn254fr.Element](note.TokenType)
+	rField, err := snarktoken.FieldElementFromBytes[bn254fr.Element](note.Randomness)
+	if err != nil {
 		return nil, errors.Wrapf(err, "prover: invalid randomness")
 	}
 	var trField bn254fr.Element
@@ -258,9 +258,9 @@ func buildOutputWitnessBLS12381(note *snarktoken.Note, cm, tc, typeRandomness []
 
 	var vField bls12381fr.Element
 	vField.SetUint64(note.Value)
-	tField := snarktoken.EncodeTokenTypeBLS12381(note.TokenType)
-	var rField bls12381fr.Element
-	if err := rField.SetBytesCanonical(note.Randomness[:]); err != nil {
+	tField := snarktoken.EncodeTokenType[bls12381fr.Element](note.TokenType)
+	rField, err := snarktoken.FieldElementFromBytes[bls12381fr.Element](note.Randomness)
+	if err != nil {
 		return nil, errors.Wrapf(err, "prover: invalid randomness")
 	}
 	var trField bls12381fr.Element
@@ -324,9 +324,9 @@ func buildOutputWitnessBN254(note *snarktoken.Note, cm, tc, typeRandomness []byt
 
 	var vField bn254fr.Element
 	vField.SetUint64(note.Value)
-	tField := snarktoken.EncodeTokenTypeBN254(note.TokenType)
-	var rField bn254fr.Element
-	if err := rField.SetBytesCanonical(note.Randomness[:]); err != nil {
+	tField := snarktoken.EncodeTokenType[bn254fr.Element](note.TokenType)
+	rField, err := snarktoken.FieldElementFromBytes[bn254fr.Element](note.Randomness)
+	if err != nil {
 		return nil, errors.Wrapf(err, "prover: invalid randomness")
 	}
 	var trField bn254fr.Element
