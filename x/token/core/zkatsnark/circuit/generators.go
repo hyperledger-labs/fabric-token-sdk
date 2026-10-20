@@ -28,19 +28,19 @@ func resolveGenerators(api frontend.API, vx, vy, rx, ry *big.Int) (twistededward
 	field := api.Compiler().Field()
 	if field.Cmp(ecc.BN254.ScalarField()) == 0 {
 		return twistededwards.Point{
-				X: babyjubjub.V.X.BigInt(new(big.Int)),
-				Y: babyjubjub.V.Y.BigInt(new(big.Int)),
-			}, twistededwards.Point{
-				X: babyjubjub.R.X.BigInt(new(big.Int)),
-				Y: babyjubjub.R.Y.BigInt(new(big.Int)),
-			}
+			X: babyjubjub.V.X.BigInt(new(big.Int)),
+			Y: babyjubjub.V.Y.BigInt(new(big.Int)),
+		}, twistededwards.Point{
+			X: babyjubjub.R.X.BigInt(new(big.Int)),
+			Y: babyjubjub.R.Y.BigInt(new(big.Int)),
+		}
 	}
 
 	return twistededwards.Point{
-			X: jubjub.V.X.BigInt(new(big.Int)),
-			Y: jubjub.V.Y.BigInt(new(big.Int)),
-		}, twistededwards.Point{
-			X: jubjub.R.X.BigInt(new(big.Int)),
-			Y: jubjub.R.Y.BigInt(new(big.Int)),
-		}
+		X: jubjub.V.X.BigInt(new(big.Int)),
+		Y: jubjub.V.Y.BigInt(new(big.Int)),
+	}, twistededwards.Point{
+		X: jubjub.R.X.BigInt(new(big.Int)),
+		Y: jubjub.R.Y.BigInt(new(big.Int)),
+	}
 }
