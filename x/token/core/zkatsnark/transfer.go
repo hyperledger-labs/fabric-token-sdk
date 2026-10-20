@@ -149,7 +149,14 @@ func (s *TransferService) Transfer(
 		actionMetadata = meta.TransferActionMetadata(opts.Attributes)
 	}
 
-	action, notes, err := s.Orchestrator.BuildTransferAction(ctx, inputs, outputs, tokenType, s.PublicParametersManager.PublicParams(), actionMetadata)
+	action, notes, err := s.Orchestrator.BuildTransferAction(
+		ctx,
+		inputs,
+		outputs,
+		tokenType,
+		s.PublicParametersManager.PublicParams(),
+		actionMetadata,
+	)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to generate zk transfer")
 	}

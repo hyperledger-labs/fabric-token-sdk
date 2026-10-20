@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package validator_test
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/json"
@@ -22,6 +23,9 @@ import (
 	"github.com/LFDT-Panurus/panurus/token/driver"
 	drivermock "github.com/LFDT-Panurus/panurus/token/driver/mock"
 	"github.com/LFDT-Panurus/panurus/token/driver/protos-go/v1/request"
+	benchmark2 "github.com/LFDT-Panurus/panurus/token/services/benchmark"
+	"github.com/LFDT-Panurus/panurus/token/services/identity"
+	"github.com/LFDT-Panurus/panurus/token/services/identity/x509"
 	token2 "github.com/LFDT-Panurus/panurus/token/token"
 
 	"github.com/consensys/gnark-crypto/ecc"
@@ -71,14 +75,15 @@ var (
 )
 
 // fixtureFor lazily builds (once per config) the Spend/Output setup, provers,
-// orchestrator and validator.
-func fixtureFor(t *testing.T, cfg e2eConfig) *e2eFixture {
-	t.Helper()
+// orchestrator and validator. Accepts testing.TB so it can be shared between
+// tests (*testing.T) and benchmarks (*testing.B).
+func fixtureFor(tb testing.TB, cfg e2eConfig) *e2eFixture {
+	tb.Helper()
 	fixturesMu.Lock()
 	defer fixturesMu.Unlock()
 
 	if err := fixtureErr[cfg.name()]; err != nil {
-		t.Fatalf("fixture %s: %v", cfg.name(), err)
+		tb.Fatalf("fixture %s: %v", cfg.name(), err)
 	}
 	if f, ok := fixtures[cfg.name()]; ok {
 		return f
@@ -86,7 +91,7 @@ func fixtureFor(t *testing.T, cfg e2eConfig) *e2eFixture {
 	f, err := buildFixture(cfg)
 	if err != nil {
 		fixtureErr[cfg.name()] = err
-		t.Fatalf("fixture %s: %v", cfg.name(), err)
+		tb.Fatalf("fixture %s: %v", cfg.name(), err)
 	}
 	fixtures[cfg.name()] = f
 
@@ -1350,4 +1355,198 @@ func TestValidateMigration_NotConfiguredWithoutSetup(t *testing.T) {
 		err = freshVal.ValidateMigration(&snarktoken.MigrationAction{})
 		require.ErrorIs(t, err, validator.ErrMigrationNotConfigured)
 	})
+}
+
+// ── Benchmarks ───────────────────────────────────────────────────────────────
+//
+// These mirror the pattern in token/core/fabtoken/v1/validator/validator_test.go:
+// BenchmarkValidatorTransfer / TestParallelBenchmarkValidatorTransfer build a
+// Validator once per benchmark case and repeatedly call
+// VerifyTokenRequestFromRaw against raw wire-format bytes, rather than going
+// through the TransferService / Orchestrator on every iteration.
+
+// BenchmarkValidatorTransfer benchmarks VerifyTokenRequestFromRaw on a
+// zkatsnark transfer token request, for every configured benchmark case and
+// every supported (proof system, curve) combination.
+func BenchmarkValidatorTransfer(b *testing.B) {
+	_, _, cases, err := benchmark2.GenerateCasesWithDefaults()
+	require.NoError(b, err)
+
+	for _, cfg := range e2eConfigs {
+		f := fixtureFor(b, cfg)
+		for _, tc := range cases {
+			b.Run(cfg.name()+"/"+tc.Name, func(b *testing.B) {
+				n := int(benchmark2.SetupSamples()) // #nosec G115
+				if n == 0 {
+					n = min(b.N, 1000)
+				}
+				env, err := newBenchmarkValidatorEnv(b, n, tc.BenchmarkCase, f)
+				require.NoError(b, err)
+
+				b.ResetTimer()
+				i := 0
+				for b.Loop() {
+					e := env.Envs[i%len(env.Envs)]
+					_, _, err := e.v.VerifyTokenRequestFromRaw(
+						b.Context(),
+						e.getState,
+						"an_anchor",
+						e.raw,
+					)
+					require.NoError(b, err)
+					i++
+				}
+			})
+		}
+	}
+}
+
+// TestParallelBenchmarkValidatorTransfer runs the validator transfer
+// benchmark in parallel, for every supported (proof system, curve)
+// combination.
+func TestParallelBenchmarkValidatorTransfer(t *testing.T) {
+	_, _, cases, err := benchmark2.GenerateCasesWithDefaults()
+	require.NoError(t, err)
+
+	for _, cfg := range e2eConfigs {
+		t.Run(cfg.name(), func(t *testing.T) {
+			f := fixtureFor(t, cfg)
+
+			test := benchmark2.NewTest[*benchmarkValidatorEnv](cases)
+			test.RunBenchmark(t,
+				func(c *benchmark2.Case) (*benchmarkValidatorEnv, error) {
+					return newBenchmarkValidatorEnv(t, 1, c, f)
+				},
+				func(ctx context.Context, env *benchmarkValidatorEnv) error {
+					_, _, err := env.Envs[0].v.VerifyTokenRequestFromRaw(
+						ctx,
+						env.Envs[0].getState,
+						"an_anchor",
+						env.Envs[0].raw,
+					)
+
+					return err
+				},
+			)
+		})
+	}
+}
+
+type benchmarkValidatorSingleEnv struct {
+	v        *validator.Validator
+	raw      []byte
+	getState driver.GetStateFnc
+}
+
+type benchmarkValidatorEnv struct {
+	Envs []*benchmarkValidatorSingleEnv
+}
+
+// newBenchmarkValidatorEnv builds n independent transfer token requests
+// (each with its own freshly proven TransferAction) against the shared
+// fixture's Validator.
+func newBenchmarkValidatorEnv(tb testing.TB, n int, benchmarkCase *benchmark2.Case, f *e2eFixture) (*benchmarkValidatorEnv, error) {
+	tb.Helper()
+	envs := make([]*benchmarkValidatorSingleEnv, n)
+	for i := range n {
+		env, err := newValidatorBenchmarkSingleEnv(tb, benchmarkCase, f)
+		if err != nil {
+			return nil, err
+		}
+		envs[i] = env
+	}
+
+	return &benchmarkValidatorEnv{Envs: envs}, nil
+}
+
+func newValidatorBenchmarkSingleEnv(tb testing.TB, benchmarkCase *benchmark2.Case, f *e2eFixture) (*benchmarkValidatorSingleEnv, error) {
+	tb.Helper()
+
+	owner, err := identity.WrapWithType(x509.IdentityType, []byte("owner"))
+	if err != nil {
+		return nil, err
+	}
+
+	numInputs := benchmarkCase.NumInputs
+	if numInputs == 0 {
+		numInputs = 1
+	}
+	numOutputs := benchmarkCase.NumOutputs
+	if numOutputs == 0 {
+		numOutputs = 1
+	}
+
+	spends := make([]prover.SpendRequest, numInputs)
+	for i := range numInputs {
+		note, err := snarktoken.NewRandomNote(100, "ABC", f.cfg.curve)
+		if err != nil {
+			return nil, err
+		}
+		spends[i] = prover.SpendRequest{Note: note}
+	}
+
+	outputs := make([]prover.OutputRequest, numOutputs)
+	for i := range numOutputs {
+		outputs[i] = prover.OutputRequest{Value: 100, TokenType: "ABC", Recipient: owner}
+	}
+
+	action, _, err := f.orch.BuildTransferAction(tb.Context(), spends, outputs, "ABC", f.pp, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	action.InputIDs = make([]*token2.ID, numInputs)
+	ledger := make(map[token2.ID][]byte, numInputs)
+	tr := &driver.TokenRequest{Version: driver.ProtocolV1}
+	for i := range numInputs {
+		id := token2.ID{TxId: strconv.Itoa(i), Index: 0}
+		action.InputIDs[i] = &id
+
+		outputDesc := &snarktoken.OutputDescription{
+			CommitmentOut: action.Inputs[i].CommitmentIn,
+			Recipient:     owner,
+		}
+		rawOutputDesc, err := outputDesc.Serialize()
+		if err != nil {
+			return nil, err
+		}
+		ledger[id] = rawOutputDesc
+
+		tr.Signatures = append(tr.Signatures, &driver.RequestSignature{
+			Action: &driver.ActionSignature{Signature: []byte("signature")},
+		})
+	}
+
+	rawTA, err := action.Serialize()
+	if err != nil {
+		return nil, err
+	}
+	tr.Actions = []*driver.TypedAction{
+		{Type: request.ActionType_ACTION_TYPE_TRANSFER, Raw: rawTA},
+	}
+
+	raw, err := tr.Bytes()
+	if err != nil {
+		return nil, err
+	}
+
+	des := &drivermock.Deserializer{}
+	des.GetOwnerVerifierReturns(&drivermock.Verifier{}, nil)
+	des.GetIssuerVerifierReturns(&drivermock.Verifier{}, nil)
+
+	v, err := validator.NewValidator(f.pp, des, driver.DefaultResourceLimits())
+	if err != nil {
+		return nil, err
+	}
+
+	getState := func(id token2.ID) ([]byte, error) {
+		raw, ok := ledger[id]
+		if !ok {
+			return nil, errors.Errorf("no such token [%s]", id)
+		}
+
+		return raw, nil
+	}
+
+	return &benchmarkValidatorSingleEnv{v: v, raw: raw, getState: getState}, nil
 }
