@@ -6,8 +6,6 @@ SPDX-License-Identifier: Apache-2.0
 package validator
 
 import (
-	"math/big"
-
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/backend/witness"
 	"github.com/consensys/gnark/frontend"
@@ -74,8 +72,8 @@ func publicWitnessForOutput(d decodedOutput, curve ecc.ID) (witness.Witness, err
 // fields, so leaving them nil is safe here.
 func publicWitnessForMigration(d decodedMigration, curve ecc.ID) (witness.Witness, error) {
 	assignment := &circuit.MigrationCircuit{
-		CommitmentPedersenX: emulated.ValueOf[emulated.BLS12381Fp](d.PedersenX.BigInt(new(big.Int))),
-		CommitmentPedersenY: emulated.ValueOf[emulated.BLS12381Fp](d.PedersenY.BigInt(new(big.Int))),
+		CommitmentPedersenX: emulated.ValueOf[emulated.BLS12381Fp](d.PedersenX),
+		CommitmentPedersenY: emulated.ValueOf[emulated.BLS12381Fp](d.PedersenY),
 		CommitmentMiMC:      d.CommitmentMiMC,
 		ValueCommitOutX:     d.ValueCommitX,
 		ValueCommitOutY:     d.ValueCommitY,

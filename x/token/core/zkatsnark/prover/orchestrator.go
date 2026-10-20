@@ -12,7 +12,7 @@ import (
 
 	"github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
 
-	"github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/crypto/jubjub"
+	"github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/crypto/edwards"
 	"github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/pp"
 	snarktoken "github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/token"
 )
@@ -160,7 +160,7 @@ func (o *Orchestrator) BuildTransferAction(
 	if err != nil {
 		return nil, nil, fmt.Errorf("orchestrator: binding signature failed: %w", err)
 	}
-	sigBytes, err := jubjub.SerializeSignature(sig)
+	sigBytes, err := edwards.Jubjub().SerializeSignature(sig)
 	if err != nil {
 		return nil, nil, fmt.Errorf("orchestrator: binding signature serialization failed: %w", err)
 	}
@@ -233,7 +233,7 @@ func (o *Orchestrator) BuildIssueAction(
 	if err != nil {
 		return nil, nil, fmt.Errorf("orchestrator: binding signature failed: %w", err)
 	}
-	sigBytes, err := jubjub.SerializeSignature(sig)
+	sigBytes, err := edwards.Jubjub().SerializeSignature(sig)
 	if err != nil {
 		return nil, nil, fmt.Errorf("orchestrator: binding signature serialization failed: %w", err)
 	}

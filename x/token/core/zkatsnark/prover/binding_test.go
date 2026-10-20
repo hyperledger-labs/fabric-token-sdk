@@ -12,17 +12,17 @@ import (
 	"github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
 	"github.com/stretchr/testify/require"
 
-	"github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/crypto/jubjub"
+	"github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/crypto/edwards"
 	"github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/prover"
 	snarktoken "github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/token"
 )
 
 func mustProofResult(t *testing.T, value uint64) prover.ProofResult {
 	t.Helper()
-	rcv, err := jubjub.RandomJubjubScalar()
+	rcv, err := edwards.Jubjub().RandomScalar()
 	require.NoError(t, err)
 
-	cv, err := jubjub.ValueCommit(value, rcv)
+	cv, err := edwards.Jubjub().ValueCommit(value, rcv)
 	require.NoError(t, err)
 
 	// Commitment field is irrelevant to binding-signature math directly,
@@ -113,7 +113,7 @@ func TestComputeBindingSignatureValid(t *testing.T) {
 
 	bvk, err := prover.ComputeBVK(in, out, 0)
 	require.NoError(t, err)
-	err = jubjub.Verify(bvk, h, sig, jubjub.R)
+	err = edwards.Jubjub().Verify(bvk, h, sig, edwards.Jubjub().R)
 
 	require.NoError(t, err, "binding signature must verify against independently computed bvk")
 }
@@ -132,7 +132,7 @@ func TestComputeBindingSignatureRejectsNonConservation(t *testing.T) {
 
 	bvk, err := prover.ComputeBVK(in, out, 0)
 	require.NoError(t, err)
-	err = jubjub.Verify(bvk, h, sig, jubjub.R)
+	err = edwards.Jubjub().Verify(bvk, h, sig, edwards.Jubjub().R)
 
 	require.Error(t, err,
 		"CRITICAL: a binding signature for non-conserved values must fail verification — "+
@@ -150,7 +150,7 @@ func TestComputeBindingSignatureIssuance(t *testing.T) {
 	require.NoError(t, err)
 	actionHash := prover.ComputeActionHash("issue", tc, nil, out)
 
-	err = jubjub.Verify(bvk, actionHash, sig, jubjub.R)
+	err = edwards.Jubjub().Verify(bvk, actionHash, sig, edwards.Jubjub().R)
 	require.NoError(t, err, "issuance binding signature (zero inputs) must verify")
 }
 
@@ -167,7 +167,7 @@ func TestComputeBindingSignatureRejectsWrongTypeCommitmentAtVerification(t *test
 	tcEUR := mustTypeCommitment(t, "EUR")
 	h := prover.ComputeActionHash("transfer", tcEUR, in, out)
 
-	err = jubjub.Verify(bvk, h, sig, jubjub.R)
+	err = edwards.Jubjub().Verify(bvk, h, sig, edwards.Jubjub().R)
 	require.Error(t, err,
 		"verifying against a hash computed with a different type commitment must fail, "+
 			"this confirms type commitment really is bound into the signed message")

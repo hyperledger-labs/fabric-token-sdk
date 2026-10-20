@@ -16,8 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 
 	"github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/circuit"
-	"github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/crypto/babyjubjub"
-	"github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/crypto/jubjub"
+	"github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/crypto/edwards"
 	"github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/pp"
 	snarktoken "github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/token"
 )
@@ -74,12 +73,12 @@ func BuildSpendWitness(note *snarktoken.Note, typeRandomness []byte, publicParam
 }
 
 func buildSpendWitnessBLS12381(note *snarktoken.Note, cm, tc, typeRandomness []byte) (*SpendWitnessResult, error) {
-	rcv, err := jubjub.RandomJubjubScalar()
+	rcv, err := edwards.Jubjub().RandomScalar()
 	if err != nil {
 		return nil, errors.Wrapf(err, "prover: RCV generation failed")
 	}
 
-	cv, err := jubjub.ValueCommit(note.Value, rcv)
+	cv, err := edwards.Jubjub().ValueCommit(note.Value, rcv)
 	if err != nil {
 		return nil, errors.Wrapf(err, "prover: value commitment failed")
 	}
@@ -105,10 +104,10 @@ func buildSpendWitnessBLS12381(note *snarktoken.Note, cm, tc, typeRandomness []b
 		return nil, errors.Wrapf(err, "prover: invalid type commitment")
 	}
 
-	genVX := jubjub.V.X.BigInt(new(big.Int))
-	genVY := jubjub.V.Y.BigInt(new(big.Int))
-	genRX := jubjub.R.X.BigInt(new(big.Int))
-	genRY := jubjub.R.Y.BigInt(new(big.Int))
+	genVX := edwards.Jubjub().V.X.BigInt(new(big.Int))
+	genVY := edwards.Jubjub().V.Y.BigInt(new(big.Int))
+	genRX := edwards.Jubjub().R.X.BigInt(new(big.Int))
+	genRY := edwards.Jubjub().R.Y.BigInt(new(big.Int))
 
 	assignment := &circuit.SpendCircuit{
 		CommitmentIn:   cmField,
@@ -139,12 +138,12 @@ func buildSpendWitnessBLS12381(note *snarktoken.Note, cm, tc, typeRandomness []b
 }
 
 func buildSpendWitnessBN254(note *snarktoken.Note, cm, tc, typeRandomness []byte) (*SpendWitnessResult, error) {
-	rcv, err := babyjubjub.RandomBabyJubjubScalar()
+	rcv, err := edwards.BabyJubjub().RandomScalar()
 	if err != nil {
 		return nil, errors.Wrapf(err, "prover: RCV generation failed")
 	}
 
-	cv, err := babyjubjub.ValueCommit(note.Value, rcv)
+	cv, err := edwards.BabyJubjub().ValueCommit(note.Value, rcv)
 	if err != nil {
 		return nil, errors.Wrapf(err, "prover: value commitment failed")
 	}
@@ -170,10 +169,10 @@ func buildSpendWitnessBN254(note *snarktoken.Note, cm, tc, typeRandomness []byte
 		return nil, errors.Wrapf(err, "prover: invalid type commitment")
 	}
 
-	genVX := babyjubjub.V.X.BigInt(new(big.Int))
-	genVY := babyjubjub.V.Y.BigInt(new(big.Int))
-	genRX := babyjubjub.R.X.BigInt(new(big.Int))
-	genRY := babyjubjub.R.Y.BigInt(new(big.Int))
+	genVX := edwards.BabyJubjub().V.X.BigInt(new(big.Int))
+	genVY := edwards.BabyJubjub().V.Y.BigInt(new(big.Int))
+	genRX := edwards.BabyJubjub().R.X.BigInt(new(big.Int))
+	genRY := edwards.BabyJubjub().R.Y.BigInt(new(big.Int))
 
 	assignment := &circuit.SpendCircuit{
 		CommitmentIn:   cmField,
@@ -246,12 +245,12 @@ func BuildOutputWitness(value uint64, tokenType string, publicParams *pp.PublicP
 }
 
 func buildOutputWitnessBLS12381(note *snarktoken.Note, cm, tc, typeRandomness []byte, publicParams *pp.PublicParams) (*OutputWitnessResult, error) {
-	rcv, err := jubjub.RandomJubjubScalar()
+	rcv, err := edwards.Jubjub().RandomScalar()
 	if err != nil {
 		return nil, errors.Wrapf(err, "prover: RCV generation failed")
 	}
 
-	cv, err := jubjub.ValueCommit(note.Value, rcv)
+	cv, err := edwards.Jubjub().ValueCommit(note.Value, rcv)
 	if err != nil {
 		return nil, errors.Wrapf(err, "prover: value commitment failed")
 	}
@@ -276,10 +275,10 @@ func buildOutputWitnessBLS12381(note *snarktoken.Note, cm, tc, typeRandomness []
 		return nil, errors.Wrapf(err, "prover: invalid type commitment")
 	}
 
-	genVX := jubjub.V.X.BigInt(new(big.Int))
-	genVY := jubjub.V.Y.BigInt(new(big.Int))
-	genRX := jubjub.R.X.BigInt(new(big.Int))
-	genRY := jubjub.R.Y.BigInt(new(big.Int))
+	genVX := edwards.Jubjub().V.X.BigInt(new(big.Int))
+	genVY := edwards.Jubjub().V.Y.BigInt(new(big.Int))
+	genRX := edwards.Jubjub().R.X.BigInt(new(big.Int))
+	genRY := edwards.Jubjub().R.Y.BigInt(new(big.Int))
 
 	assignment := &circuit.OutputCircuit{
 		CommitmentOut:   cmField,
@@ -312,12 +311,12 @@ func buildOutputWitnessBLS12381(note *snarktoken.Note, cm, tc, typeRandomness []
 }
 
 func buildOutputWitnessBN254(note *snarktoken.Note, cm, tc, typeRandomness []byte, publicParams *pp.PublicParams) (*OutputWitnessResult, error) {
-	rcv, err := babyjubjub.RandomBabyJubjubScalar()
+	rcv, err := edwards.BabyJubjub().RandomScalar()
 	if err != nil {
 		return nil, errors.Wrapf(err, "prover: RCV generation failed")
 	}
 
-	cv, err := babyjubjub.ValueCommit(note.Value, rcv)
+	cv, err := edwards.BabyJubjub().ValueCommit(note.Value, rcv)
 	if err != nil {
 		return nil, errors.Wrapf(err, "prover: value commitment failed")
 	}
@@ -342,10 +341,10 @@ func buildOutputWitnessBN254(note *snarktoken.Note, cm, tc, typeRandomness []byt
 		return nil, errors.Wrapf(err, "prover: invalid type commitment")
 	}
 
-	genVX := babyjubjub.V.X.BigInt(new(big.Int))
-	genVY := babyjubjub.V.Y.BigInt(new(big.Int))
-	genRX := babyjubjub.R.X.BigInt(new(big.Int))
-	genRY := babyjubjub.R.Y.BigInt(new(big.Int))
+	genVX := edwards.BabyJubjub().V.X.BigInt(new(big.Int))
+	genVY := edwards.BabyJubjub().V.Y.BigInt(new(big.Int))
+	genRX := edwards.BabyJubjub().R.X.BigInt(new(big.Int))
+	genRY := edwards.BabyJubjub().R.Y.BigInt(new(big.Int))
 
 	assignment := &circuit.OutputCircuit{
 		CommitmentOut:   cmField,

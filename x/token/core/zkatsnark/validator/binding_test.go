@@ -12,12 +12,12 @@ import (
 	"github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
 	"github.com/stretchr/testify/require"
 
-	"github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/crypto/jubjub"
+	"github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/crypto/edwards"
 	"github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/prover"
 	snarktoken "github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/token"
 )
 
-func mustTypeCommitmentV(t *testing.T, tokenType string) fr.Element {
+func mustTypeCommitmentV(t *testing.T, tokenType string) [32]byte {
 	t.Helper()
 	var typeRandomness fr.Element
 	_, err := typeRandomness.SetRandom()
@@ -27,8 +27,8 @@ func mustTypeCommitmentV(t *testing.T, tokenType string) fr.Element {
 	tcBytes, err := snarktoken.ComputeTypeCommitment(tokenType, tr[:], ecc.BLS12_381)
 	require.NoError(t, err)
 
-	var tc fr.Element
-	require.NoError(t, tc.SetBytesCanonical(tcBytes))
+	var tc [32]byte
+	require.Equal(t, 32, copy(tc[:], tcBytes))
 
 	return tc
 }
@@ -40,14 +40,14 @@ func mustTypeCommitmentV(t *testing.T, tokenType string) fr.Element {
 // prover.ProofResult values with their private RCV fields), still verifies
 // through this package's reconstruction path.
 func TestVerifyBindingSignature_AgreesWithProverSideConstruction(t *testing.T) {
-	rcv1, err := jubjub.RandomJubjubScalar()
+	rcv1, err := edwards.Jubjub().RandomScalar()
 	require.NoError(t, err)
-	rcv2, err := jubjub.RandomJubjubScalar()
+	rcv2, err := edwards.Jubjub().RandomScalar()
 	require.NoError(t, err)
 
-	cv1, err := jubjub.ValueCommit(100, rcv1)
+	cv1, err := edwards.Jubjub().ValueCommit(100, rcv1)
 	require.NoError(t, err)
-	cv2, err := jubjub.ValueCommit(100, rcv2)
+	cv2, err := edwards.Jubjub().ValueCommit(100, rcv2)
 	require.NoError(t, err)
 
 	var cm1, cm2 fr.Element
@@ -55,7 +55,7 @@ func TestVerifyBindingSignature_AgreesWithProverSideConstruction(t *testing.T) {
 	_, _ = cm2.SetRandom()
 
 	tc := mustTypeCommitmentV(t, "USD")
-	tcBytes := tc.Bytes()
+	tcBytes := tc
 
 	cm1Bytes := cm1.Bytes()
 	cv1XBytes := cv1.X.Bytes()
@@ -82,15 +82,15 @@ func TestVerifyBindingSignature_AgreesWithProverSideConstruction(t *testing.T) {
 
 	sig, err := prover.ComputeBindingSignature("transfer", tcBytes[:], inputs, outputs)
 	require.NoError(t, err)
-	sigBytes, err := jubjub.SerializeSignature(sig)
+	sigBytes, err := edwards.Jubjub().SerializeSignature(sig)
 	require.NoError(t, err)
 
 	// Simulate what the validator actually has: decoded public data only,
 	// with RCV never populated (as decode.go never produces it).
-	decodedIn := []decodedSpend{{Commitment: cm1, ValueCommitX: cv1.X, ValueCommitY: cv1.Y}}
-	decodedOut := []decodedOutput{{Commitment: cm2, ValueCommitX: cv2.X, ValueCommitY: cv2.Y}}
+	decodedIn := []decodedSpend{{CommitmentBytes: cm1Bytes[:], ValueCommitXBytes: cv1XBytes[:], ValueCommitYBytes: cv1YBytes[:]}}
+	decodedOut := []decodedOutput{{CommitmentBytes: cm2Bytes[:], ValueCommitXBytes: cv2XBytes[:], ValueCommitYBytes: cv2YBytes[:]}}
 
-	err = verifyBindingSignature("transfer", tc, decodedIn, decodedOut, sigBytes, 0)
+	err = verifyBindingSignature(ecc.BLS12_381, "transfer", tcBytes[:], decodedIn, decodedOut, sigBytes, 0)
 	require.NoError(t, err)
 }
 
@@ -98,21 +98,21 @@ func TestVerifyBindingSignature_RejectsCorruptedSignatureBytes(t *testing.T) {
 	corrupted := make([]byte, 96) // all-zero, not a valid signature
 	tc := mustTypeCommitmentV(t, "USD")
 
-	err := verifyBindingSignature("transfer", tc, nil, nil, corrupted, 0)
+	err := verifyBindingSignature(ecc.BLS12_381, "transfer", tc[:], nil, nil, corrupted, 0)
 	require.Error(t, err)
 }
 
 func TestVerifyBindingSignature_WrongPublicValueDeltaFailsIssuance(t *testing.T) {
-	rcv, err := jubjub.RandomJubjubScalar()
+	rcv, err := edwards.Jubjub().RandomScalar()
 	require.NoError(t, err)
 
-	cv, err := jubjub.ValueCommit(500, rcv)
+	cv, err := edwards.Jubjub().ValueCommit(500, rcv)
 	require.NoError(t, err)
 	var cm fr.Element
 	_, _ = cm.SetRandom()
 
 	tc := mustTypeCommitmentV(t, "USD")
-	tcBytes := tc.Bytes()
+	tcBytes := tc
 
 	cmBytes := cm.Bytes()
 	cvXBytes := cv.X.Bytes()
@@ -128,14 +128,14 @@ func TestVerifyBindingSignature_WrongPublicValueDeltaFailsIssuance(t *testing.T)
 
 	sig, err := prover.ComputeBindingSignature("issue", tcBytes[:], nil, outputs)
 	require.NoError(t, err)
-	sigBytes, err := jubjub.SerializeSignature(sig)
+	sigBytes, err := edwards.Jubjub().SerializeSignature(sig)
 	require.NoError(t, err)
 
-	decodedOut := []decodedOutput{{Commitment: cm, ValueCommitX: cv.X, ValueCommitY: cv.Y}}
+	decodedOut := []decodedOutput{{CommitmentBytes: cmBytes[:], ValueCommitXBytes: cvXBytes[:], ValueCommitYBytes: cvYBytes[:]}}
 
 	// Deliberately verify with 0 instead of the real
 	// totalIssued, this is exactly the "forgot to pass TotalValue" bug
 	// this test exists to catch permanently.
-	err = verifyBindingSignature("issue", tc, nil, decodedOut, sigBytes, 0)
+	err = verifyBindingSignature(ecc.BLS12_381, "issue", tcBytes[:], nil, decodedOut, sigBytes, 0)
 	require.Error(t, err, "wrong publicValueDelta must fail, this is the exact bug class already found once in prover/binding_test.go")
 }

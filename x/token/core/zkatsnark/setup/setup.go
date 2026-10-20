@@ -28,9 +28,8 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 
 	"github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/circuit"
-	"github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/crypto/babyjubjub"
 	"github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/crypto/backend"
-	"github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/crypto/jubjub"
+	"github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/crypto/edwards"
 	"github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/pp"
 )
 
@@ -72,17 +71,17 @@ func curveGenerators(curve ecc.ID) (generatorCoords, error) {
 	switch curve {
 	case ecc.BLS12_381:
 		return generatorCoords{
-			VX: jubjub.V.X.BigInt(new(big.Int)),
-			VY: jubjub.V.Y.BigInt(new(big.Int)),
-			RX: jubjub.R.X.BigInt(new(big.Int)),
-			RY: jubjub.R.Y.BigInt(new(big.Int)),
+			VX: edwards.Jubjub().V.X.BigInt(new(big.Int)),
+			VY: edwards.Jubjub().V.Y.BigInt(new(big.Int)),
+			RX: edwards.Jubjub().R.X.BigInt(new(big.Int)),
+			RY: edwards.Jubjub().R.Y.BigInt(new(big.Int)),
 		}, nil
 	case ecc.BN254:
 		return generatorCoords{
-			VX: babyjubjub.V.X.BigInt(new(big.Int)),
-			VY: babyjubjub.V.Y.BigInt(new(big.Int)),
-			RX: babyjubjub.R.X.BigInt(new(big.Int)),
-			RY: babyjubjub.R.Y.BigInt(new(big.Int)),
+			VX: edwards.BabyJubjub().V.X.BigInt(new(big.Int)),
+			VY: edwards.BabyJubjub().V.Y.BigInt(new(big.Int)),
+			RX: edwards.BabyJubjub().R.X.BigInt(new(big.Int)),
+			RY: edwards.BabyJubjub().R.Y.BigInt(new(big.Int)),
 		}, nil
 	default:
 		return generatorCoords{}, errors.Errorf("setup: no value-commitment generators for curve %s", curve)

@@ -20,7 +20,7 @@ import (
 
 	"github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/circuit"
 	"github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/crypto/backend"
-	"github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/crypto/jubjub"
+	"github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/crypto/edwards"
 	"github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/pp"
 	"github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/setup"
 	snarktoken "github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/token"
@@ -83,12 +83,12 @@ func BuildMigrationWitness(
 		return nil, errors.Wrapf(err, "prover: migration commitment derivation failed")
 	}
 
-	rcv, err := jubjub.RandomJubjubScalar()
+	rcv, err := edwards.Jubjub().RandomScalar()
 	if err != nil {
 		return nil, errors.Wrapf(err, "prover: migration RCV generation failed")
 	}
 
-	cv, err := jubjub.ValueCommit(note.Value, rcv)
+	cv, err := edwards.Jubjub().ValueCommit(note.Value, rcv)
 	if err != nil {
 		return nil, errors.Wrapf(err, "prover: migration value commitment failed")
 	}
@@ -140,10 +140,10 @@ func BuildMigrationWitness(
 		return nil, errors.Wrapf(err, "prover: invalid note randomness bytes")
 	}
 
-	genVX := jubjub.V.X.BigInt(new(big.Int))
-	genVY := jubjub.V.Y.BigInt(new(big.Int))
-	genRX := jubjub.R.X.BigInt(new(big.Int))
-	genRY := jubjub.R.Y.BigInt(new(big.Int))
+	genVX := edwards.Jubjub().V.X.BigInt(new(big.Int))
+	genVY := edwards.Jubjub().V.Y.BigInt(new(big.Int))
+	genRX := edwards.Jubjub().R.X.BigInt(new(big.Int))
+	genRY := edwards.Jubjub().R.Y.BigInt(new(big.Int))
 
 	assignment := &circuit.MigrationCircuit{
 		CommitmentPedersenX: emulated.ValueOf[emulated.BLS12381Fp](pedXBig),

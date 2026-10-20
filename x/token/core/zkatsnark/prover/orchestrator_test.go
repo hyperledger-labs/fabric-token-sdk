@@ -18,7 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/crypto/backend"
-	"github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/crypto/jubjub"
+	"github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/crypto/edwards"
 	"github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/prover"
 	snarktoken "github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/token"
 )
@@ -148,10 +148,10 @@ func TestBuildTransferAction_Valid(t *testing.T) {
 
 	actionHash := prover.ComputeActionHash(snarktoken.ActionTypeTransfer, action.TypeCommitment, inResults, outResults)
 
-	sig, err := jubjub.DeserializeSignature(action.BindingSignature)
+	sig, err := edwards.Jubjub().DeserializeSignature(action.BindingSignature)
 	require.NoError(t, err)
 
-	err = jubjub.Verify(bvk, actionHash, sig, jubjub.R)
+	err = edwards.Jubjub().Verify(bvk, actionHash, sig, edwards.Jubjub().R)
 	require.NoError(t, err, "binding signature reconstructed from wire-format bytes must verify")
 }
 

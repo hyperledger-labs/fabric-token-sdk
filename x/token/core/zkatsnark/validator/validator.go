@@ -6,7 +6,6 @@ SPDX-License-Identifier: Apache-2.0
 package validator
 
 import (
-	"github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 
 	"github.com/LFDT-Panurus/panurus/token/core/common"
@@ -118,19 +117,19 @@ func (v *Validator) ValidateTransfer(a *snarktoken.TransferAction) error {
 		return err
 	}
 
-	decodedInputs, err := decodeAllSpends(a.Inputs)
+	decodedInputs, err := decodeAllSpends(a.Inputs, v.pp.Curve)
 	if err != nil {
 		return err
 	}
 
-	decodedOutputs, err := decodeAllOutputs(a.Outputs)
+	decodedOutputs, err := decodeAllOutputs(a.Outputs, v.pp.Curve)
 	if err != nil {
 		return err
 	}
 
-	var actionTC fr.Element
-	if err := actionTC.SetBytesCanonical(a.TypeCommitment); err != nil {
-		return err
+	actionTC, err := decodeScalar(v.pp.Curve, a.TypeCommitment)
+	if err != nil {
+		return errors.Wrapf(err, "validator: TypeCommitment")
 	}
 
 	if err := checkTypeCommitmentHomogeneity(actionTC, decodedInputs, decodedOutputs); err != nil {
@@ -142,7 +141,8 @@ func (v *Validator) ValidateTransfer(a *snarktoken.TransferAction) error {
 	}
 
 	return verifyBindingSignature(
-		snarktoken.ActionTypeTransfer, actionTC,
+		v.pp.Curve,
+		snarktoken.ActionTypeTransfer, a.TypeCommitment,
 		decodedInputs, decodedOutputs,
 		a.BindingSignature, 0,
 	)
@@ -154,14 +154,14 @@ func (v *Validator) ValidateIssue(a *snarktoken.IssueAction) error {
 		return err
 	}
 
-	decodedOutputs, err := decodeAllOutputs(a.Outputs)
+	decodedOutputs, err := decodeAllOutputs(a.Outputs, v.pp.Curve)
 	if err != nil {
 		return err
 	}
 
-	var actionTC fr.Element
-	if err := actionTC.SetBytesCanonical(a.TypeCommitment); err != nil {
-		return err
+	actionTC, err := decodeScalar(v.pp.Curve, a.TypeCommitment)
+	if err != nil {
+		return errors.Wrapf(err, "validator: TypeCommitment")
 	}
 
 	if err := checkTypeCommitmentHomogeneity(actionTC, nil, decodedOutputs); err != nil {
@@ -172,13 +172,14 @@ func (v *Validator) ValidateIssue(a *snarktoken.IssueAction) error {
 		return err
 	}
 
-	totalValue, err := parseTotalValue(a.TotalValue)
+	totalValue, err := parseTotalValue(v.pp.Curve, a.TotalValue)
 	if err != nil {
 		return err
 	}
 
 	return verifyBindingSignature(
-		snarktoken.ActionTypeIssue, actionTC,
+		v.pp.Curve,
+		snarktoken.ActionTypeIssue, a.TypeCommitment,
 		nil, decodedOutputs,
 		a.BindingSignature, totalValue,
 	)
@@ -196,7 +197,7 @@ func (v *Validator) ValidateMigration(a *snarktoken.MigrationAction) error {
 		return err
 	}
 
-	decoded, err := decodeMigrationAction(a)
+	decoded, err := decodeMigrationAction(a, v.pp.Curve)
 	if err != nil {
 		return err
 	}
