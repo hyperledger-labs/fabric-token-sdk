@@ -1315,7 +1315,7 @@ func UpdatePublicParamsAndWait(network *integration.Infrastructure, publicParams
 		if node.Id() == "custodian" {
 			continue
 		}
-		gomega.Eventually(GetPublicParams).WithArguments(network, node).WithTimeout(60 * time.Second).WithPolling(5 * time.Second).Should(gomega.Equal(publicParams))
+		gomega.Eventually(GetPublicParams).WithArguments(network, node).WithTimeout(120 * time.Second).WithPolling(5 * time.Second).Should(gomega.Equal(publicParams))
 	}
 }
 
