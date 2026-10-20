@@ -20,7 +20,6 @@ import (
 
 	"github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/circuit"
 	"github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/crypto/backend"
-	"github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/crypto/edwards"
 	"github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/pp"
 	"github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/setup"
 	snarktoken "github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/token"
@@ -69,31 +68,34 @@ func BuildMigrationWitness(
 		return nil, errors.Wrapf(err, "prover: invalid PedersenOpening")
 	}
 
-	// Migration currently only supports BLS12-381 (the Pedersen opening group
-	// is BLS12-381 G1, pinned by zkatdlog).
-	curve := publicParams.Curve
+	cc, err := newCurveCtx(publicParams.Curve)
+	if err != nil {
+		return nil, err
+	}
 
 	note, err := snarktoken.NewRandomNote(opening.Value, opening.TokenType)
 	if err != nil {
 		return nil, errors.Wrapf(err, "prover: migration note creation failed")
 	}
 
-	cm, err := note.Commitment(curve)
+	cm, err := note.Commitment(cc.id)
 	if err != nil {
 		return nil, errors.Wrapf(err, "prover: migration commitment derivation failed")
 	}
 
-	rcv, err := edwards.Jubjub().RandomScalar()
+	rcvBytes, err := cc.suite.RandomScalar()
 	if err != nil {
 		return nil, errors.Wrapf(err, "prover: migration RCV generation failed")
 	}
 
-	cv, err := edwards.Jubjub().ValueCommit(note.Value, rcv)
+	cv, err := cc.suite.ValueCommit(note.Value, rcvBytes)
 	if err != nil {
 		return nil, errors.Wrapf(err, "prover: migration value commitment failed")
 	}
 
-	// Compute TokenTypePed = HashToZr(tokenType)
+	// The Pedersen side is the source zkatdlog commitment, which lives in
+	// BLS12-381 G1 regardless of the curve the new zkatsnark token uses.
+	// TokenTypePed = HashToZr(tokenType)
 	tokenTypePed := hashToZrBLS12381([]byte(opening.TokenType))
 
 	var blindingFactor bls12381fr.Element
@@ -113,71 +115,59 @@ func BuildMigrationWitness(
 	pedYBytes := pedPoint.Y.Bytes()
 
 	gens := DefaultPedersenGeneratorCoords()
-	var vField bls12381fr.Element
-	vField.SetUint64(opening.Value)
-
-	tField := snarktoken.EncodeTokenType[bls12381fr.Element](opening.TokenType)
-
-	tc, err := snarktoken.ComputeTypeCommitment(opening.TokenType, typeRandomness, curve)
+	tc, err := snarktoken.ComputeTypeCommitment(opening.TokenType, typeRandomness, cc.id)
 	if err != nil {
 		return nil, errors.Wrapf(err, "prover: migration type commitment failed")
 	}
 
-	var cmField bls12381fr.Element
-	if err := cmField.SetBytesCanonical(cm); err != nil {
+	cmField, err := cc.canonical(cm)
+	if err != nil {
 		return nil, errors.Wrapf(err, "prover: invalid commitment bytes")
 	}
-	var tcField bls12381fr.Element
-	if err := tcField.SetBytesCanonical(tc); err != nil {
+	tcField, err := cc.canonical(tc)
+	if err != nil {
 		return nil, errors.Wrapf(err, "prover: invalid type commitment bytes")
 	}
-	var trField bls12381fr.Element
-	if err := trField.SetBytesCanonical(typeRandomness); err != nil {
+	trField, err := cc.canonical(typeRandomness)
+	if err != nil {
 		return nil, errors.Wrapf(err, "prover: invalid type randomness bytes")
 	}
-	rField, err := snarktoken.FieldElementFromBytes[bls12381fr.Element](note.Randomness)
+	rField, err := cc.fromBytes(note.Randomness)
 	if err != nil {
 		return nil, errors.Wrapf(err, "prover: invalid note randomness bytes")
 	}
 
-	genVX := edwards.Jubjub().V.X.BigInt(new(big.Int))
-	genVY := edwards.Jubjub().V.Y.BigInt(new(big.Int))
-	genRX := edwards.Jubjub().R.X.BigInt(new(big.Int))
-	genRY := edwards.Jubjub().R.Y.BigInt(new(big.Int))
+	g := cc.generators()
 
 	assignment := &circuit.MigrationCircuit{
 		CommitmentPedersenX: emulated.ValueOf[emulated.BLS12381Fp](pedXBig),
 		CommitmentPedersenY: emulated.ValueOf[emulated.BLS12381Fp](pedYBig),
 		CommitmentMiMC:      cmField,
-		ValueCommitOutX:     cv.X,
-		ValueCommitOutY:     cv.Y,
+		ValueCommitOutX:     new(big.Int).SetBytes(cv.X),
+		ValueCommitOutY:     new(big.Int).SetBytes(cv.Y),
 		TypeCommitment:      tcField,
-		Value:               vField,
-		TokenType:           tField,
+		Value:               new(big.Int).SetUint64(opening.Value),
+		TokenType:           cc.tokenType(opening.TokenType),
 		TokenTypePed:        tokenTypePed,
 		RandomnessPed:       blindingFactor,
 		RandomnessNew:       rField,
-		RCV:                 rcv,
+		RCV:                 new(big.Int).SetBytes(rcvBytes),
 		TypeRandomness:      trField,
 		MaxBits:             publicParams.MaxBits,
 		PedG0X:              gens.G0X, PedG0Y: gens.G0Y,
 		PedG1X: gens.G1X, PedG1Y: gens.G1Y,
 		PedG2X: gens.G2X, PedG2Y: gens.G2Y,
-		GenVX: genVX, GenVY: genVY,
-		GenRX: genRX, GenRY: genRY,
+		GenVX: g.VX, GenVY: g.VY,
+		GenRX: g.RX, GenRY: g.RY,
 	}
-
-	rcvBytes := rcv.Bytes()
-	cvXBytes := cv.X.Bytes()
-	cvYBytes := cv.Y.Bytes()
 
 	return &MigrationWitnessResult{
 		Assignment:       assignment,
 		Note:             note,
-		RCV:              rcvBytes[:],
+		RCV:              rcvBytes,
 		Commitment:       cm,
-		ValueCommitmentX: cvXBytes[:],
-		ValueCommitmentY: cvYBytes[:],
+		ValueCommitmentX: cv.X,
+		ValueCommitmentY: cv.Y,
 		TypeCommitment:   tc,
 		PedersenCommitX:  pedXBytes,
 		PedersenCommitY:  pedYBytes,

@@ -70,9 +70,7 @@ func TestVerifyBindingSignature_BN254(t *testing.T) {
 	cmB, tcB, cx, cy, rb := cm.Bytes(), tc.Bytes(), cv.X.Bytes(), cv.Y.Bytes(), rcv.Bytes()
 
 	out := []prover.ProofResult{{Commitment: cmB[:], ValueCommitmentX: cx[:], ValueCommitmentY: cy[:], RCV: rb[:]}}
-	sig, err := prover.ComputeBindingSignatureFor(c, "issue", tcB[:], nil, out)
-	require.NoError(t, err)
-	raw, err := c.SerializeSignature(sig)
+	raw, err := prover.ComputeBindingSignature(ecc.BN254, "issue", tcB[:], nil, out)
 	require.NoError(t, err)
 
 	decodedOut := []decodedOutput{{CommitmentBytes: cmB[:], ValueCommitXBytes: cx[:], ValueCommitYBytes: cy[:]}}

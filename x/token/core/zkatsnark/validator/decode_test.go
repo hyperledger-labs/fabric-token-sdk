@@ -39,7 +39,8 @@ func validSpendBytes(t *testing.T) snarktoken.SpendDescription {
 	cmBytes := cm.Bytes()
 	cxBytes := cv.X.Bytes()
 	cyBytes := cv.Y.Bytes()
-	ttBytes := snarktoken.EncodeTokenTypeBytes[fr.Element]("USD")
+	ttBytes, err := snarktoken.EncodeTokenTypeBytes("USD", ecc.BLS12_381)
+	require.NoError(t, err)
 
 	return snarktoken.SpendDescription{
 		CommitmentIn:   cmBytes[:],
@@ -135,7 +136,8 @@ func validMigrationBytes(t *testing.T) *snarktoken.MigrationAction {
 	require.NoError(t, err)
 	cmBytes := cm.Bytes()
 
-	ttBytes := snarktoken.EncodeTokenTypeBytes[fr.Element]("USD")
+	ttBytes, err := snarktoken.EncodeTokenTypeBytes("USD", ecc.BLS12_381)
+	require.NoError(t, err)
 
 	return &snarktoken.MigrationAction{
 		CommitmentPedersenX: pxBytes[:],
@@ -208,7 +210,8 @@ func validOutputBytes(t *testing.T) snarktoken.OutputDescription {
 	cmBytes := cm.Bytes()
 	cxBytes := cv.X.Bytes()
 	cyBytes := cv.Y.Bytes()
-	ttBytes := snarktoken.EncodeTokenTypeBytes[fr.Element]("USD")
+	ttBytes, err := snarktoken.EncodeTokenTypeBytes("USD", ecc.BLS12_381)
+	require.NoError(t, err)
 
 	return snarktoken.OutputDescription{
 		CommitmentOut:   cmBytes[:],

@@ -80,10 +80,9 @@ func TestVerifyBindingSignature_AgreesWithProverSideConstruction(t *testing.T) {
 		RCV:              rcv2Bytes[:],
 	}}
 
-	sig, err := prover.ComputeBindingSignature("transfer", tcBytes[:], inputs, outputs)
+	sig, err := prover.ComputeBindingSignature(ecc.BLS12_381, "transfer", tcBytes[:], inputs, outputs)
 	require.NoError(t, err)
-	sigBytes, err := edwards.Jubjub().SerializeSignature(sig)
-	require.NoError(t, err)
+	sigBytes := sig
 
 	// Simulate what the validator actually has: decoded public data only,
 	// with RCV never populated (as decode.go never produces it).
@@ -126,10 +125,9 @@ func TestVerifyBindingSignature_WrongPublicValueDeltaFailsIssuance(t *testing.T)
 		RCV:              rcvBytes[:],
 	}}
 
-	sig, err := prover.ComputeBindingSignature("issue", tcBytes[:], nil, outputs)
+	sig, err := prover.ComputeBindingSignature(ecc.BLS12_381, "issue", tcBytes[:], nil, outputs)
 	require.NoError(t, err)
-	sigBytes, err := edwards.Jubjub().SerializeSignature(sig)
-	require.NoError(t, err)
+	sigBytes := sig
 
 	decodedOut := []decodedOutput{{CommitmentBytes: cmBytes[:], ValueCommitXBytes: cvXBytes[:], ValueCommitYBytes: cvYBytes[:]}}
 

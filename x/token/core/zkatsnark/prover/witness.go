@@ -6,13 +6,10 @@ SPDX-License-Identifier: Apache-2.0
 package prover
 
 import (
+	"crypto/rand"
 	"math/big"
 
 	"github.com/consensys/gnark-crypto/ecc"
-	bls12381fr "github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
-	bls12381tw "github.com/consensys/gnark-crypto/ecc/bls12-381/twistededwards"
-	bn254fr "github.com/consensys/gnark-crypto/ecc/bn254/fr"
-	bn254tw "github.com/consensys/gnark-crypto/ecc/bn254/twistededwards"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 
 	"github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/circuit"
@@ -21,23 +18,92 @@ import (
 	snarktoken "github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/token"
 )
 
+// curveCtx carries what witness construction needs to stay independent of the
+// concrete curve: the byte-oriented twisted Edwards suite and the modulus of
+// the circuit's native scalar field. Both are selected by the pairing curve in
+// the public parameters.
+type curveCtx struct {
+	id      ecc.ID
+	suite   edwards.Suite
+	modulus *big.Int
+}
+
+func newCurveCtx(id ecc.ID) (*curveCtx, error) {
+	suite, err := edwards.ForCurve(id)
+	if err != nil {
+		return nil, errors.Wrapf(err, "prover: unsupported curve %s", id)
+	}
+
+	return &curveCtx{id: id, suite: suite, modulus: suite.FieldModulus()}, nil
+}
+
+// fromBytes reduces arbitrary-length big-endian bytes into the scalar field.
+// For canonical 32-byte input this is the identity; longer input (e.g. 64-byte
+// note randomness) is reduced, giving negligible bias.
+func (c *curveCtx) fromBytes(b []byte) (*big.Int, error) {
+	if len(b) == 0 {
+		return nil, errors.New("prover: empty bytes for field element")
+	}
+
+	return new(big.Int).Mod(new(big.Int).SetBytes(b), c.modulus), nil
+}
+
+// canonical decodes b as a canonical (fully reduced) field element.
+func (c *curveCtx) canonical(b []byte) (*big.Int, error) {
+	v := new(big.Int).SetBytes(b)
+	if len(b) != (c.modulus.BitLen()+7)/8 || v.Cmp(c.modulus) >= 0 {
+		return nil, errors.Errorf("prover: non-canonical field element (%d bytes)", len(b))
+	}
+
+	return v, nil
+}
+
+// tokenType maps a token type string to a field element, as the note
+// commitment does.
+func (c *curveCtx) tokenType(t string) *big.Int {
+	return new(big.Int).Mod(new(big.Int).SetBytes([]byte(t)), c.modulus)
+}
+
+// randomFieldElement returns a uniform field element and its canonical bytes.
+func (c *curveCtx) randomFieldElement() ([]byte, error) {
+	v, err := rand.Int(rand.Reader, c.modulus)
+	if err != nil {
+		return nil, errors.Wrapf(err, "prover: field element generation failed")
+	}
+
+	return v.FillBytes(make([]byte, (c.modulus.BitLen()+7)/8)), nil
+}
+
+func (c *curveCtx) generators() generators {
+	v, r := c.suite.Generators()
+
+	return generators{
+		VX: new(big.Int).SetBytes(v.X), VY: new(big.Int).SetBytes(v.Y),
+		RX: new(big.Int).SetBytes(r.X), RY: new(big.Int).SetBytes(r.Y),
+	}
+}
+
+// generators are the value (V) and randomness (R) generator coordinates fed to
+// the circuits as constants.
+type generators struct{ VX, VY, RX, RY *big.Int }
+
 // SpendWitnessResult bundles a compiled SpendCircuit assignment with the
 // data the Orchestrator needs to assemble the wire format and the binding
 // signature.
 //
-// ValueCommitment is stored as raw bytes (X||Y, 64 bytes) to avoid
-// locking the type to a single curve.
+// ValueCommitment is stored as raw bytes (X||Y) to avoid locking the type to
+// a single curve.
 type SpendWitnessResult struct {
 	Assignment       *circuit.SpendCircuit
-	RCV              []byte // 32 bytes, curve-agnostic
-	Commitment       []byte // 32 bytes
-	ValueCommitmentX []byte // 32 bytes
-	ValueCommitmentY []byte // 32 bytes
-	TypeCommitment   []byte // 32 bytes
+	RCV              []byte
+	Commitment       []byte
+	ValueCommitmentX []byte
+	ValueCommitmentY []byte
+	TypeCommitment   []byte
 }
 
 // BuildSpendWitness constructs a SpendCircuit assignment for spending an
-// existing token.
+// existing token. The curve is taken from the public parameters.
 //
 // note.Randomness must be the EXACT randomness originally used when this
 // token's commitment was recorded on the ledger, the wallet holding this
@@ -50,155 +116,94 @@ func BuildSpendWitness(note *snarktoken.Note, typeRandomness []byte, publicParam
 		return nil, errors.New("prover: cannot build spend witness for a nil note")
 	}
 
-	curve := publicParams.Curve
-
-	cm, err := note.Commitment(curve)
+	cc, err := newCurveCtx(publicParams.Curve)
 	if err != nil {
 		return nil, err
 	}
 
-	tc, err := snarktoken.ComputeTypeCommitment(note.TokenType, typeRandomness, curve)
+	cm, err := note.Commitment(cc.id)
+	if err != nil {
+		return nil, err
+	}
+
+	tc, err := snarktoken.ComputeTypeCommitment(note.TokenType, typeRandomness, cc.id)
 	if err != nil {
 		return nil, errors.Wrapf(err, "prover: type commitment failed")
 	}
 
-	switch curve {
-	case ecc.BLS12_381:
-		return buildSpendWitnessBLS12381(note, cm, tc, typeRandomness)
-	case ecc.BN254:
-		return buildSpendWitnessBN254(note, cm, tc, typeRandomness)
-	default:
-		return nil, errors.Errorf("prover: unsupported curve %s", curve)
-	}
-}
-
-func buildSpendWitnessBLS12381(note *snarktoken.Note, cm, tc, typeRandomness []byte) (*SpendWitnessResult, error) {
-	rcv, err := edwards.Jubjub().RandomScalar()
+	w, err := cc.commonWitness(note, cm, tc, typeRandomness)
 	if err != nil {
-		return nil, errors.Wrapf(err, "prover: RCV generation failed")
+		return nil, err
 	}
-
-	cv, err := edwards.Jubjub().ValueCommit(note.Value, rcv)
-	if err != nil {
-		return nil, errors.Wrapf(err, "prover: value commitment failed")
-	}
-
-	var vField bls12381fr.Element
-	vField.SetUint64(note.Value)
-	tField := snarktoken.EncodeTokenType[bls12381fr.Element](note.TokenType)
-	rField, err := snarktoken.FieldElementFromBytes[bls12381fr.Element](note.Randomness)
-	if err != nil {
-		return nil, errors.Wrapf(err, "prover: invalid randomness")
-	}
-	var trField bls12381fr.Element
-	if err := trField.SetBytesCanonical(typeRandomness); err != nil {
-		return nil, errors.Wrapf(err, "prover: invalid type randomness")
-	}
-
-	var cmField bls12381fr.Element
-	if err := cmField.SetBytesCanonical(cm); err != nil {
-		return nil, errors.Wrapf(err, "prover: invalid commitment")
-	}
-	var tcField bls12381fr.Element
-	if err := tcField.SetBytesCanonical(tc); err != nil {
-		return nil, errors.Wrapf(err, "prover: invalid type commitment")
-	}
-
-	genVX := edwards.Jubjub().V.X.BigInt(new(big.Int))
-	genVY := edwards.Jubjub().V.Y.BigInt(new(big.Int))
-	genRX := edwards.Jubjub().R.X.BigInt(new(big.Int))
-	genRY := edwards.Jubjub().R.Y.BigInt(new(big.Int))
-
-	assignment := &circuit.SpendCircuit{
-		CommitmentIn:   cmField,
-		ValueCommitInX: cv.X,
-		ValueCommitInY: cv.Y,
-		TypeCommitment: tcField,
-		Value:          vField,
-		TokenType:      tField,
-		Randomness:     rField,
-		RCV:            rcv,
-		TypeRandomness: trField,
-		GenVX:          genVX, GenVY: genVY,
-		GenRX: genRX, GenRY: genRY,
-	}
-
-	rcvBytes := rcv.Bytes()
-	cvXBytes := cv.X.Bytes()
-	cvYBytes := cv.Y.Bytes()
 
 	return &SpendWitnessResult{
-		Assignment:       assignment,
-		RCV:              rcvBytes[:],
+		Assignment: &circuit.SpendCircuit{
+			CommitmentIn:   w.cm,
+			ValueCommitInX: w.cvX,
+			ValueCommitInY: w.cvY,
+			TypeCommitment: w.tc,
+			Value:          w.value,
+			TokenType:      w.tokenType,
+			Randomness:     w.randomness,
+			RCV:            w.rcv,
+			TypeRandomness: w.typeRandomness,
+			GenVX:          w.gens.VX, GenVY: w.gens.VY,
+			GenRX: w.gens.RX, GenRY: w.gens.RY,
+		},
+		RCV:              w.rcvBytes,
 		Commitment:       cm,
-		ValueCommitmentX: cvXBytes[:],
-		ValueCommitmentY: cvYBytes[:],
+		ValueCommitmentX: w.cvXBytes,
+		ValueCommitmentY: w.cvYBytes,
 		TypeCommitment:   tc,
 	}, nil
 }
 
-func buildSpendWitnessBN254(note *snarktoken.Note, cm, tc, typeRandomness []byte) (*SpendWitnessResult, error) {
-	rcv, err := edwards.BabyJubjub().RandomScalar()
+// witnessValues are the curve-independent circuit inputs derived from a note.
+type witnessValues struct {
+	cm, cvX, cvY, tc, value, tokenType *big.Int
+	randomness, rcv, typeRandomness    *big.Int
+	rcvBytes, cvXBytes, cvYBytes       []byte
+	gens                               generators
+}
+
+func (c *curveCtx) commonWitness(note *snarktoken.Note, cm, tc, typeRandomness []byte) (*witnessValues, error) {
+	rcvBytes, err := c.suite.RandomScalar()
 	if err != nil {
 		return nil, errors.Wrapf(err, "prover: RCV generation failed")
 	}
 
-	cv, err := edwards.BabyJubjub().ValueCommit(note.Value, rcv)
+	cv, err := c.suite.ValueCommit(note.Value, rcvBytes)
 	if err != nil {
 		return nil, errors.Wrapf(err, "prover: value commitment failed")
 	}
 
-	var vField bn254fr.Element
-	vField.SetUint64(note.Value)
-	tField := snarktoken.EncodeTokenType[bn254fr.Element](note.TokenType)
-	rField, err := snarktoken.FieldElementFromBytes[bn254fr.Element](note.Randomness)
+	randomness, err := c.fromBytes(note.Randomness)
 	if err != nil {
 		return nil, errors.Wrapf(err, "prover: invalid randomness")
 	}
-	var trField bn254fr.Element
-	if err := trField.SetBytesCanonical(typeRandomness); err != nil {
+	tr, err := c.canonical(typeRandomness)
+	if err != nil {
 		return nil, errors.Wrapf(err, "prover: invalid type randomness")
 	}
-
-	var cmField bn254fr.Element
-	if err := cmField.SetBytesCanonical(cm); err != nil {
+	cmV, err := c.canonical(cm)
+	if err != nil {
 		return nil, errors.Wrapf(err, "prover: invalid commitment")
 	}
-	var tcField bn254fr.Element
-	if err := tcField.SetBytesCanonical(tc); err != nil {
+	tcV, err := c.canonical(tc)
+	if err != nil {
 		return nil, errors.Wrapf(err, "prover: invalid type commitment")
 	}
 
-	genVX := edwards.BabyJubjub().V.X.BigInt(new(big.Int))
-	genVY := edwards.BabyJubjub().V.Y.BigInt(new(big.Int))
-	genRX := edwards.BabyJubjub().R.X.BigInt(new(big.Int))
-	genRY := edwards.BabyJubjub().R.Y.BigInt(new(big.Int))
-
-	assignment := &circuit.SpendCircuit{
-		CommitmentIn:   cmField,
-		ValueCommitInX: cv.X,
-		ValueCommitInY: cv.Y,
-		TypeCommitment: tcField,
-		Value:          vField,
-		TokenType:      tField,
-		Randomness:     rField,
-		RCV:            rcv,
-		TypeRandomness: trField,
-		GenVX:          genVX, GenVY: genVY,
-		GenRX: genRX, GenRY: genRY,
-	}
-
-	rcvBytes := rcv.Bytes()
-	cvXBytes := cv.X.Bytes()
-	cvYBytes := cv.Y.Bytes()
-
-	return &SpendWitnessResult{
-		Assignment:       assignment,
-		RCV:              rcvBytes[:],
-		Commitment:       cm,
-		ValueCommitmentX: cvXBytes[:],
-		ValueCommitmentY: cvYBytes[:],
-		TypeCommitment:   tc,
+	return &witnessValues{
+		cm: cmV, tc: tcV,
+		cvX: new(big.Int).SetBytes(cv.X), cvY: new(big.Int).SetBytes(cv.Y),
+		value:          new(big.Int).SetUint64(note.Value),
+		tokenType:      c.tokenType(note.TokenType),
+		randomness:     randomness,
+		rcv:            new(big.Int).SetBytes(rcvBytes),
+		typeRandomness: tr,
+		rcvBytes:       rcvBytes, cvXBytes: cv.X, cvYBytes: cv.Y,
+		gens: c.generators(),
 	}, nil
 }
 
@@ -207,199 +212,62 @@ func buildSpendWitnessBN254(note *snarktoken.Note, cm, tc, typeRandomness []byte
 type OutputWitnessResult struct {
 	Assignment       *circuit.OutputCircuit
 	Note             *snarktoken.Note
-	RCV              []byte // 32 bytes
-	Commitment       []byte // 32 bytes
-	ValueCommitmentX []byte // 32 bytes
-	ValueCommitmentY []byte // 32 bytes
-	TypeCommitment   []byte // 32 bytes
+	RCV              []byte
+	Commitment       []byte
+	ValueCommitmentX []byte
+	ValueCommitmentY []byte
+	TypeCommitment   []byte
 }
 
 // BuildOutputWitness constructs an OutputCircuit assignment for creating a
-// new token of the given value and type.
+// new token of the given value and type. The curve is taken from the public
+// parameters.
 func BuildOutputWitness(value uint64, tokenType string, publicParams *pp.PublicParams, typeRandomness []byte) (*OutputWitnessResult, error) {
+	cc, err := newCurveCtx(publicParams.Curve)
+	if err != nil {
+		return nil, err
+	}
+
 	note, err := snarktoken.NewRandomNote(value, tokenType)
 	if err != nil {
 		return nil, errors.Wrapf(err, "prover: new output note failed")
 	}
 
-	curve := publicParams.Curve
-
-	cm, err := note.Commitment(curve)
+	cm, err := note.Commitment(cc.id)
 	if err != nil {
 		return nil, errors.Wrapf(err, "prover: commitment derivation failed")
 	}
 
-	tc, err := snarktoken.ComputeTypeCommitment(tokenType, typeRandomness, curve)
+	tc, err := snarktoken.ComputeTypeCommitment(tokenType, typeRandomness, cc.id)
 	if err != nil {
 		return nil, errors.Wrapf(err, "prover: type commitment failed")
 	}
 
-	switch curve {
-	case ecc.BLS12_381:
-		return buildOutputWitnessBLS12381(note, cm, tc, typeRandomness, publicParams)
-	case ecc.BN254:
-		return buildOutputWitnessBN254(note, cm, tc, typeRandomness, publicParams)
-	default:
-		return nil, errors.Errorf("prover: unsupported curve %s", curve)
-	}
-}
-
-func buildOutputWitnessBLS12381(note *snarktoken.Note, cm, tc, typeRandomness []byte, publicParams *pp.PublicParams) (*OutputWitnessResult, error) {
-	rcv, err := edwards.Jubjub().RandomScalar()
+	w, err := cc.commonWitness(note, cm, tc, typeRandomness)
 	if err != nil {
-		return nil, errors.Wrapf(err, "prover: RCV generation failed")
+		return nil, err
 	}
-
-	cv, err := edwards.Jubjub().ValueCommit(note.Value, rcv)
-	if err != nil {
-		return nil, errors.Wrapf(err, "prover: value commitment failed")
-	}
-
-	var vField bls12381fr.Element
-	vField.SetUint64(note.Value)
-	tField := snarktoken.EncodeTokenType[bls12381fr.Element](note.TokenType)
-	rField, err := snarktoken.FieldElementFromBytes[bls12381fr.Element](note.Randomness)
-	if err != nil {
-		return nil, errors.Wrapf(err, "prover: invalid randomness")
-	}
-	var trField bls12381fr.Element
-	if err := trField.SetBytesCanonical(typeRandomness); err != nil {
-		return nil, errors.Wrapf(err, "prover: invalid type randomness")
-	}
-	var cmField bls12381fr.Element
-	if err := cmField.SetBytesCanonical(cm); err != nil {
-		return nil, errors.Wrapf(err, "prover: invalid commitment")
-	}
-	var tcField bls12381fr.Element
-	if err := tcField.SetBytesCanonical(tc); err != nil {
-		return nil, errors.Wrapf(err, "prover: invalid type commitment")
-	}
-
-	genVX := edwards.Jubjub().V.X.BigInt(new(big.Int))
-	genVY := edwards.Jubjub().V.Y.BigInt(new(big.Int))
-	genRX := edwards.Jubjub().R.X.BigInt(new(big.Int))
-	genRY := edwards.Jubjub().R.Y.BigInt(new(big.Int))
-
-	assignment := &circuit.OutputCircuit{
-		CommitmentOut:   cmField,
-		ValueCommitOutX: cv.X,
-		ValueCommitOutY: cv.Y,
-		TypeCommitment:  tcField,
-		Value:           vField,
-		TokenType:       tField,
-		Randomness:      rField,
-		RCV:             rcv,
-		TypeRandomness:  trField,
-		MaxBits:         publicParams.MaxBits,
-		GenVX:           genVX, GenVY: genVY,
-		GenRX: genRX, GenRY: genRY,
-	}
-
-	rcvBytes := rcv.Bytes()
-	cvXBytes := cv.X.Bytes()
-	cvYBytes := cv.Y.Bytes()
 
 	return &OutputWitnessResult{
-		Assignment:       assignment,
+		Assignment: &circuit.OutputCircuit{
+			CommitmentOut:   w.cm,
+			ValueCommitOutX: w.cvX,
+			ValueCommitOutY: w.cvY,
+			TypeCommitment:  w.tc,
+			Value:           w.value,
+			TokenType:       w.tokenType,
+			Randomness:      w.randomness,
+			RCV:             w.rcv,
+			TypeRandomness:  w.typeRandomness,
+			MaxBits:         publicParams.MaxBits,
+			GenVX:           w.gens.VX, GenVY: w.gens.VY,
+			GenRX: w.gens.RX, GenRY: w.gens.RY,
+		},
 		Note:             note,
-		RCV:              rcvBytes[:],
+		RCV:              w.rcvBytes,
 		Commitment:       cm,
-		ValueCommitmentX: cvXBytes[:],
-		ValueCommitmentY: cvYBytes[:],
+		ValueCommitmentX: w.cvXBytes,
+		ValueCommitmentY: w.cvYBytes,
 		TypeCommitment:   tc,
 	}, nil
-}
-
-func buildOutputWitnessBN254(note *snarktoken.Note, cm, tc, typeRandomness []byte, publicParams *pp.PublicParams) (*OutputWitnessResult, error) {
-	rcv, err := edwards.BabyJubjub().RandomScalar()
-	if err != nil {
-		return nil, errors.Wrapf(err, "prover: RCV generation failed")
-	}
-
-	cv, err := edwards.BabyJubjub().ValueCommit(note.Value, rcv)
-	if err != nil {
-		return nil, errors.Wrapf(err, "prover: value commitment failed")
-	}
-
-	var vField bn254fr.Element
-	vField.SetUint64(note.Value)
-	tField := snarktoken.EncodeTokenType[bn254fr.Element](note.TokenType)
-	rField, err := snarktoken.FieldElementFromBytes[bn254fr.Element](note.Randomness)
-	if err != nil {
-		return nil, errors.Wrapf(err, "prover: invalid randomness")
-	}
-	var trField bn254fr.Element
-	if err := trField.SetBytesCanonical(typeRandomness); err != nil {
-		return nil, errors.Wrapf(err, "prover: invalid type randomness")
-	}
-	var cmField bn254fr.Element
-	if err := cmField.SetBytesCanonical(cm); err != nil {
-		return nil, errors.Wrapf(err, "prover: invalid commitment")
-	}
-	var tcField bn254fr.Element
-	if err := tcField.SetBytesCanonical(tc); err != nil {
-		return nil, errors.Wrapf(err, "prover: invalid type commitment")
-	}
-
-	genVX := edwards.BabyJubjub().V.X.BigInt(new(big.Int))
-	genVY := edwards.BabyJubjub().V.Y.BigInt(new(big.Int))
-	genRX := edwards.BabyJubjub().R.X.BigInt(new(big.Int))
-	genRY := edwards.BabyJubjub().R.Y.BigInt(new(big.Int))
-
-	assignment := &circuit.OutputCircuit{
-		CommitmentOut:   cmField,
-		ValueCommitOutX: cv.X,
-		ValueCommitOutY: cv.Y,
-		TypeCommitment:  tcField,
-		Value:           vField,
-		TokenType:       tField,
-		Randomness:      rField,
-		RCV:             rcv,
-		TypeRandomness:  trField,
-		MaxBits:         publicParams.MaxBits,
-		GenVX:           genVX, GenVY: genVY,
-		GenRX: genRX, GenRY: genRY,
-	}
-
-	rcvBytes := rcv.Bytes()
-	cvXBytes := cv.X.Bytes()
-	cvYBytes := cv.Y.Bytes()
-
-	return &OutputWitnessResult{
-		Assignment:       assignment,
-		Note:             note,
-		RCV:              rcvBytes[:],
-		Commitment:       cm,
-		ValueCommitmentX: cvXBytes[:],
-		ValueCommitmentY: cvYBytes[:],
-		TypeCommitment:   tc,
-	}, nil
-}
-
-// ── Curve-typed value commitment helpers used by binding signature ───────────
-
-// ValueCommitPointBLS12381 decodes X/Y bytes into a BLS12-381 twistededwards point.
-func ValueCommitPointBLS12381(xBytes, yBytes []byte) (bls12381tw.PointAffine, error) {
-	var p bls12381tw.PointAffine
-	if err := p.X.SetBytesCanonical(xBytes); err != nil {
-		return p, errors.Wrapf(err, "prover: invalid VC X")
-	}
-	if err := p.Y.SetBytesCanonical(yBytes); err != nil {
-		return p, errors.Wrapf(err, "prover: invalid VC Y")
-	}
-
-	return p, nil
-}
-
-// ValueCommitPointBN254 decodes X/Y bytes into a BN254 twistededwards point.
-func ValueCommitPointBN254(xBytes, yBytes []byte) (bn254tw.PointAffine, error) {
-	var p bn254tw.PointAffine
-	if err := p.X.SetBytesCanonical(xBytes); err != nil {
-		return p, errors.Wrapf(err, "prover: invalid VC X")
-	}
-	if err := p.Y.SetBytesCanonical(yBytes); err != nil {
-		return p, errors.Wrapf(err, "prover: invalid VC Y")
-	}
-
-	return p, nil
 }

@@ -11,8 +11,6 @@ import (
 	"testing"
 
 	"github.com/consensys/gnark-crypto/ecc"
-	bls12381fr "github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
-	bn254fr "github.com/consensys/gnark-crypto/ecc/bn254/fr"
 	"github.com/stretchr/testify/require"
 
 	snarktoken "github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/token"
@@ -439,31 +437,31 @@ func TestTokensUpgradeService_CheckUpgradeProof_Error(t *testing.T) {
 
 func TestEncodeTokenType_Empty(t *testing.T) {
 	// Empty string must not panic and must produce a zero element.
-	elemBLS := snarktoken.EncodeTokenType[bls12381fr.Element]("")
-	require.True(t, elemBLS.IsZero())
-
-	elemBN := snarktoken.EncodeTokenType[bn254fr.Element]("")
-	require.True(t, elemBN.IsZero())
+	for _, curve := range supportedCurves {
+		elem, err := snarktoken.EncodeTokenTypeBytes("", curve)
+		require.NoError(t, err)
+		require.Equal(t, make([]byte, 32), elem)
+	}
 }
 
 func TestEncodeTokenType_Deterministic(t *testing.T) {
-	e1BLS := snarktoken.EncodeTokenType[bls12381fr.Element]("EUR")
-	e2BLS := snarktoken.EncodeTokenType[bls12381fr.Element]("EUR")
-	require.Equal(t, e1BLS, e2BLS)
-
-	e1BN := snarktoken.EncodeTokenType[bn254fr.Element]("EUR")
-	e2BN := snarktoken.EncodeTokenType[bn254fr.Element]("EUR")
-	require.Equal(t, e1BN, e2BN)
+	for _, curve := range supportedCurves {
+		e1, err := snarktoken.EncodeTokenTypeBytes("EUR", curve)
+		require.NoError(t, err)
+		e2, err := snarktoken.EncodeTokenTypeBytes("EUR", curve)
+		require.NoError(t, err)
+		require.Equal(t, e1, e2)
+	}
 }
 
 func TestEncodeTokenType_DifferentTypes(t *testing.T) {
-	eUSDBLS := snarktoken.EncodeTokenType[bls12381fr.Element]("USD")
-	eEURBLS := snarktoken.EncodeTokenType[bls12381fr.Element]("EUR")
-	require.NotEqual(t, eUSDBLS, eEURBLS)
-
-	eUSDBN := snarktoken.EncodeTokenType[bn254fr.Element]("USD")
-	eEURBN := snarktoken.EncodeTokenType[bn254fr.Element]("EUR")
-	require.NotEqual(t, eUSDBN, eEURBN)
+	for _, curve := range supportedCurves {
+		eUSD, err := snarktoken.EncodeTokenTypeBytes("USD", curve)
+		require.NoError(t, err)
+		eEUR, err := snarktoken.EncodeTokenTypeBytes("EUR", curve)
+		require.NoError(t, err)
+		require.NotEqual(t, eUSD, eEUR)
+	}
 }
 
 // ── ComputeTypeCommitment ─────────────────────────────────────────────────────

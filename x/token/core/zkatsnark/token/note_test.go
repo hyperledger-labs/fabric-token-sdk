@@ -6,11 +6,10 @@ SPDX-License-Identifier: Apache-2.0
 package token_test
 
 import (
+	"math/big"
 	"testing"
 
 	"github.com/consensys/gnark-crypto/ecc"
-	bls12381fr "github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
-	bn254fr "github.com/consensys/gnark-crypto/ecc/bn254/fr"
 	"github.com/stretchr/testify/require"
 
 	snarktoken "github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/token"
@@ -57,25 +56,18 @@ func TestNoteCommitmentDeterminism_WideRandomness(t *testing.T) {
 }
 
 func TestEncodeTokenType_Generic(t *testing.T) {
-	// BLS12-381
-	tBLS := snarktoken.EncodeTokenType[bls12381fr.Element]("USD")
-	var inlineBLS bls12381fr.Element
-	inlineBLS.SetBytes([]byte("USD"))
-	require.Equal(t, inlineBLS, tBLS)
+	for _, curve := range supportedCurves {
+		t.Run(curve.String(), func(t *testing.T) {
+			want := new(big.Int).Mod(new(big.Int).SetBytes([]byte("USD")), curve.ScalarField())
 
-	bBLS := snarktoken.EncodeTokenTypeBytes[bls12381fr.Element]("USD")
-	expectedBLS := inlineBLS.Bytes()
-	require.Equal(t, expectedBLS[:], bBLS)
+			got, err := snarktoken.EncodeTokenTypeBytes("USD", curve)
+			require.NoError(t, err)
+			require.Equal(t, want.FillBytes(make([]byte, 32)), got)
+		})
+	}
 
-	// BN254
-	tBN := snarktoken.EncodeTokenType[bn254fr.Element]("USD")
-	var inlineBN bn254fr.Element
-	inlineBN.SetBytes([]byte("USD"))
-	require.Equal(t, inlineBN, tBN)
-
-	bBN := snarktoken.EncodeTokenTypeBytes[bn254fr.Element]("USD")
-	expectedBN := inlineBN.Bytes()
-	require.Equal(t, expectedBN[:], bBN)
+	_, err := snarktoken.EncodeTokenTypeBytes("USD", ecc.BW6_761)
+	require.Error(t, err)
 }
 
 func TestNoteRandomnessUniqueness(t *testing.T) {
@@ -99,22 +91,20 @@ func TestNoteRandomnessUniqueness(t *testing.T) {
 	}
 }
 
-func TestNewRandomNoteForField(t *testing.T) {
-	// Generic note creation for BLS12-381
-	noteBLS, err := snarktoken.NewRandomNoteForField[bls12381fr.Element](100, "USD")
-	require.NoError(t, err)
-	require.Len(t, noteBLS.Randomness, 32)
-	cmBLS, err := noteBLS.Commitment(ecc.BLS12_381)
-	require.NoError(t, err)
-	require.Len(t, cmBLS, 32)
+func TestNewRandomNoteForCurve(t *testing.T) {
+	for _, curve := range supportedCurves {
+		t.Run(curve.String(), func(t *testing.T) {
+			note, err := snarktoken.NewRandomNoteForCurve(100, "USD", curve)
+			require.NoError(t, err)
+			require.Len(t, note.Randomness, 32)
+			cm, err := note.Commitment(curve)
+			require.NoError(t, err)
+			require.Len(t, cm, 32)
+		})
+	}
 
-	// Generic note creation for BN254
-	noteBN, err := snarktoken.NewRandomNoteForField[bn254fr.Element](100, "USD")
-	require.NoError(t, err)
-	require.Len(t, noteBN.Randomness, 32)
-	cmBN, err := noteBN.Commitment(ecc.BN254)
-	require.NoError(t, err)
-	require.Len(t, cmBN, 32)
+	_, err := snarktoken.NewRandomNoteForCurve(100, "USD", ecc.BW6_761)
+	require.Error(t, err)
 }
 
 func TestNoteSerializeDeserialize_AllCurvesAndLengths(t *testing.T) {
@@ -172,36 +162,31 @@ func TestNoteCommitmentCrossCurveDistinction(t *testing.T) {
 }
 
 func TestFieldElementFromBytes_WideAndCanonical(t *testing.T) {
-	// 32-byte canonical
-	rBLS, rBytesBLS, err := snarktoken.SampleFieldRandomness[bls12381fr.Element]()
-	require.NoError(t, err)
-	parsedBLS, err := snarktoken.FieldElementFromBytes[bls12381fr.Element](rBytesBLS)
-	require.NoError(t, err)
-	require.Equal(t, rBLS, parsedBLS)
-
-	rBN, rBytesBN, err := snarktoken.SampleFieldRandomness[bn254fr.Element]()
-	require.NoError(t, err)
-	parsedBN, err := snarktoken.FieldElementFromBytes[bn254fr.Element](rBytesBN)
-	require.NoError(t, err)
-	require.Equal(t, rBN, parsedBN)
-
-	// Wide 64-byte randomness
 	wide, err := snarktoken.SampleRandomness(64)
 	require.NoError(t, err)
 
-	fBLS, err := snarktoken.FieldElementFromBytes[bls12381fr.Element](wide)
-	require.NoError(t, err)
-	var expectedBLS bls12381fr.Element
-	expectedBLS.SetBytes(wide)
-	require.Equal(t, expectedBLS, fBLS)
+	for _, curve := range supportedCurves {
+		t.Run(curve.String(), func(t *testing.T) {
+			// 32-byte canonical: identity.
+			rBytes, err := snarktoken.SampleFieldRandomness(curve)
+			require.NoError(t, err)
+			require.Len(t, rBytes, 32)
+			parsed, err := snarktoken.FieldElementFromBytes(rBytes, curve)
+			require.NoError(t, err)
+			require.Equal(t, rBytes, parsed)
 
-	fBN, err := snarktoken.FieldElementFromBytes[bn254fr.Element](wide)
-	require.NoError(t, err)
-	var expectedBN bn254fr.Element
-	expectedBN.SetBytes(wide)
-	require.Equal(t, expectedBN, fBN)
+			// Wide 64-byte randomness: reduced modulo the field order.
+			f, err := snarktoken.FieldElementFromBytes(wide, curve)
+			require.NoError(t, err)
+			want := new(big.Int).Mod(new(big.Int).SetBytes(wide), curve.ScalarField())
+			require.Equal(t, want.FillBytes(make([]byte, 32)), f)
 
-	// Empty bytes error
-	_, err = snarktoken.FieldElementFromBytes[bls12381fr.Element](nil)
+			// Empty bytes error.
+			_, err = snarktoken.FieldElementFromBytes(nil, curve)
+			require.Error(t, err)
+		})
+	}
+
+	_, err = snarktoken.FieldElementFromBytes(wide, ecc.BW6_761)
 	require.Error(t, err)
 }

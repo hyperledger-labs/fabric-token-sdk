@@ -143,15 +143,15 @@ func TestBuildTransferAction_Valid(t *testing.T) {
 		})
 	}
 
-	bvk, err := prover.ComputeBVK(inResults, outResults, 0)
+	bvk, err := prover.ComputeBVK(ecc.BLS12_381, inResults, outResults, 0)
 	require.NoError(t, err)
 
 	actionHash := prover.ComputeActionHash(snarktoken.ActionTypeTransfer, action.TypeCommitment, inResults, outResults)
 
-	sig, err := edwards.Jubjub().DeserializeSignature(action.BindingSignature)
+	suite, err := edwards.ForCurve(ecc.BLS12_381)
 	require.NoError(t, err)
 
-	err = edwards.Jubjub().Verify(bvk, actionHash, sig, edwards.Jubjub().R)
+	err = suite.VerifyBinding(bvk, actionHash, action.BindingSignature)
 	require.NoError(t, err, "binding signature reconstructed from wire-format bytes must verify")
 }
 

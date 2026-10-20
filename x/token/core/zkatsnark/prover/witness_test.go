@@ -270,18 +270,3 @@ func TestBuildOutputWitness_UnsupportedCurve(t *testing.T) {
 	_, err := prover.BuildOutputWitness(100, "USD", p, tr[:])
 	require.Error(t, err, "an unsupported curve must be rejected")
 }
-
-func TestValueCommitPointBN254(t *testing.T) {
-	// Generate a valid BN254 babyjubjub value commitment via the witness builder
-	p := pp.DefaultPublicParams()
-	p.Curve = ecc.BN254
-
-	tr := randomBN254TypeRandomness(t)
-
-	wr, err := prover.BuildOutputWitness(100, "USD", p, tr)
-	require.NoError(t, err)
-
-	pt, err := prover.ValueCommitPointBN254(wr.ValueCommitmentX, wr.ValueCommitmentY)
-	require.NoError(t, err)
-	require.True(t, pt.IsOnCurve(), "decoded BN254 value commitment point must be on the baby jubjub curve")
-}

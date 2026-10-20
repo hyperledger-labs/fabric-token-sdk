@@ -10,10 +10,9 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"hash"
-	"math/big"
 	"sort"
 
-	bls12381tw "github.com/consensys/gnark-crypto/ecc/bls12-381/twistededwards"
+	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 
 	"github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/crypto/edwards"
@@ -106,50 +105,33 @@ func ComputeActionHash(actionType string, typeCommitment []byte, inputs, outputs
 // adding valueBalance·V restores the equality bvk = bsk·R so the
 // Schnorr verification succeeds.
 //
-// ComputeBVK works over BLS12-381/Jubjub; use ComputeBVKFor for another curve.
-func ComputeBVK(inputs, outputs []ProofResult, valueBalance uint64) (bls12381tw.PointAffine, error) {
-	return ComputeBVKFor(edwards.Jubjub(), inputs, outputs, valueBalance)
+// The embedded twisted Edwards curve is selected by the pairing curve curve.
+func ComputeBVK(curve ecc.ID, inputs, outputs []ProofResult, valueBalance uint64) (edwards.Coords, error) {
+	suite, err := edwards.ForCurve(curve)
+	if err != nil {
+		return edwards.Coords{}, errors.Wrapf(err, "prover: bvk")
+	}
+
+	bvk, err := suite.BindingKey(toCoords(inputs), toCoords(outputs), valueBalance)
+	if err != nil {
+		return edwards.Coords{}, errors.Wrapf(err, "prover: bvk computation")
+	}
+
+	return bvk, nil
 }
 
-// ComputeBVKFor is ComputeBVK over the given twisted Edwards curve.
-func ComputeBVKFor[F any, PF edwards.Field[F], P any](
-	c *edwards.Curve[F, PF, P], inputs, outputs []ProofResult, valueBalance uint64,
-) (P, error) {
-	var zero P
-	points := make([]P, 0, len(inputs)+len(outputs)+1)
-
-	for _, r := range inputs {
-		pt, err := c.PointFromBytes(r.ValueCommitmentX, r.ValueCommitmentY)
-		if err != nil {
-			return zero, errors.Wrapf(err, "prover: invalid input value commitment")
-		}
-		points = append(points, pt)
+func toCoords(rs []ProofResult) []edwards.Coords {
+	cs := make([]edwards.Coords, len(rs))
+	for i, r := range rs {
+		cs[i] = edwards.Coords{X: r.ValueCommitmentX, Y: r.ValueCommitmentY}
 	}
 
-	for _, r := range outputs {
-		pt, err := c.PointFromBytes(r.ValueCommitmentX, r.ValueCommitmentY)
-		if err != nil {
-			return zero, errors.Wrapf(err, "prover: invalid output value commitment")
-		}
-		points = append(points, c.NegatePoint(pt))
-	}
-
-	if valueBalance != 0 {
-		points = append(points, c.ScalarMul(c.V, new(big.Int).SetUint64(valueBalance)))
-	}
-
-	return c.ValueCommitSum(points), nil
+	return cs
 }
 
 // ComputeBindingSignature computes the per-action binding signature proving
-// value conservation: Σvalue_in == Σvalue_out, over BLS12-381/Jubjub.
-// See ComputeBindingSignatureFor.
-func ComputeBindingSignature(actionType string, typeCommitment []byte, inputs, outputs []ProofResult) (edwards.JubjubSignature, error) {
-	return ComputeBindingSignatureFor(edwards.Jubjub(), actionType, typeCommitment, inputs, outputs)
-}
-
-// ComputeBindingSignatureFor computes the per-action binding signature over
-// the given twisted Edwards curve.
+// value conservation (Σvalue_in == Σvalue_out) over the twisted Edwards curve
+// embedded in the given pairing curve, and returns it serialized.
 //
 // bsk = Σrcv_in − Σrcv_out is the private signing key, computable only
 // because the caller collected every RCV used across this action's proofs.
@@ -161,42 +143,26 @@ func ComputeBindingSignature(actionType string, typeCommitment []byte, inputs, o
 // For issuance (empty inputs), bsk becomes −Σrcv_out. There is no
 // conservation requirement for issuance, the signature instead attests
 // that the published output value commitments are correctly formed.
-func ComputeBindingSignatureFor[F any, PF edwards.Field[F], P any](
-	c *edwards.Curve[F, PF, P], actionType string, typeCommitment []byte, inputs, outputs []ProofResult,
-) (edwards.Signature[F, P], error) {
-	var none edwards.Signature[F, P]
-
-	// bsk must be computed modulo the embedded curve's subgroup order, NOT the
-	// host scalar field modulus: field arithmetic reduces mod the latter, but
-	// the Schnorr scheme operates in the former.
-	bskBig := new(big.Int)
-
-	for _, r := range inputs {
-		rcv, err := c.ScalarFromBytes(r.RCV)
-		if err != nil {
-			return none, errors.Wrapf(err, "prover: invalid input RCV bytes")
-		}
-		bskBig.Add(bskBig, PF(&rcv).BigInt(new(big.Int)))
+func ComputeBindingSignature(curve ecc.ID, actionType string, typeCommitment []byte, inputs, outputs []ProofResult) ([]byte, error) {
+	suite, err := edwards.ForCurve(curve)
+	if err != nil {
+		return nil, errors.Wrapf(err, "prover: binding signature")
 	}
 
-	for _, r := range outputs {
-		rcv, err := c.ScalarFromBytes(r.RCV)
-		if err != nil {
-			return none, errors.Wrapf(err, "prover: invalid output RCV bytes")
+	rcvs := func(rs []ProofResult) [][]byte {
+		out := make([][]byte, len(rs))
+		for i, r := range rs {
+			out[i] = r.RCV
 		}
-		bskBig.Sub(bskBig, PF(&rcv).BigInt(new(big.Int)))
+
+		return out
 	}
-
-	bskBig.Mod(bskBig, c.Order())
-
-	var bsk F
-	PF(&bsk).SetBigInt(bskBig)
 
 	actionHash := ComputeActionHash(actionType, typeCommitment, inputs, outputs)
 
-	sig, err := c.Sign(bsk, actionHash, c.R)
+	sig, err := suite.SignBinding(actionHash, rcvs(inputs), rcvs(outputs))
 	if err != nil {
-		return none, errors.Wrapf(err, "prover: binding signature generation failed")
+		return nil, errors.Wrapf(err, "prover: binding signature generation failed")
 	}
 
 	return sig, nil

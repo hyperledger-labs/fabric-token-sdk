@@ -33,6 +33,20 @@ type Suite interface {
 	// VerifyBinding checks a Schnorr signature over msg under public key
 	// bvk, using the R generator as the base point.
 	VerifyBinding(bvk Coords, msg, sig []byte) error
+
+	// FieldModulus is the modulus of the curve's field, i.e. the scalar field
+	// of the pairing curve the circuits are defined over.
+	FieldModulus() *big.Int
+	// Generators returns the value (V) and randomness (R) generators.
+	Generators() (v, r Coords)
+	// RandomScalar returns a canonical random scalar in [0, subgroup order).
+	RandomScalar() ([]byte, error)
+	// ValueCommit returns cv = value·V + rcv·R for a canonical scalar rcv.
+	ValueCommit(value uint64, rcv []byte) (Coords, error)
+	// SignBinding signs msg with bsk = ΣrcvsIn − ΣrcvsOut (mod subgroup
+	// order), using the R generator as the base point, and returns the
+	// serialized signature.
+	SignBinding(msg []byte, rcvsIn, rcvsOut [][]byte) ([]byte, error)
 }
 
 // ForCurve returns the Suite of the twisted Edwards curve embedded in the
@@ -125,4 +139,67 @@ func (s suite[F, PF, P]) VerifyBinding(bvk Coords, msg, sig []byte) error {
 	}
 
 	return s.c.Verify(pk, msg, sg, s.c.R)
+}
+
+func (s suite[F, PF, P]) FieldModulus() *big.Int { return new(big.Int).Set(s.c.g.Modulus) }
+
+func (s suite[F, PF, P]) Generators() (Coords, Coords) {
+	return s.coords(s.c.V), s.coords(s.c.R)
+}
+
+func (s suite[F, PF, P]) coords(p P) Coords {
+	x, y := s.c.g.Coords(p)
+
+	return Coords{X: PF(&x).Marshal(), Y: PF(&y).Marshal()}
+}
+
+func (s suite[F, PF, P]) RandomScalar() ([]byte, error) {
+	k, err := s.c.RandomScalar()
+	if err != nil {
+		return nil, err
+	}
+
+	return PF(&k).Marshal(), nil
+}
+
+func (s suite[F, PF, P]) ValueCommit(value uint64, rcv []byte) (Coords, error) {
+	k, err := s.c.ScalarFromBytes(rcv)
+	if err != nil {
+		return Coords{}, err
+	}
+	cv, err := s.c.ValueCommit(value, k)
+	if err != nil {
+		return Coords{}, err
+	}
+
+	return s.coords(cv), nil
+}
+
+func (s suite[F, PF, P]) SignBinding(msg []byte, rcvsIn, rcvsOut [][]byte) ([]byte, error) {
+	// bsk is accumulated modulo the subgroup order, NOT the field modulus.
+	bsk := new(big.Int)
+	for _, b := range rcvsIn {
+		k, err := s.c.ScalarFromBytes(b)
+		if err != nil {
+			return nil, errors.Wrapf(err, "invalid input RCV bytes")
+		}
+		bsk.Add(bsk, PF(&k).BigInt(new(big.Int)))
+	}
+	for _, b := range rcvsOut {
+		k, err := s.c.ScalarFromBytes(b)
+		if err != nil {
+			return nil, errors.Wrapf(err, "invalid output RCV bytes")
+		}
+		bsk.Sub(bsk, PF(&k).BigInt(new(big.Int)))
+	}
+	bsk.Mod(bsk, s.c.Order())
+
+	var sk F
+	PF(&sk).SetBigInt(bsk)
+	sig, err := s.c.Sign(sk, msg, s.c.R)
+	if err != nil {
+		return nil, errors.Wrapf(err, "binding signature generation failed")
+	}
+
+	return s.c.SerializeSignature(sig)
 }

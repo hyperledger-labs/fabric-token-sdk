@@ -9,10 +9,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/big"
 
-	"github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
-
-	"github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/crypto/edwards"
 	"github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/pp"
 	snarktoken "github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/token"
 )
@@ -99,14 +97,17 @@ func (o *Orchestrator) BuildTransferAction(
 	}
 
 	// Generate a single typeRandomness for the entire action.
-	var typeRandomness fr.Element
-	if _, err := typeRandomness.SetRandom(); err != nil {
+	cc, err := newCurveCtx(publicParams.Curve)
+	if err != nil {
+		return nil, nil, fmt.Errorf("orchestrator: %w", err)
+	}
+	typeRandomnessBytes, err := cc.randomFieldElement()
+	if err != nil {
 		return nil, nil, fmt.Errorf("orchestrator: type randomness generation failed: %w", err)
 	}
-	typeRandomnessBytes := typeRandomness.Bytes()
 
 	// Compute the shared TypeCommitment once for the action envelope.
-	typeCommitment, err := snarktoken.ComputeTypeCommitment(tokenType, typeRandomnessBytes[:], publicParams.Curve)
+	typeCommitment, err := snarktoken.ComputeTypeCommitment(tokenType, typeRandomnessBytes, publicParams.Curve)
 	if err != nil {
 		return nil, nil, fmt.Errorf("orchestrator: type commitment computation failed: %w", err)
 	}
@@ -115,11 +116,11 @@ func (o *Orchestrator) BuildTransferAction(
 	outputCh := make(chan outputOutcome, len(outputs))
 
 	for i, req := range inputs {
-		go o.proveSpend(i, req, typeRandomnessBytes[:], publicParams, spendCh)
+		go o.proveSpend(i, req, typeRandomnessBytes, publicParams, spendCh)
 	}
 
 	for j, req := range outputs {
-		go o.proveOutput(j, req, publicParams, typeRandomnessBytes[:], outputCh)
+		go o.proveOutput(j, req, publicParams, typeRandomnessBytes, outputCh)
 	}
 
 	spendOutcomes := make([]spendOutcome, len(inputs))
@@ -156,13 +157,9 @@ func (o *Orchestrator) BuildTransferAction(
 		newNotes[j] = oc.note
 	}
 
-	sig, err := ComputeBindingSignature(snarktoken.ActionTypeTransfer, typeCommitment, inputResults, outputResults)
+	sigBytes, err := ComputeBindingSignature(publicParams.Curve, snarktoken.ActionTypeTransfer, typeCommitment, inputResults, outputResults)
 	if err != nil {
 		return nil, nil, fmt.Errorf("orchestrator: binding signature failed: %w", err)
-	}
-	sigBytes, err := edwards.Jubjub().SerializeSignature(sig)
-	if err != nil {
-		return nil, nil, fmt.Errorf("orchestrator: binding signature serialization failed: %w", err)
 	}
 
 	action := &snarktoken.TransferAction{
@@ -192,14 +189,17 @@ func (o *Orchestrator) BuildIssueAction(
 	}
 
 	// Generate a single typeRandomness for the entire action.
-	var typeRandomness fr.Element
-	if _, err := typeRandomness.SetRandom(); err != nil {
+	cc, err := newCurveCtx(publicParams.Curve)
+	if err != nil {
+		return nil, nil, fmt.Errorf("orchestrator: %w", err)
+	}
+	typeRandomnessBytes, err := cc.randomFieldElement()
+	if err != nil {
 		return nil, nil, fmt.Errorf("orchestrator: type randomness generation failed: %w", err)
 	}
-	typeRandomnessBytes := typeRandomness.Bytes()
 
 	// Compute the shared TypeCommitment once for the action envelope.
-	typeCommitment, err := snarktoken.ComputeTypeCommitment(tokenType, typeRandomnessBytes[:], publicParams.Curve)
+	typeCommitment, err := snarktoken.ComputeTypeCommitment(tokenType, typeRandomnessBytes, publicParams.Curve)
 	if err != nil {
 		return nil, nil, fmt.Errorf("orchestrator: type commitment computation failed: %w", err)
 	}
@@ -207,7 +207,7 @@ func (o *Orchestrator) BuildIssueAction(
 	var totalValue uint64
 	outputCh := make(chan outputOutcome, len(outputs))
 	for j, req := range outputs {
-		go o.proveOutput(j, req, publicParams, typeRandomnessBytes[:], outputCh)
+		go o.proveOutput(j, req, publicParams, typeRandomnessBytes, outputCh)
 		totalValue += req.Value
 	}
 
@@ -229,18 +229,12 @@ func (o *Orchestrator) BuildIssueAction(
 		newNotes[j] = oc.note
 	}
 
-	sig, err := ComputeBindingSignature(snarktoken.ActionTypeIssue, typeCommitment, nil, outputResults)
+	sigBytes, err := ComputeBindingSignature(publicParams.Curve, snarktoken.ActionTypeIssue, typeCommitment, nil, outputResults)
 	if err != nil {
 		return nil, nil, fmt.Errorf("orchestrator: binding signature failed: %w", err)
 	}
-	sigBytes, err := edwards.Jubjub().SerializeSignature(sig)
-	if err != nil {
-		return nil, nil, fmt.Errorf("orchestrator: binding signature serialization failed: %w", err)
-	}
 
-	var totalValueField fr.Element
-	totalValueField.SetUint64(totalValue)
-	totalValueBytes := totalValueField.Bytes()
+	totalValueBytes := new(big.Int).SetUint64(totalValue).FillBytes(make([]byte, (cc.modulus.BitLen()+7)/8))
 
 	action := &snarktoken.IssueAction{
 		Issuer:           issuer,
@@ -248,7 +242,7 @@ func (o *Orchestrator) BuildIssueAction(
 		TypeCommitment:   typeCommitment,
 		Outputs:          outputDescs,
 		BindingSignature: sigBytes,
-		TotalValue:       totalValueBytes[:],
+		TotalValue:       totalValueBytes,
 		Metadata:         metadata,
 	}
 
@@ -371,15 +365,20 @@ func (o *Orchestrator) proveOutput(index int, req OutputRequest, publicParams *p
 func (o *Orchestrator) proveMigration(index int, req MigrationRequest, publicParams *pp.PublicParams, out chan<- migrationOutcome) {
 	// Each migration request gets its own typeRandomness since
 	// each produces an independent MigrationAction.
-	var typeRandomness fr.Element
-	if _, err := typeRandomness.SetRandom(); err != nil {
+	cc, err := newCurveCtx(publicParams.Curve)
+	if err != nil {
+		out <- migrationOutcome{index: index, err: err}
+
+		return
+	}
+	typeRandomnessBytes, err := cc.randomFieldElement()
+	if err != nil {
 		out <- migrationOutcome{index: index, err: fmt.Errorf("type randomness generation failed: %w", err)}
 
 		return
 	}
-	typeRandomnessBytes := typeRandomness.Bytes()
 
-	witnessRes, err := BuildMigrationWitness(req.Opening, publicParams, typeRandomnessBytes[:])
+	witnessRes, err := BuildMigrationWitness(req.Opening, publicParams, typeRandomnessBytes)
 	if err != nil {
 		out <- migrationOutcome{index: index, err: err}
 

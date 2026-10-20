@@ -8,6 +8,8 @@ package prover_test
 import (
 	"testing"
 
+	"github.com/consensys/gnark-crypto/ecc"
+
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
 	"github.com/stretchr/testify/require"
 
@@ -34,32 +36,37 @@ func babyProofResult(t *testing.T, value uint64) prover.ProofResult {
 
 // TestBindingSignatureBabyJubjub exercises the curve-generic binding path on BN254.
 func TestBindingSignatureBabyJubjub(t *testing.T) {
-	c := edwards.BabyJubjub()
+	suite, err := edwards.ForCurve(ecc.BN254)
+	require.NoError(t, err)
 	tc := make([]byte, 32)
 
 	in := []prover.ProofResult{babyProofResult(t, 60), babyProofResult(t, 40)}
 	out := []prover.ProofResult{babyProofResult(t, 100)}
-	sig, err := prover.ComputeBindingSignatureFor(c, "transfer", tc, in, out)
+	sig, err := prover.ComputeBindingSignature(ecc.BN254, "transfer", tc, in, out)
 	require.NoError(t, err)
-	bvk, err := prover.ComputeBVKFor(c, in, out, 0)
+	bvk, err := prover.ComputeBVK(ecc.BN254, in, out, 0)
 	require.NoError(t, err)
-	require.NoError(t, c.Verify(bvk, prover.ComputeActionHash("transfer", tc, in, out), sig, c.R))
+	require.NoError(t, suite.VerifyBinding(bvk, prover.ComputeActionHash("transfer", tc, in, out), sig))
 
 	// Issuance: no inputs, valueBalance = Σv_out.
 	iss := []prover.ProofResult{babyProofResult(t, 500)}
-	isig, err := prover.ComputeBindingSignatureFor(c, "issue", tc, nil, iss)
+	isig, err := prover.ComputeBindingSignature(ecc.BN254, "issue", tc, nil, iss)
 	require.NoError(t, err)
-	ibvk, err := prover.ComputeBVKFor(c, nil, iss, 500)
+	ibvk, err := prover.ComputeBVK(ecc.BN254, nil, iss, 500)
 	require.NoError(t, err)
-	require.NoError(t, c.Verify(ibvk, prover.ComputeActionHash("issue", tc, nil, iss), isig, c.R))
+	require.NoError(t, suite.VerifyBinding(ibvk, prover.ComputeActionHash("issue", tc, nil, iss), isig))
 
 	// Wrong balance must not verify.
-	badBvk, err := prover.ComputeBVKFor(c, nil, iss, 499)
+	badBvk, err := prover.ComputeBVK(ecc.BN254, nil, iss, 499)
 	require.NoError(t, err)
-	require.ErrorIs(t, c.Verify(badBvk, prover.ComputeActionHash("issue", tc, nil, iss), isig, c.R), edwards.ErrInvalidSignature)
+	require.Error(t, suite.VerifyBinding(badBvk, prover.ComputeActionHash("issue", tc, nil, iss), isig))
 
 	// Malformed RCV is rejected.
 	bad := []prover.ProofResult{{RCV: []byte{1}}}
-	_, err = prover.ComputeBindingSignatureFor(c, "issue", tc, nil, bad)
+	_, err = prover.ComputeBindingSignature(ecc.BN254, "issue", tc, nil, bad)
+	require.Error(t, err)
+
+	// Unsupported curve is rejected.
+	_, err = prover.ComputeBindingSignature(ecc.BW6_761, "issue", tc, nil, iss)
 	require.Error(t, err)
 }
