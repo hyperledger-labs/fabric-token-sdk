@@ -1,3 +1,7 @@
+# Copyright IBM Corp. All Rights Reserved.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """Compare two sets of benchmark outputs and emit a Markdown report.
 
 Given a directory of ``go test -bench`` output files split into a *base* group

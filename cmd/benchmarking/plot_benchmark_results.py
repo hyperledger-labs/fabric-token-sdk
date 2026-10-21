@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# Copyright IBM Corp. All Rights Reserved.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 plot_benchmark_results.py: Generates comparison plots across executor
 strategies (serial, unbounded, pool) for each parallel benchmark test.

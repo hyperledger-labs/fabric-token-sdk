@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# Copyright IBM Corp. All Rights Reserved.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 run_benchmarks.py:  Automates the full benchmark matrix and produces
 benchmark_results.csv with executor strategy as an additional dimension.
