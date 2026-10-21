@@ -276,7 +276,7 @@ func (d *locker) UnlockIDs(ctx context.Context, owner string, ids ...*token2.ID)
 		entry, ok := s.locked[k]
 		if !ok {
 			notFound = append(notFound, &k)
-			logger.Warnf("unlocking [%s] hold by no one, skipping", id)
+			logger.Debugf("unlocking [%s] hold by no one, skipping", id)
 
 			continue
 		}

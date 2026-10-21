@@ -154,7 +154,7 @@ TEMP_TRACER_DIR="$WORK_DIR/tools/profiler/tracer"
 cat > "$TEMP_TRACER_DIR/go.mod" << EOF
 module github.com/LFDT-Panurus/panurus/tools/profiler/tracer
 
-go 1.24
+go 1.27
 EOF
 
 # Add replace directive to point to the tracer in the temp workspace

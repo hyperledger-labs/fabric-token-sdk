@@ -1,6 +1,6 @@
 module tools
 
-go 1.27.2
+go 1.27.3
 
 require (
 	github.com/bufbuild/buf v1.71.0
@@ -14,7 +14,7 @@ require (
 	golang.org/x/tools v0.51.0
 	golang.org/x/vuln v1.8.0
 	google.golang.org/protobuf v1.36.11
-	honnef.co/go/tools v0.7.0
+	honnef.co/go/tools v0.8.1
 )
 
 require (

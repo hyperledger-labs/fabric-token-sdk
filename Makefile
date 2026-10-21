@@ -72,6 +72,14 @@ download-fabric:
 GO_TEST_PARAMS ?= -coverpkg=./... -coverprofile=profile.cov
 GO_PACKAGES = $(shell go list ./... | grep -v '/integration/' | grep -v 'regression' | grep -v 'mock' |  grep -v 'protos-go' |  grep -v 'testutils'; go list ./integration/nwo/...)
 
+.PHONY: benchmark-selector-postgres
+# benchmark the token selectors against a real Postgres (needs `make testing-docker-images`).
+# BENCH_FILTER narrows the run, e.g. BENCH_FILTER='hot-wallet/.*skipLocked'.
+BENCH_FILTER ?= .
+BENCH_TIME ?= 100x
+benchmark-selector-postgres:
+	@go test ./token/services/selector/ -run '^$$' -bench 'BenchmarkSelectorPostgres/$(BENCH_FILTER)' -benchtime=$(BENCH_TIME) -benchmem -timeout 90m
+
 .PHONY: unit-tests
 # run standard unit tests
 unit-tests:
