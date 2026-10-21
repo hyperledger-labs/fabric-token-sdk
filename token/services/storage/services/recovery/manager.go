@@ -18,7 +18,7 @@ import (
 	"github.com/LFDT-Panurus/panurus/token/services/storage"
 	dbdriver "github.com/LFDT-Panurus/panurus/token/services/storage/db/driver"
 	"github.com/LFDT-Panurus/panurus/token/services/storage/ttxdb"
-	"github.com/hashicorp/go-uuid"
+	"github.com/google/uuid"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 )
 
@@ -229,10 +229,11 @@ func (m *Manager) Start() error {
 	// guaranteeing every process's owner string is unique, so a shared config value (e.g. one
 	// InstanceID baked into a Deployment's ConfigMap and applied to every replica pod) can
 	// never collide.
-	suffix, err := uuid.GenerateUUID()
+	u, err := uuid.NewRandom()
 	if err != nil {
 		return errors.Wrapf(err, "failed to generate instance id suffix")
 	}
+	suffix := u.String()
 	if m.configuredInstanceID == "" {
 		m.config.InstanceID = "recovery-" + suffix
 	} else {
