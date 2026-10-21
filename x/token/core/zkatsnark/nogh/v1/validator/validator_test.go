@@ -40,7 +40,7 @@ import (
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
 
-	"github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/nogh/v1"
+	zkatsnark "github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/nogh/v1"
 	"github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/nogh/v1/crypto/backend"
 	snarkdriver "github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/nogh/v1/driver"
 	"github.com/LFDT-Panurus/panurus/x/token/core/zkatsnark/nogh/v1/pp"
