@@ -10,6 +10,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"maps"
 	"os"
 	"strconv"
 	"sync/atomic"
@@ -1024,12 +1025,8 @@ func prepareSwapRequest(configuration *SetupConfiguration, l *ledger) (*driver.T
 	}
 
 	auditTokens := make(map[string]*token2.Token, len(inputs1)+len(inputs2))
-	for k, v := range inputs1 {
-		auditTokens[k] = v
-	}
-	for k, v := range inputs2 {
-		auditTokens[k] = v
-	}
+	maps.Copy(auditTokens, inputs1)
+	maps.Copy(auditTokens, inputs2)
 
 	deserializer, err := zkatsnarkdriver.NewDeserializer(configuration.PP)
 	if err != nil {
