@@ -6,6 +6,12 @@
 # reviewed and judged not exploitable in Panurus's usage. Include the OSV ID,
 # the module it comes from, and why it's safe to ignore here. Re-review (and
 # ideally drop) each entry whenever the pulling-in dependency is upgraded.
+#
+# A second, rarer kind of entry is an "unmaintained package" advisory: one that
+# condemns an entire package no matter how it is used and ships no fixed version
+# (introduced at 0), so no upgrade ever clears it. Such a finding only applies
+# to code that chooses to import that package. Allow-list it here only after
+# confirming nothing in Panurus imports it, and say so in the entry.
 
 # GO-2024-3218: Content Censorship in IPFS via Kademlia DHT abuse, in
 # github.com/libp2p/go-libp2p-kad-dht. No fix is published upstream. Reached
@@ -30,3 +36,12 @@ GO-2024-3218
 # that pin and cannot be adopted. Re-review when FSC's grpc dependency moves to
 # v1.85.0+.
 GO-2026-6443
+
+# GO-2026-5932: golang.org/x/crypto/openpgp is unmaintained ("deprecated; do not
+# use", introduced at 0 with no fixed version, so no upgrade ever clears it).
+# Panurus imports no openpgp code, and the golangci-lint depguard rule forbids
+# importing golang.org/x/crypto/openpgp and github.com/ProtonMail/go-crypto/openpgp,
+# so it cannot be introduced. This entry is a standing disposition: if a transitive
+# dependency ever pulls openpgp into the build, CI fails loudly for re-review.
+# See docs/security/openpgp_unmaintained_advisory.md.
+GO-2026-5932

@@ -67,7 +67,7 @@ To run it, use:
 ```bash
 make govulncheck
 ```
-Findings with no upstream fix that have been reviewed as not exploitable in Panurus's usage are listed, with justification, in `ci/govulncheck-allowlist.txt` — see that file before adding or removing an entry.
+Findings with no upstream fix that have been reviewed as not exploitable in Panurus's usage are listed, with justification, in `ci/govulncheck-allowlist.txt` — see that file before adding or removing an entry. The linter forbids importing OpenPGP (`golang.org/x/crypto/openpgp` and `github.com/ProtonMail/go-crypto/openpgp`) via the `depguard` rule in `.golangci.yml`; see [`GO-2026-5932`](../security/openpgp_unmaintained_advisory.md).
 
 ### golangci-lint
 A fast, all-in-one Go linter that runs multiple linters in parallel. It aggregates the output of many popular static analysis tools.
