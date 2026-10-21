@@ -297,7 +297,27 @@ tokens, the `parallelism` case on 10M, and the contention cases on 1,000.
 The three contention settings (`sherdlock+lock+contention`, `+stubborn`, `batchlock+contention`)
 ran to completion but their throughput lines were not captured: the output was interleaved with
 sherdlock WARN/INFO log lines ("Exceeded max number of immediate retries", "Lost lock race").
-Rerun them with logging quieted before drawing conclusions.
+Rerun with `FABRIC_LOGGING_SPEC=fatal` (8 clients, 1,000 tokens, `-benchtime=100x`, single run):
+
+| Setting | selects/s | contended/op | lock_conflicts_total |
+|---|---|---|---|
+| sherdlock+lock+contention (no backoff) | 33.0 | 86% | 1,079,087 |
+| sherdlock+lock+contention+stubborn (2 ms backoff) | 8.6 | 83% | 4,217,888 |
+| sherdlock+batchlock+contention | 105.4 | 86% | 863,680 |
+
+All three contend on 83-86% of requests, as the workload (8 clients, 1,000 tokens, no retry
+backoff for the first case) is designed to. Two things stand out:
+
+- **`+stubborn` is slower than its no-backoff counterpart**, not faster: 8.6/s vs 33.0/s, with
+  4x the lock conflicts. The 2 ms backoff does not resolve contention here, it multiplies it:
+  each retry re-attempts the same hot, still-contended prefix instead of waiting it out, so more
+  retries just mean more conflicts per eventual success. This is the in-memory locker's
+  zero-latency round trip working against the backoff's purpose; it should not be read onto the
+  Postgres retry-interval question in "Gaps in coverage" below, where a round trip costs real
+  time and 5 s is long enough to let a hot prefix clear.
+- **Batch locking is ~3x faster than the single-lock path under contention** (105.4/s vs
+  33.0/s) with slightly fewer lock conflicts, consistent with finding 1's Postgres result that
+  batch locking's advantage grows with contention, not just with selection size.
 
 How to read this:
 
@@ -312,9 +332,30 @@ How to read this:
   allocation and conversion, with no database involved. The simple selector stops after about
   100 tokens of the pre-sorted cache, which accounts for most of the 400-3000x gap. This also
   explains why the `-benchtime=2000x` run was abandoned (2000 x 115 ms is about 230 s per case).
-- **Still unexplained:** the cached/mixed figure of about 15 ms per Select over 1M tokens. That is
-  not a full scan, so it points at per-Select work on the snapshot (bucketing or iteration) and is
-  the part worth profiling.
+- **The cached/mixed figure of about 15 ms per Select over 1M tokens is `NewPermutation`'s full-wallet
+  shuffle, confirmed by profiling.** A CPU profile of `sherdlock+cached` (`pprof`, `-cpuprofile`)
+  attributes the time inside `Select` to `bucketedIterator.NewPermutation`
+  (`sherdlock/fetcher.go`), which `rand.Shuffle`s the *entire* cached candidate list on every
+  cache hit, not just the tokens a Select needs. An isolated microbenchmark of that function
+  confirms the cost and its scaling:
+
+  | wallet size | uniform amounts (one bucket) | distinct amounts (every token its own bucket) |
+  |---|---|---|
+  | 1,000 | 9.8 µs | 5.7 µs |
+  | 10,000 | 93.8 µs | 46.6 µs |
+  | 100,000 | 1.10 ms | 0.57 ms |
+  | 1,000,000 | 32.7 ms | 7.6 ms |
+
+  At 1M tokens with uniform amounts (this benchmark's actual setup: every token has quantity 1,
+  so the whole wallet is one shuffle bucket), the shuffle alone costs ~33 ms, the same order of
+  magnitude as the measured 15 ms per-Select figure and consistent with it being the dominant
+  cost rather than bucketing or map lookups. Cost is O(wallet size), not O(selection size): a
+  100-token Select pays to shuffle however many tokens the wallet holds. It is not a correctness
+  bug - the anti-hot-spot comment on `bucketedIterator` explains why the shuffle exists - but it
+  is a real optimization target for large eagerly-cached wallets, and the ~4x gap between the
+  uniform and distinct columns is explained by the per-bucket shuffle design: distinct amounts
+  put every token in its own one-element bucket, which is cheaper to "shuffle" than one
+  million-element bucket.
 - **The 0.36/s `parallelism` result** (10 clients, 10M tokens, lazy) is the same lazy-scan cost
   at 10x the wallet size, with `clients x GOMAXPROCS` goroutines competing for it.
 - Do not read any of these as a statement about production behaviour.
@@ -332,15 +373,25 @@ The report was reviewed against `benchmark_test.go` and the Postgres harness. Re
 | 5 | Near-exhaustion comment and doc claimed a third fail | Fixed in code comment, `selector.md` and this report; workload itself unchanged |
 | 6 | Zero unique violations read as "no races" | Fixed: explained as structural (`LockBatch` never plain-INSERTs) |
 | 7 | 20 ms retry, loopback DB, zero hold time | Documented under Gaps in coverage; **not measured** |
-| 8 | Sherdlock in-memory CPU cost | Lazy cost explained by the 1M-token wallet; the 15 ms cached/mixed cost **not investigated** |
+| 8 | Sherdlock in-memory CPU cost | Fixed: lazy cost explained by the 1M-token wallet; the 15 ms cached/mixed cost identified as `NewPermutation`'s full-wallet shuffle, confirmed by profiling and a standalone benchmark |
 | 9 | In-memory wallet sizes stated as 10k/100k | Fixed: 1M/10M per `testutils.NumTokensPerWallet` |
 | 10 | Little's law check mixed pass-1 and pass-2 figures | Fixed: recomputed from the table |
 | 11 | Hot-wallet recommendation row unqualified | Fixed: single node only, no failover |
 
 Remaining work: a 5 s retry run, a latency proxy, a nonzero hold time on hot-wallet and
-multi-replica, `-count=5` with `benchstat` on the sub-2x findings, and a profile of the in-memory
-sherdlock cached/mixed path. Rerun the three in-memory contention settings with logging quieted
-to capture their throughput lines.
+multi-replica, and `-count=5` with `benchstat` on the sub-2x findings. (The in-memory sherdlock
+cached/mixed path is profiled above, and the three in-memory contention settings have been
+rerun with logging quieted; see "How to read this" above for both.)
+
+A full report re-verification (2026-10-20, same machine) reran every workload at pass-1 scale
+(100 iterations) plus hot-wallet, near-exhaustion and stale-locks at pass-2 scale
+(300-1000 iterations, 3-8 runs). Every figure reproduced within the report's own stated noise
+bands, including the hot-wallet/simple gap (confirmed 1.5-2x across repeated runs, not just the
+1.3x single sample the report calls "within noise" - still inside the *suggestive* 1.3-2x band
+the report already uses to hedge this finding) and the stale-locks non-reproduction (cleaner=on
+105-167/s vs cleaner=off 103-183/s across 8 runs each, overlapping ranges, confirming sanity
+check 3's "measurement artifact" conclusion). No discrepancy was found beyond the two items
+closed out above.
 
 ## Reproducing
 
