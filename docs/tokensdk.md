@@ -25,6 +25,14 @@ Panurus is a comprehensive framework for building token-based decentralized appl
 
 ---
 
+## Architecture at a Glance
+
+![Panurus architecture](imgs/panurus_architecture.png)
+
+The editable source is [`imgs/panurus_architecture.svg`](imgs/panurus_architecture.svg). The sections below describe each part in detail.
+
+---
+
 ## Architectural Layers
 
 Panurus is organized into a vertical stack of layers, each providing a specific level of abstraction. A key design principle is the isolation of the **Network Service** to handle backend-specific complexities, allowing drivers to remain entirely ledger-agnostic.

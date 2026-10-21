@@ -1,0 +1,146 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1420 860" width="1420" height="860" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#222"/></marker>
+    <style>
+      .t{font-size:13px;font-weight:700;text-anchor:middle;fill:#111}
+      .h{font-size:16px;font-weight:700;text-anchor:middle;fill:#111}
+      .s{font-size:11px;text-anchor:middle;fill:#222}
+      .l{font-size:11px;text-anchor:middle;fill:#222}
+      .i{fill:#fff;stroke:#444;stroke-width:1.2}
+      .ln{stroke:#222;stroke-width:1.6;fill:none}
+    </style>
+  </defs>
+  <rect width="1420" height="860" fill="#fff"/>
+  <text x="710" y="38" font-size="26" font-weight="800" text-anchor="middle" fill="#111">LFDT PANURUS ARCHITECTURE</text>
+
+  <!-- platform -->
+  <rect x="10" y="60" width="1130" height="680" rx="14" fill="#eaf3f9" stroke="#9fc8dd" stroke-width="2"/>
+  <text x="575" y="84" class="h" style="font-size:17px">PANURUS PLATFORM (Fabric Smart Client node)</text>
+
+  <!-- user/app -->
+  <rect x="30" y="100" width="230" height="120" rx="10" fill="#f4f4f4" stroke="#777" stroke-width="1.5"/>
+  <text x="145" y="124" class="h">USER / APPLICATION</text>
+  <rect x="44" y="136" width="202" height="34" rx="6" class="i"/><text x="145" y="158" class="t">FSC VIEWS / DAPP</text>
+  <rect x="44" y="176" width="202" height="34" rx="6" class="i"/><text x="145" y="198" class="t">TOKENGEN CLI</text>
+
+  <!-- token api -->
+  <rect x="30" y="260" width="230" height="220" rx="10" fill="#9515c0" fill-opacity="0.18" stroke="#9515c0" stroke-width="2"/>
+  <text x="145" y="285" class="h">TOKEN API</text>
+  <text x="145" y="301" class="s">per (Network, Channel, Namespace)</text>
+  <rect x="44" y="312" width="202" height="34" rx="6" class="i"/><text x="145" y="334" class="t">TMS (Management Service)</text>
+  <rect x="44" y="352" width="202" height="34" rx="6" class="i"/><text x="145" y="374" class="t">WALLET API</text>
+  <rect x="44" y="392" width="202" height="34" rx="6" class="i"/><text x="145" y="414" class="t">VAULT API</text>
+  <rect x="44" y="432" width="202" height="36" rx="6" class="i"/><text x="145" y="448" class="t">IDENTITY SERVICE</text><text x="145" y="462" class="s">X.509 / Idemix</text>
+
+  <!-- ttx -->
+  <rect x="330" y="250" width="180" height="240" rx="12" fill="#685be3" stroke="#3d33a8" stroke-width="2"/>
+  <text x="420" y="300" font-size="16" font-weight="800" text-anchor="middle" fill="#fff">TTX SERVICE</text>
+  <text x="420" y="320" font-size="14" font-weight="700" text-anchor="middle" fill="#fff">ORCHESTRATOR</text>
+  <text x="420" y="350" font-size="11" text-anchor="middle" fill="#fff">Request → Assemble →</text>
+  <text x="420" y="366" font-size="11" text-anchor="middle" fill="#fff">Sign → Commit</text>
+  <rect x="345" y="390" width="150" height="26" rx="6" class="i"/><text x="420" y="408" class="t" style="font-size:11px">SELECTOR (UTXO locks)</text>
+  <rect x="345" y="424" width="70" height="26" rx="6" class="i"/><text x="380" y="442" class="t">NFTTX</text>
+  <rect x="425" y="424" width="70" height="26" rx="6" class="i"/><text x="460" y="442" class="t">INTEROP</text>
+
+  <!-- drivers -->
+  <rect x="570" y="100" width="300" height="470" rx="12" fill="#ccf2c6" stroke="#3f8f37" stroke-width="2"/>
+  <text x="720" y="126" class="h">TOKEN DRIVERS</text>
+  <rect x="584" y="136" width="272" height="26" rx="5" class="i"/><text x="720" y="154" class="t">DRIVER API (pluggable, ledger-agnostic)</text>
+  <rect x="584" y="174" width="272" height="170" rx="8" fill="#e8f9e5" stroke="#3f8f37"/>
+  <text x="720" y="194" class="h" style="font-size:14px">FABTOKEN (plaintext UTXO)</text>
+  <rect x="598" y="204" width="118" height="44" rx="6" class="i"/><text x="657" y="222" class="t">JSON TOKENS</text><text x="657" y="237" class="s">on ledger</text>
+  <rect x="724" y="204" width="118" height="44" rx="6" class="i"/><text x="783" y="222" class="t">X.509 OWNERS</text><text x="783" y="237" class="s">single auditor</text>
+  <rect x="598" y="258" width="244" height="30" rx="6" class="i"/><text x="720" y="278" class="t">VALIDATOR (signatures, balance)</text>
+  <text x="720" y="312" class="s">Simple, no privacy: ownership and</text><text x="720" y="326" class="s">activity visible to ledger readers</text>
+  <rect x="584" y="356" width="272" height="198" rx="8" fill="#e8f9e5" stroke="#3f8f37"/>
+  <text x="720" y="376" class="h" style="font-size:14px">ZKAT-DLOG (privacy, incl. NOGH)</text>
+  <rect x="598" y="386" width="118" height="44" rx="6" class="i"/><text x="657" y="404" class="t">PEDERSEN</text><text x="657" y="419" class="s">hidden value / type</text>
+  <rect x="724" y="386" width="118" height="44" rx="6" class="i"/><text x="783" y="404" class="t">ZK PROOFS</text><text x="783" y="419" class="s">range, transfer, issue</text>
+  <rect x="598" y="440" width="118" height="44" rx="6" class="i"/><text x="657" y="458" class="t">IDEMIX</text><text x="657" y="473" class="s">anonymous owners</text>
+  <rect x="724" y="440" width="118" height="44" rx="6" class="i"/><text x="783" y="458" class="t">AUDITOR</text><text x="783" y="473" class="s">inspects metadata</text>
+  <rect x="598" y="494" width="244" height="30" rx="6" class="i"/><text x="720" y="514" class="t">VALIDATOR (verifies proofs)</text>
+  <text x="720" y="544" class="s">NOGH: graph revealed, faster</text>
+
+  <!-- network -->
+  <rect x="930" y="100" width="190" height="260" rx="12" fill="#9fc8dd" stroke="#4b86a6" stroke-width="2"/>
+  <text x="1025" y="126" class="h">NETWORK SERVICE</text>
+  <text x="1025" y="142" class="s">bridge to the ledger</text>
+  <rect x="944" y="154" width="162" height="34" rx="6" class="i"/><text x="1025" y="176" class="t">TRANSLATOR</text>
+  <rect x="944" y="196" width="162" height="34" rx="6" class="i"/><text x="1025" y="218" class="t">BROADCAST</text>
+  <rect x="944" y="238" width="162" height="34" rx="6" class="i"/><text x="1025" y="260" class="t">FINALITY LISTENER</text>
+  <rect x="944" y="280" width="162" height="62" rx="6" class="i"/><text x="1025" y="300" class="t">BACKEND DRIVERS</text><text x="1025" y="316" class="s">Fabric</text><text x="1025" y="330" class="s">Ethereum</text>
+
+  <!-- storage -->
+  <rect x="930" y="410" width="190" height="200" rx="12" fill="#685be3" fill-opacity="0.2" stroke="#685be3" stroke-width="2"/>
+  <text x="1025" y="434" class="h">STORAGE (off-chain)</text>
+  <text x="1025" y="450" class="s">SQLite / PostgreSQL</text>
+  <rect x="944" y="460" width="162" height="30" rx="6" class="i"/><text x="1025" y="480" class="t">TOKEN DB</text>
+  <rect x="944" y="496" width="162" height="30" rx="6" class="i"/><text x="1025" y="516" class="t">TTX DB (history)</text>
+  <rect x="944" y="532" width="162" height="30" rx="6" class="i"/><text x="1025" y="552" class="t">IDENTITY / WALLET DB</text>
+  <rect x="944" y="568" width="162" height="30" rx="6" class="i"/><text x="1025" y="588" class="t">AUDIT DB</text>
+
+  <!-- p2p -->
+  <rect x="300" y="540" width="240" height="100" rx="12" fill="#9515c0" stroke="#6a0e8a" stroke-width="2"/>
+  <text x="420" y="564" font-size="15" font-weight="800" text-anchor="middle" fill="#fff">FSC P2P NETWORK</text>
+  <text x="420" y="586" font-size="11" text-anchor="middle" fill="#fff">View sessions · endorsement collection</text>
+  <text x="420" y="604" font-size="11" text-anchor="middle" fill="#fff">Identity / audit info exchange</text>
+  <text x="420" y="622" font-size="11" text-anchor="middle" fill="#fff">between owners, issuers, auditors</text>
+  <rect x="40" y="520" width="200" height="110" rx="10" fill="#e6dcf2" stroke="#9515c0" stroke-width="1.5"/>
+  <rect x="56" y="536" width="168" height="34" rx="6" class="i"/><text x="140" y="558" class="t">PANURUS NODE</text>
+  <rect x="56" y="580" width="168" height="34" rx="6" class="i"/><text x="140" y="602" class="t">PANURUS NODE</text>
+
+  <!-- fsc bar -->
+  <rect x="560" y="660" width="560" height="60" rx="10" fill="#fff" stroke="#777" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="840" y="680" class="t">FABRIC SMART CLIENT — CROSS-CUTTING</text>
+  <text x="840" y="696" class="s">Views · Network events · SQL storage · Errors · Logging</text><text x="840" y="711" class="s">Metrics (Prometheus) · Tracing (OpenTelemetry)</text>
+
+  <!-- ledger column -->
+  <rect x="1190" y="60" width="220" height="680" rx="14" fill="#dcdcdc" stroke="#999" stroke-width="2"/>
+  <text x="1300" y="90" class="h">LEDGER</text>
+  <text x="1300" y="108" class="s">Fabric / Ethereum</text>
+  <ellipse cx="1300" cy="150" rx="24" ry="9" fill="#fff" stroke="#444"/><path d="M1276,150 v22 a24,9 0 0 0 48,0 v-22" fill="#fff" stroke="#444"/>
+  <text x="1300" y="196" class="t">GLOBAL STATE</text>
+  <rect x="1204" y="220" width="192" height="230" rx="8" fill="#f4f4f4" stroke="#999"/>
+  <text x="1300" y="242" class="t">HYPERLEDGER FABRIC</text>
+  <rect x="1218" y="254" width="164" height="50" rx="6" class="i"/><text x="1300" y="274" class="t" style="font-size:11px">TOKEN CHAINCODE (TCC)</text><text x="1300" y="291" class="s">validates requests</text>
+  <rect x="1218" y="312" width="164" height="50" rx="6" class="i"/><text x="1300" y="332" class="t">PUBLIC PARAMETERS</text><text x="1300" y="349" class="s">issuers, auditor, curves</text>
+  <rect x="1218" y="370" width="164" height="64" rx="6" class="i"/><text x="1300" y="390" class="t">UTXO LEDGER</text><text x="1300" y="407" class="s">tokens as outputs of</text><text x="1300" y="421" class="s">committed requests</text>
+  <rect x="1204" y="470" width="192" height="140" rx="8" fill="#f4f4f4" stroke="#999"/>
+  <text x="1300" y="492" class="t">ETHEREUM / EVM</text>
+  <rect x="1218" y="504" width="164" height="46" rx="6" class="i"/><text x="1300" y="524" class="t">SMART CONTRACTS</text><text x="1300" y="540" class="s">validation + state</text>
+  <rect x="1218" y="558" width="164" height="38" rx="6" class="i"/><text x="1300" y="574" class="t">PUBLIC PARAMETERS</text><text x="1300" y="588" class="s">on-chain or off-chain</text>
+
+  <!-- arrows -->
+  <path class="ln" marker-start="url(#a)" marker-end="url(#a)" d="M145,220 V260"/>
+  <path class="ln" marker-end="url(#a)" d="M260,160 H295 V330 H330"/>
+  <text x="305" y="240" class="l" style="text-anchor:start">user request</text>
+  <path class="ln" marker-start="url(#a)" marker-end="url(#a)" d="M260,370 H330"/>
+  <path class="ln" marker-start="url(#a)" marker-end="url(#a)" d="M510,350 H570"/>
+  <text x="540" y="342" class="l">actions</text>
+  <path class="ln" marker-start="url(#a)" marker-end="url(#a)" d="M420,490 V540"/>
+  <path class="ln" marker-start="url(#a)" marker-end="url(#a)" d="M240,585 H300"/>
+  <text x="270" y="577" class="l">P2P</text>
+  <path class="ln" marker-end="url(#a)" d="M870,200 H930"/>
+  <path class="ln" marker-end="url(#a)" d="M870,230 H900 V250 H930" opacity="0"/>
+  <text x="900" y="192" class="l">request</text>
+  <path class="ln" marker-start="url(#a)" marker-end="url(#a)" d="M1025,360 V410"/>
+  <text x="1070" y="390" class="l">tx status / tokens</text>
+  <path class="ln" marker-start="url(#a)" marker-end="url(#a)" d="M870,500 H930"/>
+  <text x="900" y="490" class="l">state</text>
+  <path class="ln" marker-start="url(#a)" marker-end="url(#a)" d="M420,490 V520 M510,440 H540 V560" opacity="0"/>
+  <path class="ln" marker-end="url(#a)" d="M1120,150 H1190"/>
+  <text x="1155" y="142" class="l">submit</text>
+  <path class="ln" marker-end="url(#a)" d="M1190,300 H1120"/>
+  <text x="1155" y="292" class="l">finality</text>
+  <path class="ln" marker-start="url(#a)" marker-end="url(#a)" d="M145,480 V520"/>
+  <text x="196" y="504" class="l">node ↔ node</text>
+
+  <!-- external services -->
+  <rect x="300" y="765" width="780" height="80" rx="12" fill="#f4f4f4" stroke="#777" stroke-width="1.5"/>
+  <text x="690" y="787" class="h">EXTERNAL / SPECIALIZED NODES</text>
+  <rect x="320" y="800" width="230" height="36" rx="6" class="i"/><text x="435" y="817" class="t">AUDITOR SERVICE</text><text x="435" y="830" class="s">compliance, AuditDB</text>
+  <rect x="575" y="800" width="230" height="36" rx="6" class="i"/><text x="690" y="817" class="t">CERTIFIER SERVICE</text><text x="690" y="830" class="s">token certifications</text>
+  <rect x="830" y="800" width="230" height="36" rx="6" class="i"/><text x="945" y="817" class="t">ISSUER</text><text x="945" y="830" class="s">creates new tokens</text>
+  <path class="ln" marker-start="url(#a)" marker-end="url(#a)" d="M420,640 V765"/>
+  <text x="440" y="715" class="l" style="text-anchor:start">endorse / audit / certify</text>
+</svg>
