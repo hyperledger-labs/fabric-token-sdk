@@ -53,8 +53,9 @@ work func(T) error,           // The function to benchmark
 package main
 
 import (
-"fmt"
 "time"
+
+"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 "your/package/benchmark" // Import the runner
 )
 
@@ -77,7 +78,7 @@ RateLimit:      0,             // 0 = Full Speed (Closed-Loop)
         func(input int) error {   // Work: The operation to measure (timed)
             // Simulate work
             if process(input) != nil {
-                return fmt.Errorf("failed")
+                return errors.New("failed")
             }
             return nil
         },

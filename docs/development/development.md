@@ -18,5 +18,5 @@ This page contains link to the development guidelines and more.
 
 ## Useful resources
 
-- [How to use SDK's](https://github.com/hyperledger-labs/fabric-smart-client/blob/main/docs/platform/sdk.md): Current structure and guidelines for development of Panurus's-
+- [How to use SDK's](https://github.com/hyperledger-labs/fabric-smart-client/blob/main/docs/platform/sdk.md): Current structure and guidelines for development of Panurus's SDKs.
 - [Common problems](https://github.com/LFDT-Panurus/panurus/wiki/Common-problems): Common problems you may encounter. You can document more issues to help onboarding of future developers.
