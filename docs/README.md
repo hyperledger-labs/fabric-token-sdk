@@ -39,6 +39,7 @@ If you are developing *using* Panurus or contributing *to* Panurus, check out th
 
 *   [General Guidelines](development/general.md)
 *   [Idiomatic Go](development/idiomatic.md)
+*   [Dependency License Dispositions](development/license-dispositions.md)
 *   [Testing](development/testing.md)
 *   [Monitoring](development/monitoring.md), the [Metrics Reference](development/metrics.md) and the
     [Grafana dashboards](monitoring/grafana/README.md)

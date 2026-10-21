@@ -25,7 +25,7 @@ import (
 	"github.com/LFDT-Panurus/panurus/token/services/storage/db/sql/query/cond"
 	_select "github.com/LFDT-Panurus/panurus/token/services/storage/db/sql/query/select"
 	"github.com/LFDT-Panurus/panurus/token/services/storage/integrity"
-	"github.com/hashicorp/go-uuid"
+	"github.com/google/uuid"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	driver3 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections/iterators"
@@ -502,10 +502,11 @@ func (db *TransactionStore) AddTransactionEndorsementAck(ctx context.Context, tx
 	}
 
 	now := time.Now().UTC()
-	id, err := uuid.GenerateUUID()
+	u, err := uuid.NewRandom()
 	if err != nil {
 		return errors.Wrapf(err, "error generating uuid")
 	}
+	id := u.String()
 	query, args := q.InsertInto(db.table.TransactionEndorseAck).
 		Fields("id", "tx_id", "endorser", "sigma", "stored_at").
 		Row(id, txID, endorser, sigma, now).
@@ -705,10 +706,11 @@ func (w *TransactionStoreTransaction) AddTransaction(ctx context.Context, rs ...
 	rows := make([]common3.Tuple, len(rs))
 	for i, r := range rs {
 		logger.DebugfContext(ctx, "adding transaction record [%s:%d,%s:%s:%s:%s]", r.TxID, r.ActionType, r.TokenType, r.SenderEID, r.RecipientEID, r.Amount)
-		id, err := uuid.GenerateUUID()
+		u, err := uuid.NewRandom()
 		if err != nil {
 			return errors.Wrapf(err, "error generating uuid")
 		}
+		id := u.String()
 		if err := validateAmount(r.Amount); err != nil {
 			return errors.WithMessagef(err, "invalid amount for record [%s]", r.TxID)
 		}
@@ -782,10 +784,11 @@ func (w *TransactionStoreTransaction) AddMovement(ctx context.Context, rs ...dbd
 	rows := make([]common3.Tuple, len(rs))
 	for i, r := range rs {
 		logger.DebugfContext(ctx, "adding movement record [%s]", r)
-		id, err := uuid.GenerateUUID()
+		u, err := uuid.NewRandom()
 		if err != nil {
 			return errors.Wrapf(err, "error generating uuid")
 		}
+		id := u.String()
 		if err := validateAmount(r.Amount); err != nil {
 			return errors.WithMessagef(err, "invalid amount for record [%s]", r.TxID)
 		}
