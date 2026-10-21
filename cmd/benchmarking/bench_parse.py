@@ -1,3 +1,7 @@
+# Copyright IBM Corp. All Rights Reserved.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """Lightweight parser for `go test -bench` text output.
 
 This module holds only the pure-parsing logic so it can be imported without
