@@ -25,7 +25,7 @@ import (
 
 // idemixTestdataPath points at the idemix MSP material shared with
 // zkatdlog/nogh/v1 (generic idemix fixtures, nothing zkatdlog-specific).
-const idemixTestdataPath = "../../../../../token/core/zkatdlog/nogh/v1/testdata"
+const idemixTestdataPath = "../../../../../../../token/core/zkatdlog/nogh/v1/testdata"
 
 var testCurves = []ecc.ID{ecc.BN254, ecc.BLS12_381}
 

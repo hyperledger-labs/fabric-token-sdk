@@ -1367,7 +1367,7 @@ func TestValidateMigration_NotConfiguredWithoutSetup(t *testing.T) {
 
 // idemixTestdataPath points at the idemix MSP material shared with
 // zkatdlog/nogh/v1 (generic idemix fixtures, nothing zkatdlog-specific).
-const idemixTestdataPath = "../../../../../token/core/zkatdlog/nogh/v1/testdata"
+const idemixTestdataPath = "../../../../../../../token/core/zkatdlog/nogh/v1/testdata"
 
 // testutilsConfigurations builds the testutils setup configurations for the
 // curves selected by the benchmark cases (shared -curves flag) and the proof
