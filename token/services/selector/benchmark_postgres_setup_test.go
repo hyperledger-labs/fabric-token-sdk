@@ -310,11 +310,10 @@ func (p *pgVaultProvider) Vault(string, string, string) (driver.Vault, error) { 
 
 // pgReplica is one node: its own config, pools, stores and selector service.
 type pgReplica struct {
-	mgr      token.SelectorManager
-	tokens   *tokendb.StoreService
-	lockMgr  *pgLockStoreManager
-	metrics  *benchMetricsProvider
-	shutdown func()
+	mgr     token.SelectorManager
+	tokens  *tokendb.StoreService
+	lockMgr *pgLockStoreManager
+	metrics *benchMetricsProvider
 }
 
 func newPgReplica(tb testing.TB, dsn string, cfg pgConfig) *pgReplica {
@@ -354,7 +353,6 @@ func newPgReplica(tb testing.TB, dsn string, cfg pgConfig) *pgReplica {
 	case "simple":
 		svc := simple.NewService(netsdk.NewLockerProvider(ttxSSM, 2*time.Second, 5*time.Minute), fp)
 		r.mgr, err = svc.SelectorManager(mgmt)
-		r.shutdown = svc.Shutdown
 	default:
 		sc, cfgErr := selconfig.New(fp)
 		require.NoError(tb, cfgErr)
@@ -363,7 +361,6 @@ func newPgReplica(tb testing.TB, dsn string, cfg pgConfig) *pgReplica {
 		require.NoError(tb, fpErr)
 		svc := sherdlock.NewService(fetchers, lockMgr, fp, r.metrics)
 		r.mgr, err = svc.SelectorManager(mgmt)
-		r.shutdown = svc.Shutdown
 	}
 	require.NoError(tb, err)
 
@@ -371,7 +368,10 @@ func newPgReplica(tb testing.TB, dsn string, cfg pgConfig) *pgReplica {
 }
 
 func (r *pgReplica) close() {
-	r.shutdown()
+	// The sherdlock manager runs a lease cleaner; the simple one has nothing to stop.
+	if m, ok := r.mgr.(interface{ Stop() error }); ok {
+		_ = m.Stop()
+	}
 	_ = r.tokens.Close()
 	if pg := r.lockMgr.pg.Load(); pg != nil {
 		_ = pg.Close()

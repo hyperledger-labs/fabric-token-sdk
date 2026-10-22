@@ -237,9 +237,8 @@ func (l *BucketLimiter) Allow(_ context.Context, scope string, walletID string) 
 // Stop releases the memory held by the limiter. The limiter stays usable afterwards, with every
 // wallet starting from a full bucket again.
 //
-// A selector service never calls this: its Shutdown also runs on routine public-parameter
-// reloads, and resetting every wallet's allowance there would let a throttled client wash out
-// its debt. Stop is for callers that own a limiter and are done with it.
+// A selector service never calls this. Stop is for callers that own a limiter and are done
+// with it.
 func (l *BucketLimiter) Stop() {
 	l.mu.Lock()
 	defer l.mu.Unlock()

@@ -122,20 +122,6 @@ func TestServiceRateLimiting(t *testing.T) {
 		require.NoError(t, err)
 		assert.IsType(t, &sherdlock.Manager{}, mgr)
 	})
-
-	t.Run("ShutdownKeepsTheLimiter", func(t *testing.T) {
-		limiter := ratelimit.New(ratelimit.Config{Rate: 0.001, Burst: 1})
-		svc, tms := newServiceUnderTest(t, ratelimit.WithLimiter(limiter))
-
-		_, err := svc.SelectorManager(tms)
-		require.NoError(t, err)
-		require.NoError(t, limiter.Allow(t.Context(), tms.ID().String(), "alice"))
-
-		// Shutdown also runs on public-parameter reloads, so it must not hand the wallet a
-		// fresh allowance.
-		svc.Shutdown()
-		require.ErrorIs(t, limiter.Allow(t.Context(), tms.ID().String(), "alice"), token.SelectorRateLimited)
-	})
 }
 
 // newServiceUnderTest returns a sherdlock service backed by mocks, together with the management
@@ -150,7 +136,6 @@ func newServiceUnderTest(t *testing.T, opts ...ratelimit.Option) (*sherdlock.Sel
 	metricsProvider, _ := setupMetricsMocks()
 
 	svc := sherdlock.NewService(fetcherProvider, lockStoreManager, &mocks.FakeConfigProvider{}, metricsProvider, opts...)
-	t.Cleanup(svc.Shutdown)
 
 	driverTMS := &drivermock.TokenManagerService{}
 	ppm := &drivermock.PublicParamsManager{}
