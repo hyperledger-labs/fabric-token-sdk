@@ -9,6 +9,7 @@ package sherdlock
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -76,6 +77,47 @@ func TestNewCachedFetcher_WithCustomValues(t *testing.T) {
 	assert.Equal(t, customFreshness, fetcher.freshnessInterval)
 	assert.Equal(t, uint32(customMaxQueries), fetcher.maxQueriesBeforeRefresh)
 	assert.NotNil(t, fetcher.cache)
+}
+
+// fetcherCacheSize is a number of tokens (#2506): 20 wallets holding one token each fit in
+// a cache of size 20.
+func TestCachedFetcher_CacheSizeCountsTokens(t *testing.T) {
+	mockDB := new(mockTokenDB)
+	tokens := make([]*token2.UnspentTokenInWallet, 0, 20)
+	for i := range 20 {
+		tokens = append(tokens, &token2.UnspentTokenInWallet{WalletID: fmt.Sprintf("wallet%d", i), Type: "USD", Quantity: "0x1"})
+	}
+	mockDB.On("SpendableTokensIteratorBy", mock.Anything, "", token2.Type("")).Return(iterators.Slice(tokens), nil)
+
+	fetcher := NewCachedFetcher(mockDB, 20, time.Minute, 1000)
+	fetcher.update(t.Context())
+
+	for _, tok := range tokens {
+		_, ok := fetcher.cache.Get(tokenKey(tok.WalletID, "USD"))
+		assert.True(t, ok, "tokens of [%s] should be cached", tok.WalletID)
+	}
+}
+
+// An entry costs as many units as it holds tokens: with a cache of size 2, a wallet holding
+// 2 tokens fits and a wallet holding 3 does not.
+func TestCachedFetcher_CacheEntryCostIsTokenCount(t *testing.T) {
+	mockDB := new(mockTokenDB)
+	tokens := []*token2.UnspentTokenInWallet{
+		{WalletID: "wallet1", Type: "USD", Quantity: "0x1"},
+		{WalletID: "wallet1", Type: "USD", Quantity: "0x2"},
+		{WalletID: "wallet1", Type: "USD", Quantity: "0x3"},
+		{WalletID: "wallet2", Type: "USD", Quantity: "0x1"},
+		{WalletID: "wallet2", Type: "USD", Quantity: "0x2"},
+	}
+	mockDB.On("SpendableTokensIteratorBy", mock.Anything, "", token2.Type("")).Return(iterators.Slice(tokens), nil)
+
+	fetcher := NewCachedFetcher(mockDB, 2, time.Minute, 1000)
+	fetcher.update(t.Context())
+
+	_, ok := fetcher.cache.Get(tokenKey("wallet1", "USD"))
+	assert.False(t, ok, "3 tokens do not fit in a cache of size 2")
+	_, ok = fetcher.cache.Get(tokenKey("wallet2", "USD"))
+	assert.True(t, ok, "2 tokens fit in a cache of size 2")
 }
 
 func TestCachedFetcher_IsCacheStale(t *testing.T) {
