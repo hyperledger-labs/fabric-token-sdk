@@ -27,11 +27,6 @@ func TestServiceUnit(t *testing.T) {
 	svc := sherdlock.NewService(mockFP, mockLSM, mockCP, metricsProvider)
 	require.NotNil(t, svc)
 
-	t.Run("Shutdown", func(t *testing.T) {
-		svc.Shutdown()
-		assert.Equal(t, 0, svc.ManagersCount())
-	})
-
 	t.Run("SelectorManager_NilTMS", func(t *testing.T) {
 		_, err := svc.SelectorManager(nil)
 		require.Error(t, err)
@@ -59,13 +54,6 @@ func TestServiceUnit(t *testing.T) {
 		mgr, err := svc.SelectorManager(tms)
 		require.NoError(t, err)
 		assert.NotNil(t, mgr)
-		assert.Equal(t, 1, svc.ManagersCount())
-	})
-
-	t.Run("ManagersCount", func(t *testing.T) {
-		// New service starts with 0
-		svc2 := sherdlock.NewService(mockFP, mockLSM, mockCP, metricsProvider)
-		assert.Equal(t, 0, svc2.ManagersCount())
 	})
 }
 

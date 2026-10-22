@@ -36,7 +36,7 @@ type Options struct {
 // token.selector.rateLimit* configuration. Pass nil to disable rate limiting outright, whatever
 // the configuration says.
 //
-// The service does not take ownership of the limiter: it never stops it, not even from Shutdown.
+// The service does not take ownership of the limiter: it never stops it.
 // A limiter passed here may therefore be shared between services, and its lifecycle stays with
 // the caller.
 func WithLimiter(limiter Limiter) Option {

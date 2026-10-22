@@ -119,7 +119,6 @@ func TestManager_Stop(t *testing.T) {
 	})
 }
 
-// TestSelectorService_Shutdown verifies that SelectorService.Shutdown stops all managers.
 func TestManager_StopReturnsTimeoutError(t *testing.T) {
 	m := &Manager{
 		cancel:      func() {},
@@ -131,27 +130,4 @@ func TestManager_StopReturnsTimeoutError(t *testing.T) {
 	require.Error(t, err)
 	require.ErrorIs(t, err, ErrTimeout)
 	require.GreaterOrEqual(t, time.Since(start), stopTimeout)
-}
-
-func TestSelectorService_Shutdown(t *testing.T) {
-	t.Run("Shutdown stops all tracked managers", func(t *testing.T) {
-		svc := &SelectorService{}
-		m1 := &Manager{cancel: func() {}, cleanerDone: make(chan struct{})}
-		m2 := &Manager{cancel: func() {}, cleanerDone: make(chan struct{})}
-		close(m1.cleanerDone)
-		close(m2.cleanerDone)
-
-		svc.trackManager(m1)
-		svc.trackManager(m2)
-
-		// Must not panic.
-		svc.Shutdown()
-
-		assert.Equal(t, 0, svc.ManagersCount(), "managers slice cleared after Shutdown")
-	})
-
-	t.Run("Shutdown is safe with no managers", func(t *testing.T) {
-		svc := &SelectorService{}
-		require.NotPanics(t, svc.Shutdown)
-	})
 }
