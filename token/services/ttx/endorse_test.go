@@ -15,6 +15,9 @@ import (
 	"github.com/LFDT-Panurus/panurus/token"
 	"github.com/LFDT-Panurus/panurus/token/driver"
 	"github.com/LFDT-Panurus/panurus/token/driver/mock"
+	"github.com/LFDT-Panurus/panurus/token/services/identity"
+	"github.com/LFDT-Panurus/panurus/token/services/identity/boolpolicy"
+	"github.com/LFDT-Panurus/panurus/token/services/identity/multisig"
 	"github.com/LFDT-Panurus/panurus/token/services/ttx"
 	mock2 "github.com/LFDT-Panurus/panurus/token/services/ttx/dep/mock"
 	"github.com/LFDT-Panurus/panurus/token/services/ttx/dep/tokenapi"
@@ -38,6 +41,9 @@ type TestEndorseViewContextInput struct {
 	// IsMeErr makes the token IdentityProvider's IsMe return this error, simulating a
 	// storage failure while resolving ownership of a required signer (issue #2066).
 	IsMeErr error
+	// RequestIssuer is the issuer recorded in the token request's issue action.
+	// Defaults to "an_issuer".
+	RequestIssuer token.Identity
 }
 
 type TestEndorseViewContext struct {
@@ -56,6 +62,9 @@ func newTestEndorseViewContext(t *testing.T, input *TestEndorseViewContextInput)
 	}
 	if len(input.IssuerIdentity) == 0 {
 		input.IssuerIdentity = []byte("an_issuer")
+	}
+	if len(input.RequestIssuer) == 0 {
+		input.RequestIssuer = []byte("an_issuer")
 	}
 
 	session := &mock2.Session{}
@@ -103,7 +112,7 @@ func newTestEndorseViewContext(t *testing.T, input *TestEndorseViewContextInput)
 			ActionID: 0,
 			IssueMetadata: &driver.IssueMetadata{
 				Issuer: driver.AuditableIdentity{
-					Identity: []byte("an_issuer"),
+					Identity: input.RequestIssuer,
 				},
 			},
 		},
@@ -292,6 +301,37 @@ func TestEndorseView(t *testing.T) {
 			},
 		},
 		{
+			// Regression test for issue #2501: a signer typed as multisig whose body does not
+			// decode must abort endorsement instead of being handled as a plain signer.
+			name: "malformed multisig signer aborts endorsement",
+			prepare: func() *TestEndorseViewContext {
+				return newTestEndorseViewContext(t, &TestEndorseViewContextInput{
+					RequestIssuer: mustWrapWithType(t, multisig.Multisig, []byte("not a multi identity")),
+				})
+			},
+			expectError:   true,
+			errorContains: "failed unwrapping multi-sig identity",
+			expectErr:     ttx.ErrHandlingSignatureRequests,
+			verify: func(ctx *TestEndorseViewContext, _ any) {
+				assert.Equal(t, 0, ctx.session.SendCallCount())
+			},
+		},
+		{
+			// Same as above for a policy identity (issue #2501).
+			name: "malformed policy signer aborts endorsement",
+			prepare: func() *TestEndorseViewContext {
+				return newTestEndorseViewContext(t, &TestEndorseViewContextInput{
+					RequestIssuer: mustWrapWithType(t, boolpolicy.Policy, []byte("not a policy identity")),
+				})
+			},
+			expectError:   true,
+			errorContains: "failed unwrapping policy identity",
+			expectErr:     ttx.ErrHandlingSignatureRequests,
+			verify: func(ctx *TestEndorseViewContext, _ any) {
+				assert.Equal(t, 0, ctx.session.SendCallCount())
+			},
+		},
+		{
 			name: "wrong identity in signature request",
 			prepare: func() *TestEndorseViewContext {
 				c := newTestEndorseViewContext(t, &TestEndorseViewContextInput{
@@ -428,4 +468,14 @@ func TestEndorseView_EndorsedTxContextCancellation(t *testing.T) {
 	// Phase 1 signature was sent before the context was cancelled.
 	assert.GreaterOrEqual(t, testCtx.session.SendCallCount(), 1,
 		"token signature must have been sent before context cancellation")
+}
+
+// mustWrapWithType wraps raw as a typed identity of the given type, without checking that raw is a
+// valid body for that type.
+func mustWrapWithType(t *testing.T, idType identity.Type, raw []byte) token.Identity {
+	t.Helper()
+	id, err := identity.WrapWithType(idType, raw)
+	require.NoError(t, err)
+
+	return id
 }
