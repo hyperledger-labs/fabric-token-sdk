@@ -905,6 +905,22 @@ func TestPublicParamsUpdate(network *integration.Infrastructure, newAuditorID st
 		auditor = issuer
 	}
 	RegisterAuditor(network, auditor)
+	gomega.Eventually(GetPublicParams).WithArguments(network, newIssuer).WithTimeout(120 * time.Second).WithPolling(15 * time.Second).Should(gomega.Equal(ppBytes))
+	gomega.Eventually(GetPublicParams).WithArguments(network, issuer).WithTimeout(120 * time.Second).WithPolling(15 * time.Second).Should(gomega.Equal(ppBytes))
+	if _, ok := (*sel)["endorser-1"]; ok {
+		gomega.Eventually(GetPublicParams).WithArguments(network, endorser1).WithTimeout(120 * time.Second).WithPolling(15 * time.Second).Should(gomega.Equal(ppBytes))
+	}
+	if !issuerAsAuditor {
+		gomega.Eventually(GetPublicParams).WithArguments(network, newAuditor).WithTimeout(120 * time.Second).WithPolling(15 * time.Second).Should(gomega.Equal(ppBytes))
+	}
+	// give time to the issuer and the auditor to update their public parameters and reload their wallets
+	gomega.Eventually(DoesWalletExist).WithArguments(network, newIssuer, "", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.BeTrue())
+	if issuerAsAuditor {
+		gomega.Eventually(DoesWalletExist).WithArguments(network, newIssuer, "", views.AuditorWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.BeTrue())
+	} else {
+		gomega.Eventually(DoesWalletExist).WithArguments(network, newAuditor, "", views.AuditorWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(gomega.BeTrue())
+	}
+
 	txId := IssueCash(network, "", "USD", 110, alice, auditor, true, issuer)
 	gomega.Expect(txId).NotTo(gomega.BeEmpty())
 	CheckBalanceAndHolding(network, alice, "", "USD", 110, auditor)
