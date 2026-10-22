@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/LFDT-Panurus/panurus/token"
+	"github.com/LFDT-Panurus/panurus/token/services/identity"
 	"github.com/LFDT-Panurus/panurus/token/services/identity/boolpolicy"
 	"github.com/LFDT-Panurus/panurus/token/services/identity/multisig"
 	"github.com/LFDT-Panurus/panurus/token/services/ttx/dep"
@@ -251,13 +252,21 @@ func extractRequiredSigners(ctx context.Context, sigService dep.SignatureService
 	transferSigners := request.TransferSigners()
 	res := make([]token.Identity, 0, len(issuerSigners)+len(transferSigners))
 	for _, signer := range issuerSigners {
-		if appendUnwrapped(&res, signer) {
+		unwrapped, err := appendUnwrapped(&res, signer)
+		if err != nil {
+			return nil, err
+		}
+		if unwrapped {
 			continue
 		}
 		res = append(res, signer)
 	}
 	for _, signer := range transferSigners {
-		if appendUnwrapped(&res, signer) {
+		unwrapped, err := appendUnwrapped(&res, signer)
+		if err != nil {
+			return nil, err
+		}
+		if unwrapped {
 			continue
 		}
 		res = append(res, signer)
@@ -278,19 +287,47 @@ func extractRequiredSigners(ctx context.Context, sigService dep.SignatureService
 
 // appendUnwrapped appends the component identities of a composite identity (multisig or policy)
 // to res and returns true; returns false when the identity is not a composite type.
-func appendUnwrapped(res *[]token.Identity, signer token.Identity) bool {
-	if multiSigners, _, _ := multisig.Unwrap(signer); len(multiSigners) != 0 {
+// An identity typed as multisig or policy whose body does not decode is an error, as in
+// CollectEndorsementsView: handling it as a plain signer would silently drop it from the
+// required signers.
+func appendUnwrapped(res *[]token.Identity, signer token.Identity) (bool, error) {
+	idType, typed := typeOf(signer)
+	if !typed {
+		return false, nil
+	}
+	switch idType {
+	case multisig.Multisig:
+		multiSigners, _, err := multisig.Unwrap(signer)
+		if err != nil {
+			return false, errors.Wrapf(err, "failed unwrapping multi-sig identity [%s]", signer)
+		}
+		if len(multiSigners) == 0 {
+			return false, nil
+		}
 		*res = append(*res, multiSigners...)
 
-		return true
-	}
-	if pi, ok, _ := boolpolicy.Unwrap(signer); ok && pi != nil {
+		return true, nil
+	case boolpolicy.Policy:
+		pi, _, err := boolpolicy.Unwrap(signer)
+		if err != nil {
+			return false, errors.Wrapf(err, "failed unwrapping policy identity [%s]", signer)
+		}
 		for _, b := range pi.Identities {
 			*res = append(*res, token.Identity(b))
 		}
 
-		return true
+		return true, nil
+	default:
+		return false, nil
+	}
+}
+
+// typeOf returns the type of the given typed identity, or false when it is not a typed identity.
+func typeOf(id token.Identity) (identity.Type, bool) {
+	ti, err := identity.UnmarshalTypedIdentity(id)
+	if err != nil {
+		return 0, false
 	}
 
-	return false
+	return ti.Type, true
 }
