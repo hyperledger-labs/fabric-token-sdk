@@ -25,56 +25,21 @@ Panurus is a comprehensive framework for building token-based decentralized appl
 
 ---
 
+## Architecture at a Glance
+
+![Panurus architecture](imgs/panurus_architecture.png)
+
+The editable source is [`imgs/panurus_architecture.svg`](imgs/panurus_architecture.svg). The sections below describe each part in detail.
+
+---
+
 ## Architectural Layers
 
 Panurus is organized into a vertical stack of layers, each providing a specific level of abstraction. A key design principle is the isolation of the **Network Service** to handle backend-specific complexities, allowing drivers to remain entirely ledger-agnostic.
 
-```mermaid
-graph TD
-    subgraph "Application Layer"
-        UserApp[User Application / View]
-    end
+![Panurus architectural layers](imgs/panurus_layers.png)
 
-    subgraph "Services Layer"
-        TTX[TTX: Transaction Orchestration]
-        Selector[Selector: UTXO Selection]
-        Auditor[Auditor: Compliance Service]
-        Identity[Identity: Panurus Identity Service]
-    end
-
-    subgraph "Token API"
-        TMS[Token Management Service]
-        WalletAPI[Wallet API]
-        VaultAPI[Vault API]
-    end
-
-    subgraph "Driver Layer (Backend Agnostic)"
-        DriverAPI[Driver API Interface]
-        Drivers[Drivers: FabToken / ZKAT-DLOG]
-    end
-
-    subgraph "Network Service Layer"
-        NetService[Network Service: Translation & Submission]
-    end
-
-    subgraph "Infrastructure"
-        DLT[Blockchain Ledger: Fabric, FabricX]
-    end
-
-    UserApp --> TTX
-    UserApp --> TMS
-    UserApp --> NetService
-    
-    TTX --> Selector
-    TTX --> TMS
-    TTX --> NetService
-    
-    TMS --> DriverAPI
-    TMS --> Identity
-    DriverAPI --> Drivers
-    
-    NetService --> DLT
-```
+The editable source is [`imgs/panurus_layers.svg`](imgs/panurus_layers.svg).
 
 ### Key Components
 - **Services Layer**: High-level libraries for common patterns. `TTX` handles multi-party flows. The **Identity Service** is internal to Panurus and manages cryptographic materials, signatures, and identity resolution independently of the underlying platform.
@@ -131,7 +96,7 @@ graph LR
     Locked -->|Commit Success| Spent[Spent]
     Locked -->|Abort / Timeout| Unspent
     Unspent -->|Driver Upgrade| UpgradeRequired[Upgrade Required]
-    UpgradeUpgradeRequired -->|Upgrade Tx| Unspent
+    UpgradeRequired -->|Upgrade Tx| Unspent
 ```
 
 1.  **Issuance**: An authorized issuer creates a new token output on the ledger. See [Issuance Details](services/ttx.md#issue).

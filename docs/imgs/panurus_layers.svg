@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1120" width="1200" height="1120" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#222"/></marker>
+    <marker id="d" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#4b3fc4"/></marker>
+    <style>
+      .h{font-size:19px;font-weight:800;fill:#111}
+      .t{font-size:17px;font-weight:700;text-anchor:middle;fill:#111}
+      .s{font-size:14px;text-anchor:middle;fill:#222}
+      .l{font-size:14px;text-anchor:middle;fill:#222}
+      .w{fill:#fff}
+      .i{fill:#fff;stroke:#444;stroke-width:1.4}
+      .ln{stroke:#222;stroke-width:2;fill:none}
+    </style>
+  </defs>
+  <rect width="1200" height="1120" fill="#fff"/>
+  <text x="610" y="42" font-size="30" font-weight="800" text-anchor="middle" fill="#111">PANURUS ARCHITECTURAL LAYERS</text>
+
+  <!-- Application -->
+  <rect x="100" y="70" width="1020" height="120" rx="14" fill="#f4f4f4" stroke="#777" stroke-width="2"/>
+  <text x="122" y="98" class="h">APPLICATION LAYER</text>
+  <rect x="470" y="110" width="280" height="64" rx="8" class="i"/><text x="610" y="136" class="t">USER APPLICATION / VIEW</text><text x="610" y="158" class="s">FSC views, dApps</text>
+
+  <!-- Services -->
+  <rect x="100" y="240" width="1020" height="130" rx="14" fill="#685be3" fill-opacity="0.16" stroke="#685be3" stroke-width="2.4"/>
+  <text x="122" y="268" class="h">SERVICES LAYER</text>
+  <rect x="135" y="290" width="225" height="64" rx="8" fill="#685be3" stroke="#3d33a8" stroke-width="1.8"/><text x="247" y="316" class="t w">TTX</text><text x="247" y="338" class="s w">transaction orchestration</text>
+  <rect x="380" y="290" width="225" height="64" rx="8" class="i"/><text x="492" y="316" class="t">IDENTITY</text><text x="492" y="338" class="s">X.509 / Idemix</text>
+  <rect x="625" y="290" width="225" height="64" rx="8" class="i"/><text x="737" y="316" class="t">SELECTOR</text><text x="737" y="338" class="s">UTXO selection &amp; locking</text>
+  <rect x="870" y="290" width="225" height="64" rx="8" class="i"/><text x="982" y="316" class="t">AUDITOR</text><text x="982" y="338" class="s">compliance and audit</text>
+
+  <!-- Token API -->
+  <rect x="100" y="420" width="1020" height="130" rx="14" fill="#9515c0" fill-opacity="0.14" stroke="#9515c0" stroke-width="2.4"/>
+  <text x="122" y="448" class="h">TOKEN API</text>
+  <rect x="135" y="470" width="225" height="64" rx="8" fill="#9515c0" stroke="#6a0e8a" stroke-width="1.8"/><text x="247" y="496" class="t w">TMS</text><text x="247" y="518" class="s w">Token Management Service</text>
+  <rect x="380" y="470" width="225" height="64" rx="8" class="i"/><text x="492" y="508" class="t">WALLET API</text>
+  <rect x="625" y="470" width="225" height="64" rx="8" class="i"/><text x="737" y="508" class="t">VAULT API</text>
+
+  <!-- Driver -->
+  <rect x="100" y="600" width="1020" height="130" rx="14" fill="#ccf2c6" stroke="#3f8f37" stroke-width="2.4"/>
+  <text x="122" y="628" class="h">DRIVER LAYER (backend-agnostic)</text>
+  <rect x="560" y="650" width="300" height="64" rx="8" class="i"/><text x="710" y="676" class="t">DRIVER API INTERFACE</text><text x="710" y="698" class="s">pluggable token technologies</text>
+  <rect x="900" y="650" width="200" height="64" rx="8" class="i"/><text x="1000" y="676" class="t">DRIVERS</text><text x="1000" y="698" class="s">FabToken / ZKAT-DLOG</text>
+
+  <!-- Network -->
+  <rect x="100" y="780" width="1020" height="120" rx="14" fill="#9fc8dd" stroke="#4b86a6" stroke-width="2.4"/>
+  <text x="122" y="808" class="h">NETWORK SERVICE LAYER</text>
+  <rect x="470" y="820" width="280" height="64" rx="8" class="i"/><text x="610" y="846" class="t">NETWORK SERVICE</text><text x="610" y="868" class="s">translate, submit, finality</text>
+
+  <!-- Infrastructure -->
+  <rect x="100" y="950" width="1020" height="140" rx="14" fill="#dcdcdc" stroke="#999" stroke-width="2.4"/>
+  <text x="122" y="978" class="h">INFRASTRUCTURE</text>
+  <rect x="195" y="1000" width="250" height="64" rx="8" class="i"/><text x="320" y="1026" class="t">HYPERLEDGER FABRIC</text><text x="320" y="1048" class="s">Token Chaincode</text>
+  <rect x="485" y="1000" width="250" height="64" rx="8" class="i"/><text x="610" y="1026" class="t">FABRICX</text><text x="610" y="1048" class="s">Fabric-X</text>
+  <rect x="775" y="1000" width="250" height="64" rx="8" class="i"/><text x="900" y="1026" class="t">ETHEREUM / EVM</text><text x="900" y="1048" class="s">smart contracts</text>
+
+  <!-- arrows -->
+  <path class="ln" marker-end="url(#a)" d="M520,174 V207 H330 V290"/>
+  <path class="ln" marker-end="url(#a)" d="M470,142 H70 V502 H135"/>
+  <path class="ln" marker-end="url(#a)" d="M300,354 V470"/>
+  <path class="ln" marker-end="url(#a)" d="M340,470 V405 H492 V354"/>
+  <path class="ln" marker-end="url(#a)" d="M250,534 V567 H710 V650"/>
+  <path class="ln" marker-end="url(#a)" d="M860,682 H900"/>
+  <path class="ln" marker-end="url(#a)" d="M135,322 H40 V852 H470"/>
+  <text x="26" y="700" class="l" transform="rotate(-90 26 700)">translate and submit</text>
+  <path class="ln" stroke="#4b3fc4" stroke-dasharray="8 6" marker-end="url(#d)" d="M750,142 H1150 V852 H750"/>
+  <text x="1176" y="500" class="l" style="fill:#4b3fc4" transform="rotate(90 1176 500)">direct access (finality, public parameters)</text>
+  <path class="ln" d="M610,884 V917"/>
+  <path class="ln" d="M320,917 H900"/>
+  <path class="ln" marker-end="url(#a)" d="M320,917 V1000"/>
+  <path class="ln" marker-end="url(#a)" d="M610,917 V1000"/>
+  <path class="ln" marker-end="url(#a)" d="M900,917 V1000"/>
+</svg>
