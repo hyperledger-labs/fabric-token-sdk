@@ -357,17 +357,23 @@ func NewCachedFetcher(tokenDB TokenDB, cacheSize int64, freshnessInterval time.D
 		maxQueriesBeforeRefresh = defaultCacheMaxQueries
 	}
 
-	var ristrettoCache tokenCache
-	var err error
-
-	// If cacheSize <= 0, use default size; otherwise use custom size
-	// Both use the same default NumCounters and BufferItems
+	// If cacheSize <= 0, use the default size.
 	if cacheSize <= 0 {
-		ristrettoCache, err = cache.NewDefaultRistrettoCache[permutatableIterator[*token2.UnspentTokenInWallet]]()
-	} else {
-		ristrettoCache, err = cache.NewRistrettoCacheWithSize[permutatableIterator[*token2.UnspentTokenInWallet]](cacheSize)
+		cacheSize = cache.DefaultMaxCost
 	}
 
+	// cacheSize is the maximum number of tokens to cache (fetcherCacheSize), so an entry,
+	// which holds all the tokens of one wallet and type, costs as many units as it has
+	// tokens. Ristretto's internal per-entry cost is ignored: added to every entry, it
+	// would make the limit count entries instead of tokens, and a size below it would
+	// cache nothing at all.
+	ristrettoCache, err := cache.NewRistrettoCache(&cache.Config[string, permutatableIterator[*token2.UnspentTokenInWallet]]{
+		NumCounters:        cache.DefaultNumCounters,
+		MaxCost:            cacheSize,
+		BufferItems:        cache.DefaultBufferItems,
+		IgnoreInternalCost: true,
+		Cost:               tokenCacheEntryCost,
+	})
 	if err != nil {
 		panic("failed to create ristretto cache: " + err.Error())
 	}
@@ -382,6 +388,16 @@ func NewCachedFetcher(tokenDB TokenDB, cacheSize int64, freshnessInterval time.D
 	f.updateCond = sync.NewCond(&f.mu)
 
 	return f
+}
+
+// tokenCacheEntryCost is the cache cost of an entry: the number of tokens it holds, and
+// at least 1.
+func tokenCacheEntryCost(entry permutatableIterator[*token2.UnspentTokenInWallet]) int64 {
+	if b, ok := entry.(*bucketedIterator); ok && len(b.items) > 0 {
+		return int64(len(b.items))
+	}
+
+	return 1
 }
 
 // finishUpdate releases the update lock and signals all waiting goroutines.
