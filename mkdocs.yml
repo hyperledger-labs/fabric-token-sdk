@@ -77,15 +77,19 @@ nav:
       - DLog (Zero-Knowledge): drivers/dlogwogh.md
       - Extending Validator: drivers/extending_validator.md
       - Metrics: drivers/metrics.md
+      - Validator Resource Limits: drivers/validation-resource-limits.md
       - Benchmark:
           - Overview: drivers/benchmark/benchmark.md
           - Tools: drivers/benchmark/tools.md
+          - Token Validation Service Benchmark: drivers/benchmark/token_validation_service_benchmark.md
           - Core Drivers:
               - DLog No-GH Overview: drivers/benchmark/core/dlognogh/dlognogh.md
               - DLog No-GH Architecture: drivers/benchmark/core/dlognogh/dlognogh_architecture.md
               - DLog No-GH Regression: drivers/benchmark/core/dlognogh/dlognogh_regression.md
               - Benchmark Sender Results: drivers/benchmark/core/dlognogh/transfer_BenchmarkSender_results.md
               - Validator Transfer Profile: drivers/benchmark/core/dlognogh/validator_transfer_profile.md
+              - Fabtoken Benchmarks: drivers/benchmark/core/fabtoken/fabtoken.md
+              - Fabtoken Testing Architecture: drivers/benchmark/core/fabtoken/fabtoken_architecture.md
           - Services:
               - Idemix Identity: drivers/benchmark/services/identity/idemix.md
   - Services:
@@ -93,6 +97,7 @@ nav:
       - Benchmark: services/benchmark.md
       - Certifier: services/certifier.md
       - Config: services/config.md
+      - Finality: services/finality.md
       - Identity: services/identity.md
       - Interop: services/interop.md
       - Network Ethereum:
@@ -104,13 +109,18 @@ nav:
       - Network: services/network.md
       - NFT Tx: services/nfttx.md
       - Selector: services/selector.md
+      - Selector Postgres Benchmark Report: services/selector-postgres-benchmark-report.md
       - Storage:
           - Overview: services/storage.md
+          - Ledger Drift Checks: services/storage/checks.md
           - Cleanup Service: services/storage/keystore_cleanup.md
+          - Endorser Database: services/storage/endorserdb.md
           - KVS Backend: services/storage/kvs.md
           - Recovery Service: services/storage/recovery.md
+          - Token Transactions DB: services/storage/ttxdb.md
       - Tokens: services/tokens.md
       - TTX: services/ttx.md
+      - TTX Responder Threat Model: services/ttx/ttx_responder_security.md
       - Observability: services/observability.md
   - Security:
       - HTLC Deadlines and Clock Synchronisation: security/htlc_deadline_clock_assumptions.md
@@ -119,6 +129,9 @@ nav:
       - Baseline Level 2: openssf/baseline_level_2.md
       - Baseline Level 3: openssf/baseline_level_3.md
       - Selector Resource Limits: security/selector_resource_limits.md
+      - Store Integrity Verification: security/store_integrity_verification.md
+      - Token Chaincode Query Limits: security/tcc_query_limits.md
+      - OpenPGP Unmaintained-Package Advisory: security/openpgp_unmaintained_advisory.md
   - Development:
       - Overview: development/development.md
       - General Guidelines: development/general.md
@@ -127,11 +140,17 @@ nav:
       - Linting: development/linting.md
       - Makefile Guide: development/makefile.md
       - Monitoring: development/monitoring.md
+      - Metrics Reference: development/metrics.md
+      - Grafana Dashboards: monitoring/grafana/README.md
       - Storage: development/storage.md
+      - SQL Query DSL: development/sql-query-dsl.md
       - Testing: development/testing.md
+      - Debugging Integration Tests: development/debug-integration-tests.md
       - Tokengen: development/tokengen.md
+      - Tokendiag: development/tokendiag.md
       - Tools: development/tools.md
       - Versioning: development/versioning.md
+      - Dependency License Dispositions: development/license-dispositions.md
       - AI Agents: development/ai_agents.md
       - Update FSC Dependency: development/update-fsc.md
       - Documentation: development/documentation.md
