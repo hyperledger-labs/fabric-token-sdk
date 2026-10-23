@@ -275,7 +275,13 @@ func TestMixedFetcher_RecoversWhenItsStaleSnapshotIsNotEmpty(t *testing.T) {
 	require.NoError(t, err,
 		"the dust alone cannot cover the request, but the released token can, and a non-empty stale "+
 			"snapshot must not hide it")
-	assert.Equal(t, []token2.ID{dust.Id, contended.Id}, idSet(ids),
+	// selected is a collections.Set[*token2.ID] (selectInternal, selector.go), and Set.ToSlice
+	// reads it out via a plain Go map, whose iteration order is randomized per run - nothing in
+	// selectInternal promises the dust and the released token come back in lock order. The
+	// invariant this test pins is membership - the dust was locked first and stays selected, the
+	// released token is what completes the request - not the slice's order, so assert that set
+	// equality rather than sequence.
+	assert.ElementsMatch(t, []token2.ID{dust.Id, contended.Id}, idSet(ids),
 		"the dust was locked first and stays selected; the released token is what completes the request")
 	assert.Equal(t, "110", sum.Decimal())
 	assert.Positive(t, invalidations.Total(),
