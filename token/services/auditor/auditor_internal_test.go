@@ -917,6 +917,15 @@ func TestRejectMultiOwnerActions(t *testing.T) {
 		}
 		require.NoError(t, rejectMultiOwnerActions(record))
 	})
+	t.Run("an issue action and a transfer action sharing an index pass", func(t *testing.T) {
+		record := &token.AuditRecord{
+			Inputs: token.NewInputStream(nil, []*token.Input{
+				{ActionType: issueAction, ActionIndex: 0, EnrollmentID: "alice"},
+				{ActionType: transferAction, ActionIndex: 0, EnrollmentID: "carol"},
+			}, 0),
+		}
+		require.NoError(t, rejectMultiOwnerActions(record))
+	})
 	t.Run("an unattributed input does not count as a second owner", func(t *testing.T) {
 		record := &token.AuditRecord{
 			Inputs: token.NewInputStream(nil, []*token.Input{

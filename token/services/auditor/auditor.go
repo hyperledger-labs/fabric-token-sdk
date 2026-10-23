@@ -536,14 +536,21 @@ func (r *requestWrapper) AuditRecord(ctx context.Context) (*token.AuditRecord, e
 // an error that does not name the cause. It mirrors the store's grouping:
 // unattributed inputs are skipped.
 func rejectMultiOwnerActions(record *token.AuditRecord) error {
-	firstEID := map[int]string{}
+	// An action is named by its type and index together: issue and transfer actions are
+	// numbered independently, so their inputs can share an index.
+	type action struct {
+		actionType  request.ActionType
+		actionIndex int
+	}
+	firstEID := map[action]string{}
 	for _, in := range record.Inputs.Inputs() {
 		if in.EnrollmentID == "" {
 			continue
 		}
-		eID, ok := firstEID[in.ActionIndex]
+		key := action{actionType: in.ActionType, actionIndex: in.ActionIndex}
+		eID, ok := firstEID[key]
 		if !ok {
-			firstEID[in.ActionIndex] = in.EnrollmentID
+			firstEID[key] = in.EnrollmentID
 
 			continue
 		}

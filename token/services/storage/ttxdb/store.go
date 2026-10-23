@@ -7,12 +7,15 @@ SPDX-License-Identifier: Apache-2.0
 package ttxdb
 
 import (
+	"cmp"
 	"context"
 	"math/big"
 	"reflect"
+	"slices"
 	"time"
 
 	"github.com/LFDT-Panurus/panurus/token"
+	"github.com/LFDT-Panurus/panurus/token/driver/protos-go/v1/request"
 	"github.com/LFDT-Panurus/panurus/token/services/logging"
 	"github.com/LFDT-Panurus/panurus/token/services/storage/db"
 	"github.com/LFDT-Panurus/panurus/token/services/storage/db/common"
@@ -502,20 +505,17 @@ func TransactionRecords(ctx context.Context, record *token.AuditRecord, timestam
 	inputs := record.Inputs
 	outputs := record.Outputs
 
-	actionIndex := 0
-	for {
+	// Issue and transfer actions are numbered independently, so an action is named by its
+	// type and index together: grouping by index alone would merge issue action 0 with
+	// transfer action 0 and record the issued outputs as sent by the transfer's sender.
+	for _, action := range recordActions(record) {
 		// collect inputs and outputs from the same action
 		ins := inputs.Filter(func(t *token.Input) bool {
-			return t.ActionIndex == actionIndex
+			return t.ActionType == action.actionType && t.ActionIndex == action.actionIndex
 		})
 		ous := outputs.Filter(func(t *token.Output) bool {
-			return t.ActionIndex == actionIndex
+			return t.ActionType == action.actionType && t.ActionIndex == action.actionIndex
 		})
-		if ins.Count() == 0 && ous.Count() == 0 {
-			logger.DebugfContext(ctx, "no actions left for tx [%s][%d]", record.Anchor, actionIndex)
-
-			break
-		}
 
 		// create a transaction record from ins and ous
 
@@ -560,12 +560,45 @@ func TransactionRecords(ctx context.Context, record *token.AuditRecord, timestam
 				})
 			}
 		}
-
-		actionIndex++
 	}
 	logger.DebugfContext(ctx, "parsed transactions for tx [%s]", record.Anchor)
 
 	return txs, err
+}
+
+// recordAction names one action of a request: its type and its index among the actions of
+// that type.
+type recordAction struct {
+	actionType  request.ActionType
+	actionIndex int
+}
+
+// recordActions returns the actions that have at least one input or output in record,
+// ordered by index and then by type.
+func recordActions(record *token.AuditRecord) []recordAction {
+	seen := map[recordAction]struct{}{}
+	var actions []recordAction
+	add := func(a recordAction) {
+		if _, ok := seen[a]; !ok {
+			seen[a] = struct{}{}
+			actions = append(actions, a)
+		}
+	}
+	for _, in := range record.Inputs.Inputs() {
+		add(recordAction{actionType: in.ActionType, actionIndex: in.ActionIndex})
+	}
+	for _, out := range record.Outputs.Outputs() {
+		add(recordAction{actionType: out.ActionType, actionIndex: out.ActionIndex})
+	}
+	slices.SortFunc(actions, func(a, b recordAction) int {
+		if c := cmp.Compare(a.actionIndex, b.actionIndex); c != 0 {
+			return c
+		}
+
+		return cmp.Compare(a.actionType, b.actionType)
+	})
+
+	return actions
 }
 
 // Movements converts an AuditRecord to MovementRecords for storage in the database.
