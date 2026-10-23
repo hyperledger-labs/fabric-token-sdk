@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/LFDT-Panurus/panurus/token"
+	"github.com/LFDT-Panurus/panurus/token/driver/protos-go/v1/request"
 	"github.com/LFDT-Panurus/panurus/token/sdk/tms"
 	config2 "github.com/LFDT-Panurus/panurus/token/services/config"
 	dbcommon "github.com/LFDT-Panurus/panurus/token/services/storage/db/common"
@@ -198,6 +199,47 @@ func TestTransactionRecords(t *testing.T) {
 			ActionType:   driver.Redeem,
 			SenderEID:    "alice",
 			RecipientEID: "",
+			TokenType:    "TOK",
+			Amount:       big.NewInt(10),
+			Timestamp:    now,
+			Status:       driver.Pending,
+		},
+	}, recs)
+}
+
+// Issue and transfer actions are numbered independently, so issue action 0 and transfer
+// action 0 must be recorded as two actions (#2512).
+func TestTransactionRecordsIssueAndTransferShareIndex(t *testing.T) {
+	now := time.Now()
+	record := token.AuditRecord{
+		Anchor: "issue-and-transfer",
+		Inputs: token.NewInputStream(qsMock{}, []*token.Input{
+			{ActionType: request.ActionType_ACTION_TYPE_TRANSFER, ActionIndex: 0, EnrollmentID: "carol", Type: "TOK", Quantity: token2.NewQuantityFromUInt64(10)},
+		}, 64),
+		Outputs: token.NewOutputStream([]*token.Output{
+			{ActionType: request.ActionType_ACTION_TYPE_ISSUE, ActionIndex: 0, EnrollmentID: "dave", Type: "TOK", Quantity: token2.NewQuantityFromUInt64(50)},
+			{ActionType: request.ActionType_ACTION_TYPE_TRANSFER, ActionIndex: 0, EnrollmentID: "bob", Type: "TOK", Quantity: token2.NewQuantityFromUInt64(10)},
+		}, 64),
+	}
+
+	recs, err := ttxdb.TransactionRecords(t.Context(), &record, now)
+	require.NoError(t, err)
+	assert.Equal(t, []driver.TransactionRecord{
+		{
+			TxID:         string(record.Anchor),
+			ActionType:   driver.Issue,
+			SenderEID:    "",
+			RecipientEID: "dave",
+			TokenType:    "TOK",
+			Amount:       big.NewInt(50),
+			Timestamp:    now,
+			Status:       driver.Pending,
+		},
+		{
+			TxID:         string(record.Anchor),
+			ActionType:   driver.Transfer,
+			SenderEID:    "carol",
+			RecipientEID: "bob",
 			TokenType:    "TOK",
 			Amount:       big.NewInt(10),
 			Timestamp:    now,
