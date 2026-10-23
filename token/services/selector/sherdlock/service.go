@@ -29,6 +29,13 @@ type SelectorService struct {
 //
 // By default, selection is not rate limited. Passing ratelimit options, or enabling the
 // token.selector.rateLimit* configuration keys, meters every selection request per wallet.
+//
+// The sherdlock selection-tuning keys (token.selector.sufficiencyWindow,
+// maxSufficiencyRatio, maxImmediateRetries, maxBatchWindow) are read from configuration only;
+// unlike rate limiting, there is no sherdlock.Option parameter here to override them
+// programmatically, because this constructor already uses its one variadic parameter for
+// ratelimit.Option. Build a Manager directly (NewManager) with sherdlock.Option values if you
+// need to set them in code instead of YAML.
 func NewService(
 	fetcherProvider FetcherProvider,
 	tokenLockStoreServiceManager tokenlockdb.StoreServiceManager,
@@ -52,7 +59,13 @@ func NewService(
 		leaseCleanupTickPeriod:       cfg.GetLeaseCleanupTickPeriod(),
 		metrics:                      NewMetrics(metricsProvider),
 		limiter:                      ratelimit.CompileOptions(opts...).Limiter(cfg),
-		onCreate:                     svc.trackManager,
+		tuning: CompileOptions(
+			WithSufficiencyWindow(cfg.GetSufficiencyWindow()),
+			WithMaxSufficiencyRatio(cfg.GetMaxSufficiencyRatio()),
+			WithMaxImmediateRetries(cfg.GetMaxImmediateRetries()),
+			WithMaxBatchWindow(cfg.GetMaxBatchWindow()),
+		),
+		onCreate: svc.trackManager,
 	}
 	if loader.limiter != nil {
 		logger.Infof("per-wallet token selection rate limiting is enabled")
@@ -114,7 +127,10 @@ type loader struct {
 	metrics                      *Metrics
 	// limiter meters selection requests per wallet. It is nil when rate limiting is
 	// disabled, which is the default, and is shared by every manager the loader builds.
-	limiter  ratelimit.Limiter
+	limiter ratelimit.Limiter
+	// tuning is the normalized selection tuning (see Tuning) every manager the loader
+	// builds is constructed with.
+	tuning   Tuning
 	onCreate func(*Manager)
 }
 
@@ -145,6 +161,7 @@ func (s *loader) loadTMS(tms TMS) (token.SelectorManager, error) {
 		s.leaseExpiry,
 		s.leaseCleanupTickPeriod,
 		s.metrics,
+		WithTuning(s.tuning),
 	)
 	if s.onCreate != nil {
 		s.onCreate(mgr)

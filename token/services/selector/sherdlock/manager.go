@@ -45,7 +45,12 @@ func NewManager(
 	leaseExpiry time.Duration,
 	leaseCleanupTickPeriod time.Duration,
 	m *Metrics,
+	opts ...Option,
 ) *Manager {
+	// Normalized once, here, and captured by the selectorCache closure below: every Selector
+	// this Manager ever hands out shares the same Tuning for its whole life, which is what
+	// the pending-buffer and batch-window invariants documented on Selector assume.
+	tuning := CompileOptions(opts...)
 	ctx, cancel := context.WithCancel(context.Background())
 	mgr := &Manager{
 		locker:                 locker,
@@ -55,7 +60,7 @@ func NewManager(
 		cancel:                 cancel,
 		cleanerDone:            make(chan struct{}),
 		selectorCache: lazy2.NewProvider(func(txID transaction.ID) (TokenSelectorUnlocker, error) {
-			return NewSherdSelector(txID, fetcher, locker, precision, backoff, maxRetriesAfterBackOff, m), nil
+			return NewSherdSelector(txID, fetcher, locker, precision, backoff, maxRetriesAfterBackOff, m, WithTuning(tuning)), nil
 		}),
 	}
 	if leaseCleanupTickPeriod > 0 && leaseExpiry > 0 {
