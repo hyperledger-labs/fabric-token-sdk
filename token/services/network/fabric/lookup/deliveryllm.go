@@ -237,21 +237,28 @@ func (m *endorserTxInfoMapper) MapProcessedTx(tx *fabric.ProcessedTransaction) (
 	return collections.Values(infos), nil
 }
 
+// mapTxInfo returns one KeyInfo for every write of the transaction whose key matches one of
+// the prefixes. A transaction can write several such keys in one namespace (an htlc
+// transaction that claims two tokens writes two claim keys), and each one may have its own
+// listener, so none can be dropped.
+//
+// The returned map is keyed by namespace and state key together rather than by namespace
+// alone: the events listener manager only uses the map key to range over the events,
+// dispatching each one by its ID (the state key), and keying by namespace would leave room
+// for a single key per namespace. The namespace itself is carried by KeyInfo.Namespace.
 func (m *endorserTxInfoMapper) mapTxInfo(rwSet vault2.ReadWriteSet, txID string) (map[driver2.Namespace]KeyInfo, error) {
-	txInfos := make(map[driver2.Namespace]KeyInfo, len(rwSet.Writes))
+	txInfos := make(map[driver2.Namespace]KeyInfo)
 	logger.Debugf("TX [%s] has %d namespaces", txID, len(rwSet.Writes))
 	for ns, writes := range rwSet.Writes {
 		logger.Debugf("TX [%s:%s] has [%d] writes: %v", txID, ns, len(writes), logging.Keys(writes))
 		for key, value := range writes {
 			if slices.ContainsFunc(m.prefixes, func(prefix string) bool { return strings.HasPrefix(key, prefix) }) {
 				logger.Debugf("TX [%s:%s] does have key [%s].", txID, ns, key)
-				txInfos[ns] = KeyInfo{
+				txInfos[ns+"/"+key] = KeyInfo{
 					Namespace: ns,
 					Key:       key,
 					Value:     value,
 				}
-				// TODO: we assume here there is only one such a key
-				break
 			}
 		}
 	}
