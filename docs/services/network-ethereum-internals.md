@@ -236,6 +236,13 @@ sources, and both distinctions matter enough to have caused real bugs:
   comparison to keep in lockstep, so its watchers keep `Finality.BlockTag` and its reorg safety.
   `Finality.BlockTag` and `client.BlockTagLatest` are kept independent by construction (each is a
   distinct constructor argument, not a shared default).
+- **Two other reads use `latest` for the same reason.** `Network.FetchPublicParameters`, the fetcher
+  a TMS is built from, reads at `latest` like `Connect`'s deployment and policy checks: at `finalized`
+  a contract deployed within the finalization window does not exist yet, so the node would connect and
+  then fail to build its TMS. `Network.anchorApplied`, which turns a resubmit refused as already
+  applied back into a success, reads at `latest` because the refusal comes from gas estimation at the
+  head of the chain. Both go through the binding's `latest` reader; finality itself is still decided at
+  `Finality.BlockTag`.
 
 ## Signing: byte formats that bite
 

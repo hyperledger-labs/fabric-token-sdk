@@ -49,6 +49,10 @@ type namespaceBinding struct {
 	reader     *contractReader
 	finality   *finality.Manager
 	tokenState client.Address
+	// latest reads the same TokenState at BlockTagLatest instead of the configured tag. It is for the
+	// few reads that must agree with what the contract executes against right now rather than with
+	// what is final: see anchorApplied and FetchPublicParameters.
+	latest *contractReader
 }
 
 // Network is the EVM implementation of driver.Network for one network. It owns the pieces a token
@@ -132,6 +136,7 @@ func NewNetwork(
 			config:     nc.Config,
 			submitter:  nc.Submitter,
 			reader:     reader,
+			latest:     newContractReader(evmClient, tokenState, client.BlockTagLatest),
 			tokenState: tokenState,
 			finality: finality.NewManager(
 				evmClient, reader, tokenState, nc.Config.Finality.FromBlock, nc.Config.Finality.BlockTag,
@@ -432,18 +437,24 @@ func (n *Network) Broadcast(ctx context.Context, blob any) error {
 // The envelope keeps no transaction hash in this case, because the hash belongs to the attempt that
 // landed and this process never saw it. Nothing downstream needs it: finality is waited on by anchor,
 // and that anchor resolves immediately.
+//
+// It reads at latest, not at the configured finality tag. The refusal it explains away came from gas
+// estimation, which executes against the head of the chain, so that is where the anchor has to be
+// looked for: right after the first attempt lands it is at the head but not yet finalized, and a read
+// at finalized would miss it and turn a success back into a rejection. Answering success here does not
+// claim finality; that is still decided by the finality listener at the configured tag.
 func (n *Network) anchorApplied(ctx context.Context, binding *namespaceBinding, anchor [32]byte) bool {
-	if binding.finality == nil {
+	if binding.latest == nil {
 		return false
 	}
-	code, _, _, err := binding.finality.StatusByAnchor(ctx, anchor)
+	_, found, err := binding.latest.TokenRequestHash(ctx, anchor)
 	if err != nil {
 		logger.Debugf("could not check whether [%x] is already applied: %v", anchor, err)
 
 		return false
 	}
 
-	return code == driver.Valid
+	return found
 }
 
 // ComputeTxID returns the token-request anchor for the transaction.
@@ -501,13 +512,19 @@ func (n *Network) SetupPublicParams(
 
 // FetchPublicParameters retrieves the public parameters currently stored in namespace's own
 // TokenState contract.
+//
+// It reads at latest, like the deployment and policy checks in Connect. This is the fetcher a TMS is
+// built from on a fresh node, and at the finalized tag a contract deployed within the finalization
+// window does not exist yet: the node would connect fine and then fail to build its TMS, with an ABI
+// decoding error, for as long as that window lasts. Parameters that later change, or a head that is
+// reorganised away, are picked up by the public-parameters watcher like any other update.
 func (n *Network) FetchPublicParameters(namespace string) ([]byte, error) {
 	binding, err := n.binding(namespace)
 	if err != nil {
 		return nil, err
 	}
 
-	return binding.reader.publicParameters(context.Background())
+	return binding.latest.publicParameters(context.Background())
 }
 
 // QueryTokens reads the stored bytes of the given tokens through namespace's own TokenState contract.
@@ -636,29 +653,65 @@ type ledgerView struct {
 
 // Status returns the validation code of the transaction with the given anchor.
 //
-// driver.Ledger.Status carries no namespace, unlike every other method on this interface, so it
-// cannot say which TMS's TokenState to check once more than one shares this network. That is
-// answerable without ambiguity only when this network serves exactly one TMS, which is what every
-// caller in this repository (a per-TMS drift check) already builds against; a network serving more
-// than one is asked to use GetTransactionStatus with an explicit namespace instead, rather than this
-// method silently guessing which TMS's contract the caller meant.
+// driver.Ledger.Status carries no namespace, unlike every other method on this interface, so with more
+// than one TMS on this network it cannot say which TokenState to read. It does not need to: an anchor
+// is SHA-256 over a fresh random nonce and its creator, so at most one TokenState can have applied it,
+// and asking every one finds it wherever it is. Refusing instead made every caller that only has a
+// txID (the vault's transaction drift check, run per TMS on a shared network) read every confirmed
+// transaction as unknown to the ledger.
+//
+// The TokenStates are asked at the same time, so a call costs one round trip of latency however many
+// TMS share the network, and the first one to report the anchor ends the rest.
+//
+// A read that fails for any TMS makes an otherwise Unknown answer an error, because the anchor may be
+// in the contract that could not be read.
 func (l *ledgerView) Status(id string) (driver.ValidationCode, error) {
-	if len(l.network.bindings) != 1 {
-		return driver.Unknown, errors.Errorf(
-			"evm network [%s]: Status has no namespace to disambiguate %d TMS sharing this network; "+
-				"use GetTransactionStatus with an explicit namespace instead", l.network.name, len(l.network.bindings))
-	}
-	var namespace string
-	for ns := range l.network.bindings {
-		namespace = ns
-	}
-
-	code, _, _, err := l.network.GetTransactionStatus(context.Background(), namespace, id)
+	anchor, err := keys.AnchorFromTxID(id)
 	if err != nil {
-		return driver.Unknown, err
+		return driver.Unknown, errors.Wrapf(err, "evm network: invalid transaction id [%s]", id)
 	}
 
-	return code, nil
+	if len(l.network.bindings) == 1 {
+		for _, binding := range l.network.bindings {
+			code, _, _, err := binding.finality.StatusByAnchor(context.Background(), anchor)
+
+			return code, err
+		}
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	type answer struct {
+		namespace string
+		code      driver.ValidationCode
+		err       error
+	}
+	answers := make(chan answer, len(l.network.bindings))
+	for namespace, binding := range l.network.bindings {
+		go func() {
+			code, _, _, err := binding.finality.StatusByAnchor(ctx, anchor)
+			answers <- answer{namespace: namespace, code: code, err: err}
+		}()
+	}
+
+	var errs []error
+	for range l.network.bindings {
+		a := <-answers
+		if a.err != nil {
+			errs = append(errs, errors.Wrapf(a.err, "namespace [%s]", a.namespace))
+
+			continue
+		}
+		if a.code != driver.Unknown {
+			return a.code, nil
+		}
+	}
+	if len(errs) != 0 {
+		return driver.Unknown, errors.Join(errs...)
+	}
+
+	return driver.Unknown, nil
 }
 
 // GetTransactionStatus returns the status and token-request hash of a transaction by anchor.
