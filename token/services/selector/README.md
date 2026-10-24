@@ -36,8 +36,17 @@ fail instead. They also skip under `-short`.
 Environment: `PANURUS_SELECTOR_BENCH_MATRIX=full` runs the full sherdlock cross product
 (fetcher x lock strategy x batch locking) in place of the one-axis sweep;
 `PANURUS_SELECTOR_BENCH_LARGE=1` adds a 1M-token wallet to `wallet-size`;
-`PANURUS_SELECTOR_BENCH_RETRY=5s` sets `token.selector.retryInterval` (the benchmarks default to 20ms
-so contended cases do not spend their run asleep; 5s is the production default).
+`PANURUS_SELECTOR_BENCH_RETRY=5s` sets `token.selector.retryInterval` for every case that does not
+name its own `retry=` segment (the benchmarks default to 20ms so contended cases do not spend
+their run asleep; 5s is the production default). Cases with an explicit `retry=` segment in their
+name (`near-exhaustion`, `hot-wallet`) ignore this variable: they sweep the retry-interval axis
+themselves with literals, so their label can never drift from what they actually ran at - set
+`BENCH_FILTER='near-exhaustion/retry=5s'` (or `hot-wallet/retry=5s`) to select the 5s arm directly
+instead;
+`PANURUS_SELECTOR_BENCH_LOGSPEC` overrides the package's default `error`-level logging (quieted so
+the per-request INFO/WARN logs a contended Select emits cannot interleave mid-line with benchmark
+result lines and corrupt them for `benchstat` - see `TestMain` in `benchmark_postgres_setup_test.go`),
+e.g. `PANURUS_SELECTOR_BENCH_LOGSPEC=debug` to see per-request detail while debugging a failure.
 
 Each case reports `selects/sec`, `p50-ms`/`p95-ms`/`p99-ms` of `Select` alone, `contended/op`
 (requests that ended as locked or insufficient funds: expected under contention, not an error),
@@ -45,3 +54,27 @@ Each case reports `selects/sec`, `p50-ms`/`p95-ms`/`p99-ms` of `Select` alone, `
 
 See [docs/services/selector.md](../../../docs/services/selector.md#benchmarking-against-postgres)
 for the configurations and workloads.
+
+### Statistics with benchstat
+
+A single run (`BENCH_TIME`'s default `-benchtime=100x`) tells you a case's numbers; it does not
+tell you whether a difference between two cases is real or noise. `BENCH_COUNT` repeats every
+case that many times in one `go test` invocation, and `benchstat` turns the repeats into a
+median plus a confidence interval:
+
+```bash
+make benchmark-selector-postgres BENCH_FILTER='near-exhaustion/retry=(20ms|5s)/(sherdlock\+mixed.*|simple)' \
+  BENCH_TIME=300x BENCH_COUNT=5 > near-exhaustion.txt
+benchstat -col /retry near-exhaustion.txt
+```
+
+**`-col` splits on whole `/`-separated name segments, not arbitrary substrings.** A benchmark
+name's `key=value` segments (e.g. `retry=20ms`, `hold=50ms`) are each their own segment, so
+`-col /retry` can project them into columns of one comparison table. `lockStrategy` and
+`maxConns`, by contrast, live inside the `+`-joined blob `pgConfig.name()` produces (e.g.
+`sherdlock+mixed+skipLocked+batch+clean+conns10`) — they are not their own segment, so `-col`
+cannot reach them regardless of what key you pass it (including a positional key like `-col /1`:
+benchstat accepts those too, they just can't split a blob that isn't its own segment either).
+Renaming them into `key=value` segments would invalidate the existing case names across every
+workload, which this benchmark declines to do. Compare those two by filtering `BENCH_FILTER` to
+each value and reading the per-metric numbers by hand instead of reaching for `-col` on them.
